@@ -31,6 +31,11 @@ describe('User relations', function () {
 
         expect($user->hasProfile('admin'))->toBeFalse();
         $user->profiles()->attach($admin->id);
+
+        // hasProfile() reads the cached `profiles` relation (see User model) to
+        // avoid re-querying on every check within a request; since the relation
+        // was already loaded above, it must be refreshed to see the new pivot row.
+        $user->refresh();
         expect($user->hasProfile('admin'))->toBeTrue();
     });
 

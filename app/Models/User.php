@@ -73,7 +73,10 @@ class User extends Authenticatable
 
     public function hasProfile(string $slug): bool
     {
-        return $this->profiles()->where('slug', $slug)->exists();
+        // Accessing the relation as a property (not calling profiles()) lets
+        // Eloquent cache it on this model instance, so repeated Policy/
+        // middleware checks within the same request don't re-query the DB.
+        return $this->profiles->contains(fn (Profile $profile) => $profile->slug === $slug);
     }
 
     public function hasPermission(string $routeName, string $action): bool

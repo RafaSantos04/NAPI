@@ -18,6 +18,12 @@ pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
     ->in('Feature');
 
+// IAM tests rely on the demo users/profiles/menu permissions from
+// DatabaseSeeder. Scoped to this directory (not globally) so it doesn't
+// collide with other Feature tests that create their own 'admin'-slug
+// profiles via factories.
+uses()->beforeEach(fn () => $this->seed())->in('Feature/IAM');
+
 /*
 |--------------------------------------------------------------------------
 | Expectations
