@@ -2,6 +2,12 @@
 
 namespace App\Providers;
 
+use App\Events\PermissionChanged;
+use App\Events\ProfileAssigned;
+use App\Events\UserLoggedIn;
+use App\Listeners\AuditPermissionChange;
+use App\Listeners\AuditProfileAssignment;
+use App\Listeners\AuditUserLogin;
 use App\Models\Menu;
 use App\Models\Profile;
 use App\Models\User;
@@ -12,6 +18,7 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
@@ -46,5 +53,9 @@ class AppServiceProvider extends ServiceProvider
                     429
                 ));
         });
+
+        Event::listen(ProfileAssigned::class, AuditProfileAssignment::class);
+        Event::listen(PermissionChanged::class, AuditPermissionChange::class);
+        Event::listen(UserLoggedIn::class, AuditUserLogin::class);
     }
 }

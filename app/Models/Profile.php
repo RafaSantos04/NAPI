@@ -33,11 +33,12 @@ class Profile extends Model
     }
 
     /**
-     * @return BelongsToMany<Menu, $this>
+     * @return BelongsToMany<Menu, $this, MenuProfile>
      */
     public function menus(): BelongsToMany
     {
         return $this->belongsToMany(Menu::class, 'menu_profiles')
+            ->using(MenuProfile::class)
             ->withPivot('can_view', 'can_create', 'can_update', 'can_delete');
     }
 }

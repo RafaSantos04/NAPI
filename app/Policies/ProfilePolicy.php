@@ -46,4 +46,14 @@ class ProfilePolicy
 
         return $user->hasProfile('admin');
     }
+
+    public function syncMenus(User $user, Profile $profile): bool
+    {
+        // Não pode editar perfis de sistema
+        if ($profile->is_system) {
+            return false;
+        }
+
+        return $user->hasProfile('admin');
+    }
 }

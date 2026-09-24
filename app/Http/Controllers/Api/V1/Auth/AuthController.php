@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Auth;
 
+use App\Events\UserLoggedIn;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Resources\UserResource;
@@ -30,12 +31,7 @@ class AuthController extends Controller
             ]);
         }
 
-        AuditLog::create([
-            'user_id' => $user->id,
-            'action' => 'login',
-            'ip' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-        ]);
+        event(new UserLoggedIn($user, $request->ip(), $request->userAgent()));
 
         $token = $user->createToken('api-token', ['read', 'write'])->plainTextToken;
 

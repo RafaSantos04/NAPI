@@ -56,4 +56,9 @@ class UserPolicy
 
         return false;
     }
+
+    public function assignProfiles(User $user, User $userToUpdate): bool
+    {
+        return $user->hasProfile('admin');
+    }
 }

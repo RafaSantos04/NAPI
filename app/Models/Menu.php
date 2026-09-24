@@ -12,6 +12,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property-read MenuProfile|null $pivot
+ */
 #[Fillable(['parent_id', 'label', 'route_name', 'icon', 'order', 'is_active', 'description'])]
 class Menu extends Model
 {
@@ -42,11 +45,12 @@ class Menu extends Model
     }
 
     /**
-     * @return BelongsToMany<Profile, $this>
+     * @return BelongsToMany<Profile, $this, MenuProfile>
      */
     public function profiles(): BelongsToMany
     {
         return $this->belongsToMany(Profile::class, 'menu_profiles')
+            ->using(MenuProfile::class)
             ->withPivot('can_view', 'can_create', 'can_update', 'can_delete');
     }
 
