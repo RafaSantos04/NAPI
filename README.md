@@ -50,8 +50,12 @@ composer analyse    # PHPStan / Larastan
 
 ### IAM
 
-*Em construção.* Vai cobrir usuários (ULID), perfis, vínculo usuário-perfil, menus e vínculo menu-perfil, com trilha de auditoria (`audit_logs`).
+API REST v1 com usuários (ULID), perfis, menus, matriz de permissões perfil × menu, tokens Sanctum e trilha de auditoria (`audit_logs`). Veja [`docs/modules/iam.md`](docs/modules/iam.md).
 
 ### Segurança
 
-*Em construção.* Área dedicada a testes e ferramentas de segurança da aplicação.
+*Planejado.* Área dedicada a testes e ferramentas de segurança da aplicação. Veja [`docs/modules/security.md`](docs/modules/security.md).
+
+## Documentação
+
+A documentação arquitetural completa do projeto (arquitetura, ADRs, segurança, threat model, API, banco, testes e findings) está em [`docs/`](docs/README.md).
