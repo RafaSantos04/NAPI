@@ -9,15 +9,16 @@
   exercitar `citext`, FKs e cascades de verdade
   ([ADR-0002](../architecture/decisions/ADR-0002-postgresql.md)).
 - `RefreshDatabase` em todo `tests/Feature` (`tests/Pest.php`).
-- `tests/Feature/IAM/*` roda o `DatabaseSeeder` antes de cada teste. O
-  escopo é limitado a esse diretório para não colidir com testes que criam o
-  próprio perfil `admin` via factory (comentário em `tests/Pest.php`).
+- `tests/Feature/IAM/*` e `tests/Feature/Security/*` rodam o `DatabaseSeeder`
+  antes de cada teste. O escopo é limitado a esses diretórios para não colidir
+  com testes que criam o próprio perfil `admin` via factory (comentário em
+  `tests/Pest.php`).
 - `Model::shouldBeStrict()` fica ativo nos testes: lazy loading e mass
   assignment indevidos quebram a suíte.
 - Qualidade complementar: `composer lint` (Pint) e `composer analyse`
   (Larastan nível 6 em `app/`).
 
-## Inventário (53 testes)
+## Inventário (133 testes)
 
 | Categoria | Arquivo | Testes | Nível |
 |---|---|---|---|
@@ -28,6 +29,13 @@
 | Users ↔ Profiles | `Feature/IAM/UserProfileSyncTest.php` | 4 | HTTP + evento |
 | Tokens | `Feature/IAM/TokenManagementTest.php` | 3 | HTTP |
 | Audit | `Feature/IAM/AuditEventTest.php` | 2 | HTTP + banco |
+| Security: abilities | `Feature/Security/TokenAbilityTest.php` | 14 | HTTP, Bearer real |
+| Security: usuário inativo | `Feature/Security/DisabledUserAuthenticationTest.php` | 6 | HTTP, Bearer real |
+| Security: permissões funcionais | `Feature/Security/AuthorizationMatrixTest.php` | 23 | model + HTTP, Bearer real |
+| Security: escalação | `Feature/Security/PrivilegeEscalationTest.php` | 15 | HTTP, Bearer real |
+| Security: último admin | `Feature/Security/AdminInvariantTest.php` | 7 | HTTP + Action |
+| Security: auditoria | `Feature/Security/AuditIntegrityTest.php` | 8 | HTTP + banco + evento |
+| Security: árvore de menus | `Feature/Security/MenuTreeTest.php` | 7 | HTTP, Bearer real |
 | Model/DB: Users | `Feature/UserTest.php` | 10 | Eloquent + constraints |
 | Model/DB: Profiles | `Feature/ProfileTest.php` | 5 | Eloquent + constraints |
 | Model/DB: Menus | `Feature/MenuTest.php` | 5 | Eloquent + constraints |
@@ -40,9 +48,12 @@ diretamente.
 
 ## Padrões observados
 
-- Autenticação nos testes HTTP via `actingAs()`. Isso **não** exercita o
-  token Sanctum, por isso abilities e estado de token ficam fora da cobertura
-  ([FIND-021](../findings/README.md#find-021--lacunas-de-testes-de-segurança)).
+- `tests/Feature/IAM/*` autentica com `actingAs()`, que **não** exercita o
+  token Sanctum. Desde a Fase 3.2, `tests/Feature/Security/*` usa tokens reais
+  (`asToken()`/`tokenFor()` em `tests/Pest.php`), cobrindo abilities e estado
+  do token ([FIND-021](../findings/README.md#find-021--lacunas-de-testes-de-segurança)).
+- Auditoria verificada por **cardinalidade** (`count() === 1`), não só por
+  `exists()`.
 - Negação de acesso verificada por status (404 ou 403), não pelo corpo.
 - Eventos: `Event::fake()` + `assertDispatched()` para o dispatch;
   requisição real + consulta em `audit_logs` para a reação.

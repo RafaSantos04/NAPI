@@ -67,12 +67,21 @@ A PK composta impede atribuir o mesmo perfil duas vezes.
 |---|---|---|
 | `id` | ULID | PK |
 | `parent_id` | ULID | nullable; FK auto-referente `menus` cascade; indexado |
+| `key` | varchar(100) | NOT NULL, UNIQUE; **identificador de permissão** (`{key}.{ação}`), imutável pela API (Fase 3.2) |
 | `label` | varchar(100) | |
-| `route_name` | varchar(100) | UNIQUE; **chave de autorização** |
+| `route_name` | varchar(100) | UNIQUE; só navegação desde a Fase 3.2 |
 | `icon` | varchar(50) | nullable |
 | `order` | integer | default 0; indexado |
-| `is_active` | boolean | default `true` |
+| `is_active` | boolean | default `true`; só navegação, não afeta autorização |
+| `is_system` | boolean | default `false`; menus-chave não excluíveis pela API (Fase 3.2) |
 | `description` | text | nullable |
+
+`key` e `is_system` foram adicionadas na Fase 3.2 diretamente na migration
+de criação (`2026_09_20_005741_create_menus_table`), e não numa migration
+nova. Como o projeto ainda não tem banco de produção, não havia dados a
+migrar, e um backfill seria código sem uso. Consequência: bancos criados
+antes da Fase 3.2 precisam de `php artisan migrate:fresh --seed`. Quando
+houver produção, mudanças de schema voltam a ser migrations aditivas.
 
 A FK de `parent_id` é criada em um segundo `Schema::table`. O comentário na
 migration explica que, no PostgreSQL, a PK do ULID é adicionada por um
@@ -114,10 +123,12 @@ indexados) · `name` text · `token` varchar(64) UNIQUE (hash SHA-256) ·
 | PKs compostas | pivots | Impedem vínculos duplicados |
 | `cascade` | pivots, `user_details`, `menus.parent_id` | Excluir perfil ou menu remove vínculos e permissões (testes de force delete) |
 | `set null` | `audit_logs.user_id`, `user_profiles.assigned_by` | Trilha e histórico sobrevivem à exclusão do ator (teste) |
-| `UNIQUE` | `email`, `profiles.name/slug`, `menus.route_name`, `cpf_hash`, `token` | Última linha de defesa contra duplicidade (testes de validação) |
+| `UNIQUE` | `email`, `profiles.name/slug`, `menus.key`, `menus.route_name`, `cpf_hash`, `token` | Última linha de defesa contra duplicidade (testes de validação) |
+| `SELECT … FOR UPDATE` | linha do perfil `admin` | Serializa as remoções de administrador; a invariante "≥ 1 admin ativo" não depende de check-then-act sem proteção (INV-08) |
 | Defaults booleanos | `menu_profiles.can_*` | Negação por padrão garantida no schema |
 
 Não há uso de `restrict`: a proteção contra excluir perfis com usuários e
-menus com filhos é feita na **Policy**, não no banco. Como a exclusão é
+menus com filhos ou de sistema é feita na **Policy**, não no banco. É uma
+escolha: o banco protege integridade, e a aplicação decide autorização. Como a exclusão é
 física (perfis e menus não têm soft delete), se a Policy falhar o `cascade`
 apaga os vínculos.

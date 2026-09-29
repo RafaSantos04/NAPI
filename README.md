@@ -50,7 +50,7 @@ composer analyse    # PHPStan / Larastan
 
 ### IAM
 
-API REST v1 com usuários (ULID), perfis, menus, matriz de permissões perfil × menu, tokens Sanctum e trilha de auditoria (`audit_logs`). Veja [`docs/modules/iam.md`](docs/modules/iam.md).
+API REST v1 com usuários (ULID), perfis, menus, matriz de permissões perfil × menu, tokens Sanctum e trilha de auditoria (`audit_logs`). A autorização é feita em camadas (autenticação, ability do token, permissão funcional, Policy e invariante de domínio), descritas no [ADR-0008](docs/architecture/decisions/ADR-0008-layered-authorization-model.md). Veja [`docs/modules/iam.md`](docs/modules/iam.md).
 
 ### Segurança
 

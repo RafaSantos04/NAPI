@@ -43,10 +43,12 @@ Fronteiras propostas, a serem confirmadas em ADR quando a fase começar:
 
 O [threat model](../security/threat-model.md) e os
 [findings](../findings/README.md) desta fase são o backlog natural do Lab:
-cada ameaça com risco residual é um cenário de verificação candidato. Exemplos
-concretos já confirmados: token somente leitura executando escrita
-(FIND-001), token de usuário desativado ainda válido (FIND-003) e lockout
-administrativo por renomear um menu (FIND-005).
+cada ameaça com risco residual é um cenário de verificação candidato. Os
+primeiros cenários concretos (token somente leitura executando escrita,
+FIND-001; token de usuário desativado, FIND-003; lockout administrativo por
+renomear um menu, FIND-005) foram corrigidos na Fase 3.2 e hoje existem como
+testes de regressão em `tests/Feature/Security/`. Eles são o modelo natural de
+um cenário do Lab: reproduzir, provar a correção e impedir a regressão.
 
 ## Fora de escopo nesta fase
 

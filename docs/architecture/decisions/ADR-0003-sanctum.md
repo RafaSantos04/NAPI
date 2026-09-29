@@ -4,7 +4,9 @@
 
 ## Status
 
-Accepted (registrado retroativamente na Fase 3.1)
+Accepted (registrado retroativamente na Fase 3.1). Complementado pela Fase 3.2
+([ADR-0008](ADR-0008-layered-authorization-model.md)); veja
+[Evolução na Fase 3.2](#evolução-na-fase-32).
 
 ## Context
 
@@ -73,6 +75,21 @@ cookie (exige CSRF e estado).
 Mitiga replay de token por tempo indeterminado e vazamento de tokens em
 repositórios. Não mitiga escopo excessivo de token (abilities inertes) nem
 sessões de usuários desativados.
+
+## Evolução na Fase 3.2
+
+Evolução compatível: Sanctum, tokens opacos, expiração global e prefixo continuam
+como decididos acima. Três consequências negativas foram resolvidas:
+
+- **Abilities aplicadas** pelo método HTTP (`EnsureTokenAbility`). O login
+  emite `read`, `write` e `delete`, e `POST /tokens` só emite subconjuntos
+  das abilities do token atual.
+- **Usuário inativo não autentica**: `Sanctum::authenticateAccessTokensUsing`
+  recusa tokens de dono inativo, e desativar apaga os tokens por higiene.
+- **`expires_in_days` limitado** ao teto global (7 dias).
+
+Continuam valendo: logout global, limpeza de tokens expirados não agendada e
+modo SPA inativo.
 
 ## References
 

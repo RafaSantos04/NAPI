@@ -22,11 +22,12 @@ decisão registrada na Fase 3), ela é citada.
 |---|---|---|
 | [ADR-0001](ADR-0001-laravel.md) | Laravel 13, com `bootstrap/app.php` e sem `Kernel.php` | Accepted |
 | [ADR-0002](ADR-0002-postgresql.md) | PostgreSQL com ULIDs, `citext`, `jsonb` e integridade referencial no banco | Accepted |
-| [ADR-0003](ADR-0003-sanctum.md) | Sanctum com tokens opacos por usuário, expiração global de 7 dias e prefixo `napi_` | Accepted |
-| [ADR-0004](ADR-0004-policy-based-authorization.md) | Policies como camada de autorização por instância | Accepted |
-| [ADR-0005](ADR-0005-event-driven-audit.md) | Auditoria de operações IAM como reação síncrona a eventos de domínio | Accepted |
-| [ADR-0006](ADR-0006-route-permission-matrix.md) | Matriz perfil × menu como autorização por rota, negando com 404 | Accepted |
+| [ADR-0003](ADR-0003-sanctum.md) | Sanctum com tokens opacos por usuário, expiração global de 7 dias e prefixo `napi_` | Accepted (complementado na Fase 3.2) |
+| [ADR-0004](ADR-0004-policy-based-authorization.md) | Policies como camada de autorização por instância | Superseded by ADR-0008 |
+| [ADR-0005](ADR-0005-event-driven-audit.md) | Auditoria de operações IAM como reação síncrona a eventos de domínio | Accepted (evoluído na Fase 3.2) |
+| [ADR-0006](ADR-0006-route-permission-matrix.md) | Matriz perfil × menu como autorização por rota, negando com 404 | Superseded by ADR-0008 |
 | [ADR-0007](ADR-0007-dto-action-boundary.md) | DTO + Action apenas para casos de uso com regra de negócio | Accepted |
+| [ADR-0008](ADR-0008-layered-authorization-model.md) | Autorização em camadas: autenticação, ability do token, permissão funcional (`menus.key`), Policy e invariante de domínio | Accepted (Fase 3.2) |
 
 ## Template
 

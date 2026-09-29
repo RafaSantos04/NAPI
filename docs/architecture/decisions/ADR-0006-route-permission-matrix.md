@@ -4,7 +4,18 @@
 
 ## Status
 
-Accepted (registrado retroativamente na Fase 3.1; a matriz existe desde a Fase 2)
+**Superseded by [ADR-0008](ADR-0008-layered-authorization-model.md)** (Fase 3.2).
+
+Originalmente: Accepted (registrado retroativamente na Fase 3.1; a matriz existe
+desde a Fase 2).
+
+> O que mudou: a matriz `menu_profiles` e a negação com 404 continuam. A
+> chave de autorização deixou de ser o `route_name` e passou a ser
+> `menus.key`, imutável (a alternativa "tabela de permissões desacoplada",
+> citada abaixo, foi adotada na forma de uma coluna). `CheckPermission`
+> recebe `permission:{key}.{ação}` e delega a `User::hasPermission()`, que
+> também é usada pelas Policies. A árvore passou a filtrar filhos e inativos.
+> O texto abaixo descreve a decisão como era.
 
 ## Context
 

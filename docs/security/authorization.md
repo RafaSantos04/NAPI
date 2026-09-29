@@ -1,117 +1,169 @@
 # Autorização
 
-[← Segurança](README.md) · [ADR-0004](../architecture/decisions/ADR-0004-policy-based-authorization.md) · [ADR-0006](../architecture/decisions/ADR-0006-route-permission-matrix.md) · [IAM](../modules/iam.md)
+[← Segurança](README.md) · [ADR-0008](../architecture/decisions/ADR-0008-layered-authorization-model.md) · [IAM](../modules/iam.md)
 
-## Três portões, uma interseção
+> **Fase 3.2.** O modelo abaixo substitui os "três portões com interseção"
+> da Fase 3, em que a matriz e as Policies eram fontes independentes
+> ([FIND-004](../findings/README.md#find-004--duas-fontes-de-autorização-que-não-se-conhecem)).
+> A decisão está no [ADR-0008](../architecture/decisions/ADR-0008-layered-authorization-model.md),
+> que supersede o ADR-0004 e o ADR-0006.
 
-Um endpoint de IAM só executa se **os três** permitirem:
+## Camadas, cada uma com uma pergunta
 
 ```mermaid
-flowchart LR
-    R[Requisição] --> A{1. auth:sanctum<br/>quem é?}
+flowchart TD
+    R[Requisição] --> A{1. auth:sanctum<br/>token válido e dono ativo?}
     A -- não --> X401[401]
-    A --> M{2. CheckPermission<br/>o perfil tem can_ação<br/>no menu route_name?}
+    A --> T{2. token.ability<br/>o token pode este método?}
+    T -- não --> X403a[403 Invalid ability]
+    T --> M{3. permission:key.ação<br/>o perfil tem a permissão funcional?}
     M -- não --> X404[404]
-    M --> P{3. Policy<br/>esta instância, este ator?}
-    P -- não --> X[404 em index/show<br/>403 nos demais]
-    P --> OK[executa]
+    M --> P{4. Policy<br/>regra contextual da instância?}
+    P -- não --> X403b[404 em index/show<br/>403 nos demais]
+    P --> D{5. Invariante de domínio<br/>o estado continua válido?}
+    D -- não --> X409[409]
+    D --> OK[executa + auditoria na mesma transação]
 ```
 
-| Portão | Pergunta | Fonte de verdade | Granularidade |
-|---|---|---|---|
-| 1. Sanctum | O token é válido? | `personal_access_tokens` | ator |
-| 2. Matriz | Algum perfil do ator tem `can_{ação}` neste `route_name`? | **dados**: `menu_profiles` | rota × ação CRUD |
-| 3. Policy | Esta regra de instância permite? | **código**: `app/Policies/*`, por slug de perfil | instância |
+| # | Camada | Pergunta | Fonte | Onde |
+|---|---|---|---|---|
+| 1 | Autenticação | Quem é, e a conta está ativa? | `personal_access_tokens` + `users.is_active` | `auth:sanctum` + `Sanctum::authenticateAccessTokensUsing` |
+| 2 | Capacidade do token | Este token pode fazer este tipo de operação? | abilities do token | `EnsureTokenAbility` (`token.ability`) |
+| 3 | Permissão funcional | O perfil pode fazer a ação nesta área? | **dados**: `menu_profiles` × `menus.key` | `User::hasPermission()`, via `CheckPermission` e Policies |
+| 4 | Regra contextual | Pode, **neste recurso**? | código | `app/Policies/*` |
+| 5 | Invariante de domínio | O sistema continua num estado válido? | código + lock no banco | `EnsureActiveAdministratorRemains` |
 
-**Não existe uma fonte única de verdade para autorização.** A matriz e as
-Policies são independentes e o acesso efetivo é a interseção entre elas:
+Cada camada só **restringe**. Nenhuma concede o que outra negou:
 
-| Ator | Matriz permite | Policy permite | Efetivo |
-|---|---|---|---|
-| `admin` | tudo | tudo, exceto regras de instância | tudo, exceto regras de instância |
-| `dev` | só `users.index,view` | `viewAny` de User/Profile/Menu; `view` de si mesmo | listar usuários e ver a si mesmo |
-| `viewer` | nada | quase nada | nada (404) |
-| perfil customizado com CRUD completo em `profiles.index` | tudo em perfis | nada (exige `admin` ou `dev`) | **nada**, confirmado em execução |
+- um token `write` não torna o usuário admin, e um admin com token `read`
+  não executa mutação (camadas 2 e 3 são independentes);
+- a matriz não substitui a Policy: quem tem `users.delete` ainda não exclui
+  a si mesmo nem um administrador (camada 4);
+- nem o admin passa pela invariante: o último administrador ativo não perde
+  o perfil (camada 5).
 
-A última linha é o [FIND-004](../findings/README.md#find-004--duas-fontes-de-autorização-que-não-se-conhecem):
-com as Policies atuais, a matriz só consegue **restringir** `admin` e `dev`;
-não consegue **conceder** acesso a perfis novos.
+## Camada 2: abilities do token
 
-## Portão 2: a matriz
+O contrato continua sendo `read`, `write` e `delete`, e o middleware deriva a
+ability do método HTTP:
 
-`app/Http/Middleware/CheckPermission.php`:
+| Método | Ability exigida |
+|---|---|
+| `GET`, `HEAD`, `OPTIONS` | `read` |
+| `POST`, `PUT`, `PATCH` | `write` |
+| `DELETE` | `delete` |
+
+O middleware é aplicado ao grupo autenticado inteiro, então uma rota nova
+fica coberta por padrão, sem exceções. O login emite `read`, `write` e
+`delete`. `POST /tokens` só aceita abilities que o token atual também tem,
+o que impede que um token `read` vazado emita para si um token `write`.
+
+Requisições autenticadas por sessão (`actingAs()` nos testes) carregam um
+`TransientToken`, que o Sanctum trata como detentor de todas as abilities.
+Como `statefulApi()` não está ativo, isso não é alcançável pela API hoje.
+
+## Camada 3: permissões funcionais
+
+Uma permissão é `{menu.key}.{ação}`, com ação em `view`, `create`, `update`
+ou `delete` (as colunas `can_*` de `menu_profiles`). `menus.key` é estável:
+obrigatória na criação, **proibida** na atualização e distinta do
+`route_name` de navegação ([FIND-005](../findings/README.md#find-005--menus-são-chaves-de-autorização-sem-proteção-de-sistema)).
 
 ```php
-$user->profiles()
-    ->whereHas('menus', fn ($q) => $q->where('route_name', $routeName)
-        ->where("menu_profiles.can_{$action}", true))
-    ->exists();
+$user->hasPermission('users.update'); // única resposta funcional do sistema
 ```
 
-- A coluna do pivot é qualificada (`menu_profiles.can_*`). O comentário no
-  arquivo explica que `wherePivot()` dentro de `whereHas()` gera SQL errado.
-- `$action` vem da declaração da rota (`permission:users.index,update`), não
-  do cliente. Não há interpolação de entrada do usuário no nome da coluna.
-- Mapeamento rota → chave:
+- **Admin**: o perfil de sistema `admin` detém todas as permissões
+  funcionais, inclusive de chaves criadas depois do seed. A matriz dele não
+  é editável (perfil `is_system`), então não há como o admin perder acesso
+  por dados.
+- **Demais perfis**: a união das flags de todos os perfis do usuário.
+- **Fail closed**: formato inválido, ação desconhecida ou chave inexistente
+  resultam em `false`.
+- `menus.is_active` é estado de navegação e **não** afeta a autorização.
+- Os dados são carregados uma vez por instância (`loadMissing('profiles.menus')`).
 
-| Rotas | Chave da matriz |
+| Rotas | Permissão |
 |---|---|
-| `users.*`, `users.profiles.update` | `users.index` |
-| `profiles.*` | `profiles.index` |
-| `profiles.menus.update` | `permissions.index` (update) |
-| `menus.*`, `menus.tree` | `menus.index` |
-| `auth.*`, `tokens.*` | nenhuma (só autenticação) |
+| `GET /users`, `GET /users/{id}` | `users.view` |
+| `POST /users` | `users.create` |
+| `PUT /users/{id}`, `PUT /users/{id}/profiles` | `users.update` |
+| `DELETE /users/{id}` | `users.delete` |
+| `profiles.*` | `profiles.{ação}` |
+| `PUT /profiles/{id}/menus` | `permissions.update` |
+| `menus.*` | `menus.{ação}` |
+| `GET /menus/tree`, `auth.*`, `tokens.*` | nenhuma (só camadas 1 e 2) |
 
-## Portão 3: as Policies
+Perfis padrão:
 
-| Policy | Regra | Relevância de segurança |
+| Perfil | Permissões funcionais |
+|---|---|
+| `admin` | todas (implícito) |
+| `dev` | nenhuma: autoatendimento por `/auth/me` e `/tokens` |
+| `viewer` | nenhuma |
+| customizado | exatamente as flags da matriz |
+
+## Camada 4: regras contextuais nas Policies
+
+As Policies perguntam `hasPermission()` para a parte funcional e acrescentam
+apenas o que depende da instância ou do ator:
+
+| Policy | Regra contextual |
+|---|---|
+| `UserPolicy::view`/`viewAny` | nenhuma: as duas usam `users.view` e nunca divergem ([FIND-009](../findings/README.md#find-009--perfil-dev-lista-todos-os-usuários-mas-não-pode-ver-nenhum)) |
+| `UserPolicy::update` | só admin altera conta de administrador |
+| `UserPolicy::delete` | nunca a si mesmo; só admin exclui administrador |
+| `UserPolicy::assignProfiles` | admin: livre (a invariante protege o último). Os demais não alteram os próprios perfis, não mexem em administrador e não adicionam nem removem perfil com permissão que não têm |
+| `ProfilePolicy::update/delete` | perfil `is_system` imutável; `delete` também sem usuários |
+| `ProfilePolicy::syncMenus` | perfil `is_system` imutável (inclusive para admin). Os demais não editam a matriz de um perfil que possuem e não concedem flags que não têm |
+| `MenuPolicy::delete` | menu `is_system` não é excluído; menu com filhos também não |
+
+## Anti privilege escalation
+
+| Vetor | Barreira | Teste |
 |---|---|---|
-| `UserPolicy::viewAny` | `admin` ou `dev` | `dev` lista todos ([FIND-009](../findings/README.md#find-009--perfil-dev-lista-todos-os-usuários-mas-não-pode-ver-nenhum)) |
-| `UserPolicy::view` | a si mesmo ou `admin` | protege contra IDOR em `GET /users/{id}` |
-| `UserPolicy::update` | `admin` em outro usuário, ou a si mesmo | a auto-edição é barrada antes pela matriz para não-admins |
-| `UserPolicy::delete` | `admin`, nunca a si mesmo | evita auto-exclusão |
-| `UserPolicy::assignProfiles` | `admin` | só admin concede privilégio |
-| `ProfilePolicy::update/delete/syncMenus` | `admin` e perfil não `is_system`; `delete` também sem usuários | perfis de sistema imutáveis |
-| `MenuPolicy::delete` | `admin` e sem filhos | integridade da árvore |
-| `MenuPolicy::update` | `admin` | **não há proteção de menus-chave** ([FIND-005](../findings/README.md#find-005--menus-são-chaves-de-autorização-sem-proteção-de-sistema)) |
-
-`hasProfile()` lê a relação `profiles` já carregada no model, com uma
-consulta por requisição.
+| Token `read` executa mutação | camada 2 | `TokenAbilityTest` |
+| Token cria token mais poderoso | `TokenStoreRequest::authorize` | `TokenAbilityTest` |
+| Usuário se atribui perfil privilegiado | `UserPolicy::assignProfiles` | `PrivilegeEscalationTest` |
+| Não-admin concede `admin` ou perfil acima do próprio | `User::holdsPermissionsOf` | `PrivilegeEscalationTest` |
+| Não-admin rebaixa ou edita um administrador | `UserPolicy::mayManage` | `PrivilegeEscalationTest` |
+| Delegado edita a matriz do próprio perfil | `ProfilePolicy::syncMenus` | `PrivilegeEscalationTest` |
+| Delegado concede flag que não tem | `ProfilePolicy::syncMenus` | `PrivilegeEscalationTest` |
+| Renomear/excluir menu-chave bloqueia a API | `key` imutável + `is_system` | `AuthorizationMatrixTest` |
 
 ## Visibilidade de menu ≠ autorização
 
-No NAPI a tabela `menu_profiles` tem **dois papéis**, e eles precisam
-continuar distintos:
-
-1. **Autorização (portão 2)**: aplicada no backend, em toda requisição, pelo
-   middleware. É o que protege a API.
-2. **Visibilidade**: `GET /menus/tree` devolve os menus raiz com `can_view`
-   para os perfis do ator, para uma interface decidir o que mostrar.
-
-Esconder um item de menu **não é** controle de segurança. Um cliente pode
-chamar qualquer rota diretamente, e a proteção continua sendo o middleware e
-a Policy. Hoje a árvore mostra **mais** do que o usuário pode acessar: os
-filhos não são filtrados por `can_view` ([FIND-010](../findings/README.md#find-010--árvore-de-menus-não-filtra-filhos-nem-inativos)).
-Isso não abre acesso, porque a rota filha continua protegida, mas expõe
-nomes de rotas.
+`GET /menus/tree` devolve os menus **ativos** em que o ator tem
+`{key}.view`, em qualquer profundidade. Um filho só aparece se o pai
+aparecer. A árvore é uma **projeção** da camada 3: a interface pode esconder
+itens a partir dela, mas quem protege a API continuam sendo as camadas 1 a 5.
+Por isso a árvore é acessível a qualquer usuário autenticado: ela só revela
+o que o próprio ator já pode ver. Um teste garante que aparecer na árvore
+não concede acesso (`MenuTreeTest`).
 
 ## Dados do cliente nunca são autorização
 
-- O ator vem sempre de `$request->user()` (token), nunca do corpo.
-- `is_system` não é aceito por `ProfileStoreRequest`/`ProfileUpdateRequest`,
-  então não pode ser definido pela API.
+- O ator vem sempre do token, nunca do corpo.
+- `is_system` não é aceito em perfis nem em menus, e `Menu` não o tem em `#[Fillable]`.
+- `key` de menu é `prohibited` na atualização.
 - `is_active` não é aceito por `UserStoreRequest`/`UserUpdateRequest`.
 - Controllers persistem apenas `$request->validated()`.
-- `#[Fillable]` limita os atributos gravados em massa, e `shouldBeStrict()`
-  lança exceção fora de produção (teste `has fillable protection`).
+- As Policies que recebem o conjunto pedido (`assignProfiles`, `syncMenus`)
+  avaliam a entrada ainda não validada de forma conservadora: na dúvida,
+  negam.
 
 ## Deny by default
 
-Confirmado em três níveis:
-
-- matriz: sem linha, ou flag `false` (default do schema), significa 404;
-- Policies: métodos retornam `false` quando nenhuma condição concede;
+- camada 1: sem token, token expirado ou dono inativo → 401;
+- camada 2: ability ausente → 403;
+- camada 3: sem linha na matriz, flag `false` ou chave desconhecida → 404;
+- camada 4: métodos retornam `false` se nenhuma condição concede;
 - Gate: uma ação sem método na Policy é negada.
 
-Exceções: rotas de token e `auth.me`/`auth.logout` exigem apenas
-autenticação, e isso é intencional (operam sobre o próprio ator).
+## Códigos de resposta
+
+A convenção do ADR-0006 foi mantida: negação funcional é **404**, para não
+revelar a área. Regras contextuais em escrita respondem **403**, porque o
+ator já sabe que a área existe. Ability ausente é **403**, e o dono do token
+conhece as rotas. Violação de invariante é **409**. Uma padronização completa
+fica para o [FIND-020](../findings/README.md#find-020--respostas-de-autorização-e-de-tokens-inconsistentes).

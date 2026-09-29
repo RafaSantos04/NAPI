@@ -7,20 +7,25 @@ do Laravel 13.
 
 ```text
 app/
-├── Domain/IAM/Actions/        Casos de uso com regra de negócio
-│   ├── AssignProfilesToUser.php
-│   └── SyncMenuPermissions.php
+├── Domain/IAM/
+│   ├── Actions/               Casos de uso com regra de negócio (transacionais)
+│   │   ├── AssignProfilesToUser.php
+│   │   ├── DeleteUser.php
+│   │   └── SyncMenuPermissions.php
+│   ├── Exceptions/LastActiveAdministratorException.php   409
+│   ├── AuditContext.php       Ator, IP e User-Agent carregados pelos eventos
+│   └── EnsureActiveAdministratorRemains.php              Invariante INV-08
 ├── DTOs/                      Dados validados HTTP → Action
 │   ├── AssignProfilesToUserDto.php
 │   └── SyncMenuPermissionsDto.php
 ├── Events/                    Fatos de domínio (síncronos)
-│   ├── PermissionChanged.php
-│   ├── ProfileAssigned.php
-│   └── UserLoggedIn.php
+│   ├── Contracts/Auditable.php
+│   ├── PermissionChanged.php, ProfileAssigned.php
+│   ├── UserLoggedIn.php, UserLoggedOut.php
+│   ├── UserCreated.php, UserUpdated.php, UserDeleted.php
+│   └── TokenCreated.php, TokenRevoked.php
 ├── Listeners/                 Reações; hoje, apenas auditoria
-│   ├── AuditPermissionChange.php
-│   ├── AuditProfileAssignment.php
-│   └── AuditUserLogin.php
+│   └── RecordAuditLog.php     Uma linha por evento Auditable
 ├── Http/
 │   ├── Controllers/Api/V1/    Controllers REST versionados
 │   │   ├── Auth/{AuthController, TokenController}.php
@@ -28,8 +33,10 @@ app/
 │   │   ├── ProfileController.php
 │   │   ├── UserController.php
 │   │   └── UserProfileController.php
-│   ├── Middleware/CheckPermission.php   Matriz de permissões por rota
-│   ├── Requests/              FormRequests (namespace plano, Auth/ separado)
+│   ├── Middleware/
+│   │   ├── CheckPermission.php     Permissão funcional por rota (404)
+│   │   └── EnsureTokenAbility.php  Ability do token pelo método HTTP (403)
+│   ├── Requests/              FormRequests (namespace plano, Auth/ separado: Login, TokenStore)
 │   └── Resources/             UserResource, ProfileResource, MenuResource
 ├── Models/                    User, UserDetails, Profile, Menu, AuditLog
 │                              + pivots UserProfile, MenuProfile
@@ -40,10 +47,11 @@ config/sanctum.php             Expiração (7 dias) e prefixo de token (napi_)
 database/
 ├── migrations/                citext, users, tokens, IAM, audit_logs
 ├── factories/                 User, UserDetails, Profile, Menu
-└── seeders/                   Perfis, menus + matriz, usuários de demonstração
+└── seeders/                   Perfis, menus de sistema, usuários de demonstração
 routes/api.php                 Todas as rotas /api/v1
 tests/
 ├── Feature/IAM/               Testes HTTP (seed automático via tests/Pest.php)
+├── Feature/Security/          Regressão de segurança com tokens Bearer reais (Fase 3.2)
 └── Feature/{User,Profile,Menu}Test.php   Testes de model/constraints
 ```
 

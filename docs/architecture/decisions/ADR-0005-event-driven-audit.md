@@ -4,7 +4,7 @@
 
 ## Status
 
-Accepted (Fase 3)
+Accepted (Fase 3). Evoluído na Fase 3.2; veja [Evolução na Fase 3.2](#evolução-na-fase-32).
 
 ## Context
 
@@ -83,8 +83,33 @@ Dá rastreabilidade às duas operações que mais alteram privilégios: atribuir
 perfis e mudar permissões. A trilha ainda é mutável e parcial; veja
 [audit.md](../../security/audit.md).
 
+## Evolução na Fase 3.2
+
+A decisão (auditoria como reação síncrona a eventos de domínio) continua. As
+limitações acima foram tratadas assim:
+
+- **Duplicidade**: os `Event::listen()` manuais foram removidos, e a discovery
+  do Laravel é o único registro ([FIND-002](../../findings/README.md#find-002--listeners-de-auditoria-registrados-em-duplicidade)).
+- **Contexto no evento**: todo evento auditável carrega um `AuditContext`
+  (ator, IP, User-Agent) montado na borda. Actions e listeners não usam mais
+  `auth()` nem `request()` ([FIND-013](../../findings/README.md#find-013--contexto-de-auditoria-acoplado-ao-processo-http-e-sem-atomicidade)).
+- **Atomicidade**: o evento é disparado dentro da transação da operação. Como
+  o listener é síncrono, estado e trilha fazem commit ou rollback juntos.
+- **Um listener**: os três listeners por evento foram substituídos por
+  `RecordAuditLog`, que escuta o contrato `App\Events\Contracts\Auditable`.
+  Cada evento descreve a própria entrada (`auditEntry()`), com `subject_type`
+  em FQCN.
+- **Cobertura**: logout e exclusão de usuário deixaram de ser inline; criação
+  e atualização de usuário e criação e revogação de token passaram a ser
+  auditadas. Login falho e CRUD de perfis/menus foram adiados (veja
+  [audit.md](../../security/audit.md#cobertura)).
+
+Consequência nova: enfileirar a auditoria exigiria abrir mão da atomicidade
+(`ShouldDispatchAfterCommit`), e essa troca deve ser registrada em ADR se um
+dia for feita.
+
 ## References
 
 - `app/Domain/IAM/Actions/*`, `app/Events/*`, `app/Listeners/*`
-- `app/Providers/AppServiceProvider.php` (registro manual)
-- `tests/Feature/IAM/AuditEventTest.php`, `UserProfileSyncTest.php`
+- `app/Events/Contracts/Auditable.php`, `app/Listeners/RecordAuditLog.php`, `app/Domain/IAM/AuditContext.php`
+- `tests/Feature/IAM/AuditEventTest.php`, `UserProfileSyncTest.php`, `tests/Feature/Security/AuditIntegrityTest.php`

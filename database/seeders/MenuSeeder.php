@@ -3,72 +3,38 @@
 namespace Database\Seeders;
 
 use App\Models\Menu;
-use App\Models\Profile;
 use Illuminate\Database\Seeder;
 
 class MenuSeeder extends Seeder
 {
     /**
-     * Seed the application's default menus.
+     * Seed the system menus. Their `key`s are the permission identifiers
+     * referenced by routes/api.php, so they are flagged `is_system` (not
+     * deletable through the API) and the key itself is immutable.
+     *
+     * No matrix rows are seeded: the admin profile holds every functional
+     * permission implicitly (ADR-0008), dev is limited to self-service
+     * (/auth/me) and viewer is blocked by default.
      */
     public function run(): void
     {
-        $users = Menu::create([
-            'label' => 'Users',
-            'route_name' => 'users.index',
-            'icon' => 'users',
-            'order' => 1,
-        ]);
-
-        $profiles = Menu::create([
-            'label' => 'Profiles',
-            'route_name' => 'profiles.index',
-            'icon' => 'shield',
-            'order' => 2,
-        ]);
-
-        $menus = Menu::create([
-            'label' => 'Menus',
-            'route_name' => 'menus.index',
-            'icon' => 'menu',
-            'order' => 3,
-        ]);
-
-        $audit = Menu::create([
-            'label' => 'Audit Logs',
-            'route_name' => 'audit-logs.index',
-            'icon' => 'activity',
-            'order' => 4,
-        ]);
-
-        $permissions = Menu::create([
-            'label' => 'Permissions',
-            'route_name' => 'permissions.index',
-            'icon' => 'lock',
-            'order' => 1,
-            'parent_id' => $profiles->id,
-        ]);
-
-        $this->grantPermissions($users, $profiles, $menus, $audit, $permissions);
+        $this->systemMenu('users', 'Users', 'users.index', 'users', 1);
+        $profiles = $this->systemMenu('profiles', 'Profiles', 'profiles.index', 'shield', 2);
+        $this->systemMenu('menus', 'Menus', 'menus.index', 'menu', 3);
+        $this->systemMenu('audit-logs', 'Audit Logs', 'audit-logs.index', 'activity', 4);
+        $this->systemMenu('permissions', 'Permissions', 'permissions.index', 'lock', 1, $profiles);
     }
 
-    /**
-     * Grant default menu permissions per profile: admin gets full CRUD on
-     * every menu; dev only gets view access to the Users menu (needed for
-     * self-service endpoints); viewer gets nothing (blocked by default).
-     */
-    private function grantPermissions(Menu ...$menus): void
+    private function systemMenu(string $key, string $label, string $routeName, string $icon, int $order, ?Menu $parent = null): Menu
     {
-        $admin = Profile::where('slug', 'admin')->firstOrFail();
-        $dev = Profile::where('slug', 'dev')->firstOrFail();
-
-        $fullAccess = ['can_view' => true, 'can_create' => true, 'can_update' => true, 'can_delete' => true];
-
-        foreach ($menus as $menu) {
-            $menu->profiles()->attach($admin->id, $fullAccess);
-        }
-
-        $usersMenu = $menus[0];
-        $usersMenu->profiles()->attach($dev->id, ['can_view' => true]);
+        return Menu::forceCreate([
+            'key' => $key,
+            'label' => $label,
+            'route_name' => $routeName,
+            'icon' => $icon,
+            'order' => $order,
+            'parent_id' => $parent?->id,
+            'is_system' => true,
+        ]);
     }
 }

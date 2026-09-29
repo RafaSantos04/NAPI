@@ -2,11 +2,19 @@
 
 [← Documentação](../README.md) · [Threat model](../security/threat-model.md)
 
-Observações encontradas ao investigar o código após a Fase 3. **Nenhuma foi
-corrigida nesta fase**: a Fase 3.1 só documenta.
+Observações encontradas ao investigar o código após a Fase 3. A Fase 3.1 só
+documentou. A **Fase 3.2** corrigiu os prioritários e adicionou a cada finding
+um bloco **"Status (Fase 3.2)"**, preservando a descrição original, que
+registra o comportamento como era ([Fase 3.2](../phases/phase-03-2-iam-hardening.md)).
 
-**Evidência "confirmado em execução":** o comportamento foi reproduzido com
-testes Pest temporários contra o banco `napi_test`, removidos logo depois.
+Status usados: `OPEN` · `RESOLVED` · `DEFERRED` · `ACCEPTED RISK`. "RESOLVED
+(parcial)" indica que o bloco descreve o que foi resolvido e o que continua
+aberto ou adiado.
+
+**Evidência "confirmado em execução":** na Fase 3.1, o comportamento foi
+reproduzido com testes Pest temporários contra o banco `napi_test`, removidos
+logo depois. Na Fase 3.2 essas reproduções viraram testes permanentes em
+`tests/Feature/Security/`.
 Nos demais casos, a evidência é a leitura do código citado.
 
 **Severidade** só é atribuída quando há impacto técnico concreto:
@@ -20,32 +28,34 @@ Nos demais casos, a evidência é a leitura do código citado.
 
 ## Resumo
 
-| ID | Título | Categoria | Severidade |
-|---|---|---|---|
-| [FIND-001](#find-001--abilities-de-token-não-são-aplicadas) | Abilities de token não são aplicadas | Security | **High** |
-| [FIND-002](#find-002--listeners-de-auditoria-registrados-em-duplicidade) | Listeners de auditoria registrados em duplicidade | Architecture | Medium |
-| [FIND-003](#find-003--usuário-desativado-continua-autenticado) | Usuário desativado continua autenticado | Security | Medium |
-| [FIND-004](#find-004--duas-fontes-de-autorização-que-não-se-conhecem) | Duas fontes de autorização que não se conhecem | Architecture | Medium |
-| [FIND-005](#find-005--menus-são-chaves-de-autorização-sem-proteção-de-sistema) | Menus são chaves de autorização sem proteção de sistema | Security | Medium |
-| [FIND-006](#find-006--regra-do-último-administrador-tem-janela-de-corrida-e-resposta-500) | Regra do último administrador tem janela de corrida e resposta 500 | Security | Medium |
-| [FIND-007](#find-007--userhaspermission-é-um-stub-que-sempre-autoriza) | `User::hasPermission()` é um stub que sempre autoriza | Security | Medium |
-| [FIND-008](#find-008--hash-de-cpf-é-reversível-por-força-bruta) | Hash de CPF é reversível por força bruta | Security | Medium |
-| [FIND-009](#find-009--perfil-dev-lista-todos-os-usuários-mas-não-pode-ver-nenhum) | Perfil `dev` lista todos os usuários mas não pode ver nenhum | Security | Medium |
-| [FIND-010](#find-010--árvore-de-menus-não-filtra-filhos-nem-inativos) | Árvore de menus não filtra filhos nem inativos | Architecture | Low |
-| [FIND-011](#find-011--validação-incompleta-na-sincronização-de-permissões) | Validação incompleta na sincronização de permissões | Maintainability | Low |
-| [FIND-012](#find-012--lacunas-de-cobertura-da-auditoria) | Lacunas de cobertura da auditoria | Security | Medium |
-| [FIND-013](#find-013--contexto-de-auditoria-acoplado-ao-processo-http-e-sem-atomicidade) | Contexto de auditoria acoplado ao processo HTTP e sem atomicidade | Architecture | Low |
-| [FIND-014](#find-014--audit_logs-é-mutável) | `audit_logs` é mutável | Security | Low |
-| [FIND-015](#find-015--expiração-de-token-aceita-valores-que-nunca-terão-efeito) | Expiração de token aceita valores que nunca terão efeito | Security | Low |
-| [FIND-016](#find-016--rate-limiting-restrito-ao-login-e-por-emailip) | Rate limiting restrito ao login e por email+IP | Security | Low |
-| [FIND-017](#find-017--assigned_by-não-é-preenchido-pela-api) | `assigned_by` não é preenchido pela API | Maintainability | Low |
-| [FIND-018](#find-018--sinais-de-enumeração-no-login) | Sinais de enumeração no login | Security | Low |
-| [FIND-019](#find-019--menu-pode-ser-pai-de-si-mesmo) | Menu pode ser pai de si mesmo | Maintainability | Low |
-| [FIND-020](#find-020--respostas-de-autorização-e-de-tokens-inconsistentes) | Respostas de autorização e de tokens inconsistentes | Maintainability | Improvement |
-| [FIND-021](#find-021--lacunas-de-testes-de-segurança) | Lacunas de testes de segurança | Testing | Improvement |
-| [FIND-022](#find-022--documentação-e-histórico-divergem-do-código) | Documentação e histórico divergem do código | Documentation | Improvement |
+| ID | Título | Categoria | Severidade | Status (Fase 3.2) |
+|---|---|---|---|---|
+| [FIND-001](#find-001--abilities-de-token-não-são-aplicadas) | Abilities de token não são aplicadas | Security | **High** | RESOLVED |
+| [FIND-002](#find-002--listeners-de-auditoria-registrados-em-duplicidade) | Listeners de auditoria registrados em duplicidade | Architecture | Medium | RESOLVED |
+| [FIND-003](#find-003--usuário-desativado-continua-autenticado) | Usuário desativado continua autenticado | Security | Medium | RESOLVED |
+| [FIND-004](#find-004--duas-fontes-de-autorização-que-não-se-conhecem) | Duas fontes de autorização que não se conhecem | Architecture | Medium | RESOLVED |
+| [FIND-005](#find-005--menus-são-chaves-de-autorização-sem-proteção-de-sistema) | Menus são chaves de autorização sem proteção de sistema | Security | Medium | RESOLVED |
+| [FIND-006](#find-006--regra-do-último-administrador-tem-janela-de-corrida-e-resposta-500) | Regra do último administrador tem janela de corrida e resposta 500 | Security | Medium | RESOLVED |
+| [FIND-007](#find-007--userhaspermission-é-um-stub-que-sempre-autoriza) | `User::hasPermission()` é um stub que sempre autoriza | Security | Medium | RESOLVED |
+| [FIND-008](#find-008--hash-de-cpf-é-reversível-por-força-bruta) | Hash de CPF é reversível por força bruta | Security | Medium | OPEN |
+| [FIND-009](#find-009--perfil-dev-lista-todos-os-usuários-mas-não-pode-ver-nenhum) | Perfil `dev` lista todos os usuários mas não pode ver nenhum | Security | Medium | RESOLVED |
+| [FIND-010](#find-010--árvore-de-menus-não-filtra-filhos-nem-inativos) | Árvore de menus não filtra filhos nem inativos | Architecture | Low | RESOLVED |
+| [FIND-011](#find-011--validação-incompleta-na-sincronização-de-permissões) | Validação incompleta na sincronização de permissões | Maintainability | Low | RESOLVED |
+| [FIND-012](#find-012--lacunas-de-cobertura-da-auditoria) | Lacunas de cobertura da auditoria | Security | Medium | RESOLVED (parcial) |
+| [FIND-013](#find-013--contexto-de-auditoria-acoplado-ao-processo-http-e-sem-atomicidade) | Contexto de auditoria acoplado ao processo HTTP e sem atomicidade | Architecture | Low | RESOLVED (parcial) |
+| [FIND-014](#find-014--audit_logs-é-mutável) | `audit_logs` é mutável | Security | Low | OPEN |
+| [FIND-015](#find-015--expiração-de-token-aceita-valores-que-nunca-terão-efeito) | Expiração de token aceita valores que nunca terão efeito | Security | Low | RESOLVED (parcial) |
+| [FIND-016](#find-016--rate-limiting-restrito-ao-login-e-por-emailip) | Rate limiting restrito ao login e por email+IP | Security | Low | OPEN |
+| [FIND-017](#find-017--assigned_by-não-é-preenchido-pela-api) | `assigned_by` não é preenchido pela API | Maintainability | Low | RESOLVED |
+| [FIND-018](#find-018--sinais-de-enumeração-no-login) | Sinais de enumeração no login | Security | Low | OPEN |
+| [FIND-019](#find-019--menu-pode-ser-pai-de-si-mesmo) | Menu pode ser pai de si mesmo | Maintainability | Low | OPEN |
+| [FIND-020](#find-020--respostas-de-autorização-e-de-tokens-inconsistentes) | Respostas de autorização e de tokens inconsistentes | Maintainability | Improvement | RESOLVED (parcial) |
+| [FIND-021](#find-021--lacunas-de-testes-de-segurança) | Lacunas de testes de segurança | Testing | Improvement | RESOLVED (parcial) |
+| [FIND-022](#find-022--documentação-e-histórico-divergem-do-código) | Documentação e histórico divergem do código | Documentation | Improvement | RESOLVED (parcial) |
 
 Contagem: 1 High · 9 Medium · 9 Low · 3 Improvement. Nenhum Critical.
+
+Após a Fase 3.2: **17 RESOLVED**, 6 deles parcialmente (o bloco de status diz o que ficou aberto ou adiado), e **5 OPEN** (FIND-008, 014, 016, 018, 019). O único High (FIND-001) e 8 dos 9 Medium foram resolvidos; o Medium restante é o FIND-008.
 
 ---
 
@@ -82,6 +92,18 @@ exercita abilities.
 
 Hardening, antes da Fase 4.
 
+### Status (Fase 3.2)
+
+**Status:** RESOLVED
+
+**Root cause:** Sanctum grava as abilities, mas só as verifica quando a rota pede (`abilities:`/`ability:`) ou o código chama `tokenCan()`. Nenhum dos dois existia.
+
+**Resolution:** `EnsureTokenAbility` (alias `token.ability`) aplicado a todo o grupo autenticado, derivando a ability do método HTTP: GET/HEAD/OPTIONS→`read`, POST/PUT/PATCH→`write`, DELETE→`delete`. O login passou a emitir as três abilities. `TokenStoreRequest::authorize` impede um token de emitir outro com abilities maiores que as dele.
+
+**Tests:** `tests/Feature/Security/TokenAbilityTest.php`
+
+**Commit:** pending
+
 ---
 
 ## FIND-002 — Listeners de auditoria registrados em duplicidade
@@ -115,6 +137,18 @@ Adicionar teste que verifique `count() === 1`.
 
 Hardening. Correção de uma linha; o erro foi introduzido na Fase 3.
 
+### Status (Fase 3.2)
+
+**Status:** RESOLVED
+
+**Root cause:** O Laravel 13 descobre automaticamente listeners em `app/Listeners` (`Class@handle`), e o `AppServiceProvider` os registrava de novo com `Event::listen()` (`Class`). Confirmado em `php artisan event:list`.
+
+**Resolution:** Os `Event::listen()` foram removidos, e a discovery ficou como único mecanismo. Os três listeners foram substituídos por `RecordAuditLog`, que escuta o contrato `Auditable`; `event:list` mostra um único registro.
+
+**Tests:** `tests/Feature/Security/AuditIntegrityTest.php` (`count() === 1` por ação)
+
+**Commit:** pending
+
 ---
 
 ## FIND-003 — Usuário desativado continua autenticado
@@ -147,6 +181,18 @@ um endpoint próprio, auditado.
 ### Suggested phase
 
 Hardening / Fase 4 (a área administrativa vai precisar desativar usuários).
+
+### Status (Fase 3.2)
+
+**Status:** RESOLVED
+
+**Root cause:** A guarda do Sanctum valida o token (hash, expiração, `tokenable` existente), mas não conhece o conceito de conta ativa.
+
+**Resolution:** Enforcement num único ponto: `Sanctum::authenticateAccessTokensUsing` no `AppServiceProvider` recusa o token cujo dono não está ativo (401). Higiene: hook `updated` em `User` apaga os tokens quando `is_active` passa a `false`. O endpoint de desativação ficou para a Fase 4.
+
+**Tests:** `tests/Feature/Security/DisabledUserAuthenticationTest.php`
+
+**Commit:** pending
 
 ---
 
@@ -183,6 +229,18 @@ auto-exclusão).
 
 Antes da Fase 4. A área administrativa depende de perfis configuráveis
 funcionarem.
+
+### Status (Fase 3.2)
+
+**Status:** RESOLVED
+
+**Root cause:** As Policies nasceram antes da matriz ter uma API de consulta reutilizável e decidiam por slug. A matriz só existia dentro do `CheckPermission`.
+
+**Resolution:** `User::hasPermission("{key}.{ação}")` é a única resposta funcional, usada pelo middleware, pelas Policies e pela árvore. As Policies ficaram só com regras contextuais e anti-escalação. Decisão registrada no [ADR-0008](../architecture/decisions/ADR-0008-layered-authorization-model.md).
+
+**Tests:** `tests/Feature/Security/AuthorizationMatrixTest.php`, `PrivilegeEscalationTest.php`
+
+**Commit:** pending
 
 ---
 
@@ -224,6 +282,18 @@ um bypass explícito de admin na matriz, registrado em ADR.
 
 Hardening, antes da Fase 4.
 
+### Status (Fase 3.2)
+
+**Status:** RESOLVED
+
+**Root cause:** O `route_name` fazia dois papéis, navegação (editável) e identificador de permissão, e o perfil `admin` recebia acesso por linhas da matriz que ele mesmo não podia editar.
+
+**Resolution:** Coluna nova `menus.key`, única e imutável (`prohibited` na atualização), usada como identificador de permissão; `route_name` passou a ser só navegação. Os menus-chave são `is_system` e não podem ser excluídos. O `admin` detém todas as permissões funcionais implicitamente, inclusive de menus novos. As colunas entraram na migration de criação de `menus`, já que ainda não há banco de produção.
+
+**Tests:** `tests/Feature/Security/AuthorizationMatrixTest.php` (`Stable permission keys`)
+
+**Commit:** pending
+
 ---
 
 ## FIND-006 — Regra do último administrador tem janela de corrida e resposta 500
@@ -260,6 +330,18 @@ teste.
 
 Hardening.
 
+### Status (Fase 3.2)
+
+**Status:** RESOLVED
+
+**Root cause:** Check-then-act sem transação nem lock; a contagem ignorava `is_active`; a regra lançava `\Exception`.
+
+**Resolution:** Invariante "≥ 1 administrador ativo" em `EnsureActiveAdministratorRemains`, chamada dentro de `DB::transaction` com `SELECT … FOR UPDATE` na linha do perfil `admin`, por `AssignProfilesToUser` e pela nova Action `DeleteUser`. Violação: `LastActiveAdministratorException` → 409, fora do report. A serialização foi verificada manualmente no PostgreSQL (segunda conexão bloqueada com `55P03`).
+
+**Tests:** `tests/Feature/Security/AdminInvariantTest.php`, `IAM/UserProfileSyncTest.php` (500 → 409)
+
+**Commit:** pending
+
 ---
 
 ## FIND-007 — `User::hasPermission()` é um stub que sempre autoriza
@@ -290,6 +372,18 @@ fonte) ou remover o método.
 ### Suggested phase
 
 Antes da Fase 4.
+
+### Status (Fase 3.2)
+
+**Status:** RESOLVED
+
+**Root cause:** O stub da Fase 1 nunca foi atualizado quando a lógica real foi escrita no `CheckPermission` (Fase 2).
+
+**Resolution:** `hasPermission(string $permission)` foi implementada de verdade e é agora a fonte única: fail-closed para formato, ação ou chave desconhecidos; admin implícito; resultado carregado uma vez por instância.
+
+**Tests:** `tests/Feature/Security/AuthorizationMatrixTest.php` (`Functional permissions`)
+
+**Commit:** pending
 
 ---
 
@@ -323,6 +417,12 @@ precisar ser lido. Registrar em ADR.
 
 Antes de qualquer fase que colete CPF.
 
+### Status (Fase 3.2)
+
+**Status:** OPEN
+
+**Nota:** Fora do escopo da Fase 3.2. Deve ser tratado antes de qualquer fase que colete CPF.
+
 ---
 
 ## FIND-009 — Perfil `dev` lista todos os usuários mas não pode ver nenhum
@@ -352,6 +452,18 @@ pelo que o ator pode ver. Adicionar teste de listagem para `dev`.
 ### Suggested phase
 
 Hardening.
+
+### Status (Fase 3.2)
+
+**Status:** RESOLVED
+
+**Root cause:** `viewAny` e `view` tinham regras diferentes, e o seed dava `users.view` ao `dev` com a intenção de autoatendimento.
+
+**Resolution:** `viewAny` e `view` exigem a mesma permissão, `users.view`. Por decisão do responsável pelo projeto, o `dev` ficou só com autoatendimento (`/auth/me`), e a linha foi removida do seed. `dev` recebe 404 em `/users` e em `/users/{id}`.
+
+**Tests:** `tests/Feature/Security/AuthorizationMatrixTest.php` (`limits dev to self-service`, `keeps list and detail consistent…`)
+
+**Commit:** pending
 
 ---
 
@@ -389,6 +501,18 @@ próprio ator vê. Definir a profundidade suportada.
 
 Fase 4 (a área administrativa vai consumir a árvore).
 
+### Status (Fase 3.2)
+
+**Status:** RESOLVED
+
+**Root cause:** A árvore filtrava só as raízes, pela matriz, e carregava um nível de filhos sem filtro.
+
+**Resolution:** `MenuController::tree` carrega os menus ativos, filtra por `hasPermission("{key}.view")` e monta a árvore em memória a partir das raízes, em qualquer profundidade. Filhos só aparecem sob pai visível, e ciclos ficam inalcançáveis. A rota ficou acessível a qualquer autenticado com `read`.
+
+**Tests:** `tests/Feature/Security/MenuTreeTest.php`
+
+**Commit:** pending
+
 ---
 
 ## FIND-011 — Validação incompleta na sincronização de permissões
@@ -417,6 +541,18 @@ limitar o tamanho.
 ### Suggested phase
 
 Hardening.
+
+### Status (Fase 3.2)
+
+**Status:** RESOLVED
+
+**Root cause:** As regras validavam só os valores de `permissions.*`.
+
+**Resolution:** `present` em vez de `required` (permite revogar tudo), `max:200` e uma regra que valida as chaves contra `menus.id` (422 em vez de 500).
+
+**Tests:** `tests/Feature/Security/PrivilegeEscalationTest.php` (`rejects unknown menu ids…`, `allows revoking every permission…`)
+
+**Commit:** pending
 
 ---
 
@@ -447,6 +583,18 @@ logout e exclusão para eventos.
 ### Suggested phase
 
 Hardening / Fase 5.
+
+### Status (Fase 3.2)
+
+**Status:** RESOLVED (parcial) · restante DEFERRED
+
+**Root cause:** Auditoria implementada caso a caso, sem um conjunto mínimo definido.
+
+**Resolution:** Classificação registrada em [audit.md](../security/audit.md#cobertura). **Audit now**, implementado: `user_created`, `user_updated` (só nomes de campos), `user_deleted` (via evento), `token_created`, `token_revoked`, e `logout` migrado para evento. `subject_type` padronizado em FQCN. **Deferred** (Fase 5): login falho (junto com FIND-016/018) e CRUD de perfis e menus.
+
+**Tests:** `tests/Feature/Security/AuditIntegrityTest.php`
+
+**Commit:** pending
 
 ---
 
@@ -479,6 +627,18 @@ após o commit). Configurar proxies confiáveis no deploy.
 
 Hardening.
 
+### Status (Fase 3.2)
+
+**Status:** RESOLVED (parcial) · `trustProxies` DEFERRED
+
+**Root cause:** Ator e IP eram lidos do processo HTTP (`auth()`, `request()`) em vez de viajar com o fato; o evento era disparado sem transação.
+
+**Resolution:** Eventos auditáveis carregam `AuditContext` (ator, IP, UA) montado na borda; Actions e listeners não usam mais `auth()`/`request()`. As Actions e os controllers disparam o evento dentro de `DB::transaction`, e como o listener é síncrono, estado e trilha são atômicos. `trustProxies` é configuração de deploy e continua pendente.
+
+**Tests:** `tests/Feature/Security/AuditIntegrityTest.php` (`takes the actor from the event…`), `AdminInvariantTest.php` (`leaves no audit trail for a rejected change`)
+
+**Commit:** pending
+
 ---
 
 ## FIND-014 — audit_logs é mutável
@@ -504,6 +664,12 @@ evidência de adulteração.
 ### Suggested phase
 
 Fase 5.
+
+### Status (Fase 3.2)
+
+**Status:** OPEN
+
+**Nota:** Fora do escopo da Fase 3.2 (Fase 5).
 
 ---
 
@@ -533,6 +699,18 @@ coerente) e agendar a limpeza.
 
 Hardening.
 
+### Status (Fase 3.2)
+
+**Status:** RESOLVED (parcial) · limpeza DEFERRED
+
+**Root cause:** A validação de `expires_in_days` ignorava o teto global do Sanctum.
+
+**Resolution:** `TokenStoreRequest` limita `expires_in_days` ao teto derivado de `config("sanctum.expiration")` (7 dias), que também é o padrão. O agendamento de `sanctum:prune-expired` continua pendente.
+
+**Tests:** `tests/Feature/Security/TokenAbilityTest.php` (`caps token lifetime…`)
+
+**Commit:** pending
+
 ---
 
 ## FIND-016 — Rate limiting restrito ao login e por email+IP
@@ -557,6 +735,12 @@ padrão para as rotas autenticadas.
 ### Suggested phase
 
 Hardening.
+
+### Status (Fase 3.2)
+
+**Status:** OPEN
+
+**Nota:** Fora do escopo da Fase 3.2.
 
 ---
 
@@ -584,6 +768,18 @@ explícito na Action.
 
 Hardening.
 
+### Status (Fase 3.2)
+
+**Status:** RESOLVED
+
+**Root cause:** A Action não recebia o ator.
+
+**Resolution:** `AssignProfilesToUser` recebe `AuditContext` e grava `assigned_by` apenas nos perfis recém-anexados, preservando o autor original dos que já existiam.
+
+**Tests:** `tests/Feature/Security/AuditIntegrityTest.php` (`records the assigning actor on the pivot`)
+
+**Commit:** pending
+
 ---
 
 ## FIND-018 — Sinais de enumeração no login
@@ -609,6 +805,12 @@ também para contas inativas.
 
 Fase 5 (bom cenário de verificação para o Security Lab).
 
+### Status (Fase 3.2)
+
+**Status:** OPEN
+
+**Nota:** Fora do escopo da Fase 3.2 (Fase 5).
+
 ---
 
 ## FIND-019 — Menu pode ser pai de si mesmo
@@ -632,6 +834,12 @@ Proibir `parent_id` igual ao próprio ID e a descendentes.
 ### Suggested phase
 
 Fase 4.
+
+### Status (Fase 3.2)
+
+**Status:** OPEN
+
+**Nota:** Fora do escopo. Mitigação parcial: a nova árvore é montada a partir das raízes e nunca alcança nós de um ciclo, então não entra em loop. O dado inválido continua sendo aceito (Fase 4).
 
 ---
 
@@ -661,6 +869,16 @@ por exemplo com `Response::denyAsNotFound()` nas Policies.
 
 Hardening.
 
+### Status (Fase 3.2)
+
+**Status:** RESOLVED (parcial) · restante OPEN
+
+**Resolution:** `DELETE /tokens/{id}` responde 404 quando o token não é do usuário ou não existe; a validação de tokens foi para `TokenStoreRequest`, e o parâmetro de rota passou a se chamar `$token`. A política de códigos foi documentada em [authorization.md](../security/authorization.md#códigos-de-resposta): 404 funcional, 403 contextual ou de ability, 409 invariante. Continuam abertos o envelope divergente de `store` e a negação manual em `index`/`show`.
+
+**Tests:** `tests/Feature/Security/TokenAbilityTest.php` (`returns 404 when revoking a token…`)
+
+**Commit:** pending
+
 ---
 
 ## FIND-021 — Lacunas de testes de segurança
@@ -688,6 +906,16 @@ Cada finding corrigido deve vir com um teste que falhe antes da correção.
 
 Fase 5.
 
+### Status (Fase 3.2)
+
+**Status:** RESOLVED (parcial) · varredura de rotas OPEN
+
+**Resolution:** Todos os itens listados na evidência ganharam teste com token real em `tests/Feature/Security/`, com exceção do teste de varredura de rotas. Veja [security-tests.md](../testing/security-tests.md#lacunas).
+
+**Tests:** `tests/Feature/Security/*` (80 testes)
+
+**Commit:** pending
+
 ---
 
 ## FIND-022 — Documentação e histórico divergem do código
@@ -709,3 +937,11 @@ alinhar `config/sanctum.php` à decisão.
 ### Suggested phase
 
 README: feito na Fase 3.1. Restante: junto com FIND-007 e antes da Fase 4.
+
+### Status (Fase 3.2)
+
+**Status:** RESOLVED (parcial) · decisão SPA OPEN
+
+**Resolution:** O stub de `hasPermission()` foi substituído pela implementação real (FIND-007). A decisão sobre ativar ou abandonar a autenticação SPA por cookie continua pendente.
+
+**Commit:** pending

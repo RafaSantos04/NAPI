@@ -39,7 +39,7 @@ PostgreSQL, Sanctum 4, Pest 4, Larastan (nível 6) e Pint (preset `laravel`).
 - [Autorização](security/authorization.md)
 - [Políticas e invariantes de segurança](security/security-policies.md)
 - [Auditoria](security/audit.md)
-- [Threat model inicial](security/threat-model.md)
+- [Threat model](security/threat-model.md)
 
 ## API
 
@@ -60,8 +60,9 @@ PostgreSQL, Sanctum 4, Pest 4, Larastan (nível 6) e Pint (preset `laravel`).
 
 - [Fases](phases/README.md)
 - [Fase 3: IAM REST](phases/phase-03-iam-rest.md)
+- [Fase 3.2: IAM Security Hardening](phases/phase-03-2-iam-hardening.md)
 - [Findings](findings/README.md): problemas e riscos encontrados no Reality
-  Check da Fase 3.1, ainda não corrigidos
+  Check da Fase 3.1, com o status de cada um após a Fase 3.2
 
 ## Como manter esta documentação
 

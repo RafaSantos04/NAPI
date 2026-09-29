@@ -4,8 +4,16 @@
 
 ## Status
 
-Accepted (registrado retroativamente na Fase 3.1; o método `assignProfiles`
-foi decidido na Fase 3)
+**Superseded by [ADR-0008](ADR-0008-layered-authorization-model.md)** (Fase 3.2).
+
+Originalmente: Accepted (registrado retroativamente na Fase 3.1; o método
+`assignProfiles` foi decidido na Fase 3).
+
+> O que mudou: as Policies continuam existindo e continuam sendo o lugar das
+> regras de instância, mas deixaram de decidir por slug de perfil. A parte
+> funcional vem de `User::hasPermission()` (matriz). A separação
+> "Policy decide quem pode, Action protege o estado", registrada abaixo sobre
+> `assignProfiles`, foi mantida. O texto abaixo descreve a decisão como era.
 
 ## Context
 
