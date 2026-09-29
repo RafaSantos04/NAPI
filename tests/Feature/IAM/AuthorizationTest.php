@@ -34,13 +34,17 @@ describe('Authorization', function () {
         $response->assertStatus(404);
     });
 
-    it('allows user to view themselves', function () {
+    // Fase 3.2 (FIND-009): o autoatendimento é /auth/me; GET /users/{id}
+    // exige users.view, inclusive para o próprio usuário.
+    it('allows user to view themselves through /auth/me', function () {
         $user = User::where('email', 'dev@napi.dev')->first();
 
-        $response = $this->actingAs($user)
-            ->getJson("/api/v1/users/{$user->id}");
+        $this->actingAs($user)->getJson('/api/v1/auth/me')
+            ->assertStatus(200)
+            ->assertJsonPath('data.id', $user->id);
 
-        $response->assertStatus(200);
+        $this->actingAs($user)->getJson("/api/v1/users/{$user->id}")
+            ->assertStatus(404);
     });
 
     it('blocks admin from deleting themselves', function () {

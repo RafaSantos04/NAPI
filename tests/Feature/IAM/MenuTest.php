@@ -28,6 +28,7 @@ describe('Menu CRUD', function () {
 
         $response = $this->actingAs($admin)
             ->postJson('/api/v1/menus', [
+                'key' => 'settings',
                 'label' => 'Settings',
                 'route_name' => 'settings.index',
                 'icon' => 'settings',

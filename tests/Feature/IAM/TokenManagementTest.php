@@ -10,7 +10,7 @@ describe('Token Management', function () {
             ->postJson('/api/v1/tokens', [
                 'name' => 'My App',
                 'abilities' => ['read', 'write'],
-                'expires_in_days' => 30,
+                'expires_in_days' => 7,
             ]);
 
         $response->assertStatus(201);

@@ -1,6 +1,10 @@
 <?php
 
+use App\Models\Menu;
+use App\Models\Profile;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 /*
@@ -22,7 +26,7 @@ pest()->extend(TestCase::class)
 // DatabaseSeeder. Scoped to this directory (not globally) so it doesn't
 // collide with other Feature tests that create their own 'admin'-slug
 // profiles via factories.
-uses()->beforeEach(fn () => $this->seed())->in('Feature/IAM');
+uses()->beforeEach(fn () => $this->seed())->in('Feature/IAM', 'Feature/Security');
 
 /*
 |--------------------------------------------------------------------------
@@ -50,7 +54,70 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+/**
+ * Issues a real Sanctum personal access token, so the request goes through
+ * auth:sanctum, token resolution and ability checks. actingAs() skips all of
+ * them by attaching a TransientToken that can do anything.
+ *
+ * @param  array<int, string>  $abilities
+ */
+function tokenFor(User $user, array $abilities = ['read', 'write', 'delete']): string
 {
-    // ..
+    return $user->createToken('test', $abilities)->plainTextToken;
+}
+
+function seededUser(string $slug): User
+{
+    return User::where('email', "{$slug}@napi.dev")->firstOrFail();
+}
+
+/**
+ * Creates a non-system profile holding exactly the given functional
+ * permissions, e.g. ['users' => ['view', 'update']].
+ *
+ * @param  array<string, array<int, string>>  $permissions
+ */
+function profileWithPermissions(array $permissions, ?User $holder = null): Profile
+{
+    $profile = Profile::factory()->create();
+
+    foreach ($permissions as $key => $actions) {
+        $menu = Menu::where('key', $key)->firstOrFail();
+        $profile->menus()->attach($menu->id, [
+            'can_view' => in_array('view', $actions, true),
+            'can_create' => in_array('create', $actions, true),
+            'can_update' => in_array('update', $actions, true),
+            'can_delete' => in_array('delete', $actions, true),
+        ]);
+    }
+
+    $holder?->profiles()->attach($profile->id);
+
+    return $profile;
+}
+
+/**
+ * @param  array<string, array<int, string>>  $permissions
+ */
+function userWithPermissions(array $permissions): User
+{
+    $user = User::factory()->create();
+    profileWithPermissions($permissions, $user);
+
+    return $user;
+}
+
+/**
+ * Sends a request authenticated by a real bearer token. Guards are reset
+ * first because the test application keeps the resolved user between
+ * requests of the same test.
+ *
+ * @param  array<string, mixed>  $data
+ * @param  array<int, string>  $abilities
+ */
+function asToken(User $user, string $method, string $uri, array $data = [], array $abilities = ['read', 'write', 'delete']): TestResponse
+{
+    app('auth')->forgetGuards();
+
+    return test()->withToken(tokenFor($user, $abilities))->json($method, $uri, $data);
 }

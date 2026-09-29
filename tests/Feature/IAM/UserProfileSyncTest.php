@@ -29,7 +29,8 @@ describe('User Profile Sync', function () {
                 'profile_ids' => [],
             ]);
 
-        $response->assertStatus(500);
+        // Regra de domínio conhecida: 409 Conflict, não 500 (FIND-006).
+        $response->assertStatus(409);
     });
 
     it('blocks user from assigning profiles to themselves', function () {
