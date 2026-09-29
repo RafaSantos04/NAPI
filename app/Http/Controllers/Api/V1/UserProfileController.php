@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Domain\IAM\Actions\AssignProfilesToUser;
+use App\Domain\IAM\AuditContext;
 use App\DTOs\AssignProfilesToUserDto;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AssignProfileRequest;
@@ -15,7 +16,7 @@ class UserProfileController extends Controller
     public function update(AssignProfileRequest $request, User $user): JsonResponse
     {
         $dto = AssignProfilesToUserDto::from($request);
-        AssignProfilesToUser::execute($user, $dto);
+        AssignProfilesToUser::execute($user, $dto, AuditContext::fromRequest($request));
 
         return response()->json([
             'message' => 'Profiles assigned successfully.',

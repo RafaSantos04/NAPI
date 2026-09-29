@@ -8,7 +8,7 @@ use App\Models\User;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class UserLoggedIn implements Auditable
+class UserCreated implements Auditable
 {
     use Dispatchable, SerializesModels;
 
@@ -21,7 +21,9 @@ class UserLoggedIn implements Auditable
     {
         return [
             ...$this->context->toAuditAttributes(),
-            'action' => 'login',
+            'action' => 'user_created',
+            'subject_type' => User::class,
+            'subject_id' => $this->user->id,
         ];
     }
 }

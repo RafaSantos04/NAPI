@@ -1,6 +1,8 @@
 <?php
 
+use App\Domain\IAM\Exceptions\LastActiveAdministratorException;
 use App\Http\Middleware\CheckPermission;
+use App\Http\Middleware\EnsureTokenAbility;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -16,9 +18,13 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'permission' => CheckPermission::class,
+            'token.ability' => EnsureTokenAbility::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // A known business rule rejected by the domain (409), not a server error.
+        $exceptions->dontReport(LastActiveAdministratorException::class);
+
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );

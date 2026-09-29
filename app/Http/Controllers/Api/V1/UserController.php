@@ -2,14 +2,18 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Domain\IAM\Actions\DeleteUser;
+use App\Domain\IAM\AuditContext;
+use App\Events\UserCreated;
+use App\Events\UserUpdated;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UserStoreRequest;
 use App\Http\Requests\UserUpdateRequest;
 use App\Http\Resources\UserResource;
-use App\Models\AuditLog;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
@@ -44,7 +48,13 @@ class UserController extends Controller
 
     public function store(UserStoreRequest $request): JsonResponse
     {
-        $user = User::create($request->validated());
+        $user = DB::transaction(function () use ($request) {
+            $user = User::create($request->validated());
+
+            event(new UserCreated($user, AuditContext::fromRequest($request)));
+
+            return $user;
+        });
 
         return response()->json(
             UserResource::make($user),
@@ -54,7 +64,16 @@ class UserController extends Controller
 
     public function update(UserUpdateRequest $request, User $user): UserResource
     {
-        $user->update($request->validated());
+        DB::transaction(function () use ($request, $user) {
+            $user->update($request->validated());
+
+            $changed = array_keys($user->getChanges());
+            $fields = array_values(array_diff($changed, [$user->getUpdatedAtColumn()]));
+
+            if ($fields !== []) {
+                event(new UserUpdated($user, $fields, AuditContext::fromRequest($request)));
+            }
+        });
 
         return UserResource::make($user);
     }
@@ -63,15 +82,7 @@ class UserController extends Controller
     {
         $this->authorize('delete', $user);
 
-        $user->delete();
-
-        AuditLog::create([
-            'user_id' => $request->user()->id,
-            'action' => 'user_deleted',
-            'subject_type' => 'User',
-            'subject_id' => $user->id,
-            'ip' => $request->ip(),
-        ]);
+        DeleteUser::execute($user, AuditContext::fromRequest($request));
 
         return response()->json(['message' => 'User deleted.']);
     }

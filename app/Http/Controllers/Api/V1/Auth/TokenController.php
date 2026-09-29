@@ -2,9 +2,15 @@
 
 namespace App\Http\Controllers\Api\V1\Auth;
 
+use App\Domain\IAM\AuditContext;
+use App\Events\TokenCreated;
+use App\Events\TokenRevoked;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\TokenStoreRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Laravel\Sanctum\NewAccessToken;
 
 class TokenController extends Controller
 {
@@ -23,20 +29,22 @@ class TokenController extends Controller
         ]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(TokenStoreRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:100'],
-            'abilities' => ['required', 'array', 'min:1'],
-            'abilities.*' => ['in:read,write,delete'],
-            'expires_in_days' => ['nullable', 'integer', 'min:1', 'max:365'],
-        ]);
+        $user = $request->user();
+        $validated = $request->validated();
 
-        $token = $request->user()->createToken(
-            $validated['name'],
-            $validated['abilities'],
-            now()->addDays($validated['expires_in_days'] ?? 7)
-        );
+        $token = DB::transaction(function () use ($user, $validated, $request): NewAccessToken {
+            $token = $user->createToken(
+                $validated['name'],
+                $validated['abilities'],
+                now()->addDays($validated['expires_in_days'] ?? TokenStoreRequest::maxLifetimeDays())
+            );
+
+            event(new TokenCreated($user, $token->accessToken, AuditContext::fromRequest($request)));
+
+            return $token;
+        });
 
         return response()->json([
             'token' => $token->plainTextToken,
@@ -44,9 +52,21 @@ class TokenController extends Controller
         ], 201);
     }
 
-    public function destroy(Request $request, int $tokenId): JsonResponse
+    public function destroy(Request $request, int $token): JsonResponse
     {
-        $request->user()->tokens()->where('id', $tokenId)->delete();
+        $user = $request->user();
+        $accessToken = $user->tokens()->whereKey($token)->first();
+
+        // Only the caller's own tokens exist from their point of view.
+        if (! $accessToken) {
+            return response()->json(['message' => 'Not found.'], 404);
+        }
+
+        DB::transaction(function () use ($user, $accessToken, $request) {
+            $accessToken->delete();
+
+            event(new TokenRevoked($user, $accessToken, AuditContext::fromRequest($request)));
+        });
 
         return response()->json(['message' => 'Token revoked.']);
     }

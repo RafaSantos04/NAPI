@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Domain\IAM\Actions\SyncMenuPermissions;
+use App\Domain\IAM\AuditContext;
 use App\DTOs\SyncMenuPermissionsDto;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ProfileStoreRequest;
@@ -72,7 +73,7 @@ class ProfileController extends Controller
     public function syncMenus(SyncMenusRequest $request, Profile $profile): JsonResponse
     {
         $dto = SyncMenuPermissionsDto::from($request);
-        SyncMenuPermissions::execute($profile, $dto);
+        SyncMenuPermissions::execute($profile, $dto, AuditContext::fromRequest($request));
 
         return response()->json([
             'message' => 'Menu permissions synced.',

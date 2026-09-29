@@ -8,12 +8,13 @@ use App\Models\User;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class UserLoggedIn implements Auditable
+class UserLoggedOut implements Auditable
 {
     use Dispatchable, SerializesModels;
 
     public function __construct(
         public User $user,
+        public int $revokedTokens,
         public AuditContext $context,
     ) {}
 
@@ -21,7 +22,8 @@ class UserLoggedIn implements Auditable
     {
         return [
             ...$this->context->toAuditAttributes(),
-            'action' => 'login',
+            'action' => 'logout',
+            'meta' => ['revoked_tokens' => $this->revokedTokens],
         ];
     }
 }

@@ -9,6 +9,7 @@ use App\Http\Resources\MenuResource;
 use App\Models\Menu;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 
 class MenuController extends Controller
 {
@@ -65,23 +66,39 @@ class MenuController extends Controller
         return response()->json(['message' => 'Menu deleted.']);
     }
 
+    /**
+     * The actor's navigation: active menus they hold `{key}.view` on, at any
+     * depth. A child is only reachable through a visible parent. This is a
+     * projection of the functional permissions, not an access control.
+     */
     public function tree(Request $request): JsonResponse
     {
         $user = $request->user();
 
-        $profileIds = $user->profiles()->pluck('profiles.id');
-
-        $menus = Menu::whereHas('profiles', function ($query) use ($profileIds) {
-            $query->whereIn('menu_profiles.profile_id', $profileIds)
-                ->where('menu_profiles.can_view', true);
-        })
-            ->whereNull('parent_id')
+        $visible = Menu::active()
             ->orderBy('order')
-            ->with(['children' => fn ($q) => $q->orderBy('order')])
-            ->get();
+            ->get()
+            ->toBase()
+            ->filter(fn (Menu $menu) => $user->hasPermission($menu->permissionFor('view')))
+            ->groupBy(fn (Menu $menu) => $menu->parent_id ?? '');
 
         return response()->json([
-            'data' => MenuResource::collection($menus),
+            'data' => MenuResource::collection($this->branch($visible, '')),
         ]);
+    }
+
+    /**
+     * Each menu has a single parent, so walking down from the roots visits a
+     * tree and terminates even if the data contains a cycle (FIND-019): the
+     * nodes of a cycle are never reachable from a root.
+     *
+     * @param  Collection<array-key, Collection<int, Menu>>  $byParent
+     * @return Collection<int, Menu>
+     */
+    private function branch(Collection $byParent, string $parentId): Collection
+    {
+        return $byParent->get($parentId, new Collection)
+            ->each(fn (Menu $menu) => $menu->setRelation('children', $this->branch($byParent, $menu->id)))
+            ->values();
     }
 }

@@ -8,16 +8,18 @@ use App\Models\User;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class ProfileAssigned implements Auditable
+class UserUpdated implements Auditable
 {
     use Dispatchable, SerializesModels;
 
     /**
-     * @param  array<int, string>  $profileIds
+     * @param  array<int, string>  $fields  Names of the changed attributes. Values
+     *                                      are not recorded, to keep personal data
+     *                                      out of the audit trail.
      */
     public function __construct(
         public User $user,
-        public array $profileIds,
+        public array $fields,
         public AuditContext $context,
     ) {}
 
@@ -25,10 +27,10 @@ class ProfileAssigned implements Auditable
     {
         return [
             ...$this->context->toAuditAttributes(),
-            'action' => 'profile_assigned',
+            'action' => 'user_updated',
             'subject_type' => User::class,
             'subject_id' => $this->user->id,
-            'meta' => ['profile_ids' => $this->profileIds],
+            'meta' => ['fields' => $this->fields],
         ];
     }
 }

@@ -7,13 +7,15 @@ use App\Events\Contracts\Auditable;
 use App\Models\User;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use Laravel\Sanctum\PersonalAccessToken;
 
-class UserLoggedIn implements Auditable
+class TokenRevoked implements Auditable
 {
     use Dispatchable, SerializesModels;
 
     public function __construct(
-        public User $user,
+        public User $owner,
+        public PersonalAccessToken $token,
         public AuditContext $context,
     ) {}
 
@@ -21,7 +23,13 @@ class UserLoggedIn implements Auditable
     {
         return [
             ...$this->context->toAuditAttributes(),
-            'action' => 'login',
+            'action' => 'token_revoked',
+            'subject_type' => User::class,
+            'subject_id' => $this->owner->id,
+            'meta' => [
+                'token_id' => $this->token->id,
+                'name' => $this->token->name,
+            ],
         ];
     }
 }
