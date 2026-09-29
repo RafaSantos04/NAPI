@@ -18,12 +18,14 @@ class MenuResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'key' => $this->key,
             'label' => $this->label,
             'route_name' => $this->route_name,
             'icon' => $this->icon,
             'parent_id' => $this->parent_id,
             'order' => $this->order,
             'is_active' => $this->is_active,
+            'is_system' => $this->is_system,
             'description' => $this->description,
             'children' => $this->whenLoaded('children', function () {
                 return MenuResource::collection($this->children);

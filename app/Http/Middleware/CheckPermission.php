@@ -6,9 +6,14 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Functional permission gate at the edge of the API, e.g.
+ * `permission:users.update`. The decision itself lives in
+ * User::hasPermission(), shared with the Policies (ADR-0008).
+ */
 class CheckPermission
 {
-    public function handle(Request $request, Closure $next, string $routeName, string $action = 'view'): Response
+    public function handle(Request $request, Closure $next, string $permission): Response
     {
         $user = $request->user();
 
@@ -16,21 +21,8 @@ class CheckPermission
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 
-        // Verifica se o usuário tem permissão para essa ação no menu.
-        // wherePivot() só existe na própria relação BelongsToMany; dentro do
-        // closure de whereHas() o builder é do model relacionado (Menu), então
-        // wherePivot() cai no parser mágico "where{Coluna}" do Eloquent e vira
-        // um `where "pivot" = ...` errado. É preciso referenciar a tabela pivot
-        // (menu_profiles) explicitamente.
-        $hasPermission = $user->profiles()
-            ->whereHas('menus', function ($query) use ($routeName, $action) {
-                $query->where('route_name', $routeName)
-                    ->where("menu_profiles.can_{$action}", true);
-            })
-            ->exists();
-
-        if (! $hasPermission) {
-            // Retorna 404 para não revelar que a rota existe
+        if (! $user->hasPermission($permission)) {
+            // 404 instead of 403 so the area's existence is not revealed (ADR-0006).
             return response()->json(['message' => 'Not found.'], 404);
         }
 

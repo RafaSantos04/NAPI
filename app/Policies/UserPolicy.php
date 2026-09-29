@@ -2,63 +2,85 @@
 
 namespace App\Policies;
 
+use App\Models\Profile;
 use App\Models\User;
 
+/**
+ * Functional permission comes from the matrix (User::hasPermission); this
+ * Policy adds the rules that depend on the specific user being acted on.
+ * The last-administrator invariant is enforced by the domain, not here.
+ */
 class UserPolicy
 {
-    public function viewAny(User $user): bool
+    public function viewAny(User $actor): bool
     {
-        return $user->hasProfile('admin') || $user->hasProfile('dev');
+        return $actor->hasPermission('users.view');
     }
 
-    public function view(User $user, User $userToView): bool
+    /**
+     * Same rule as viewAny, so listing and detail never disagree (FIND-009).
+     * Self-service reading goes through /auth/me.
+     */
+    public function view(User $actor, User $user): bool
     {
-        // Ele mesmo sempre pode ver
-        if ($user->id === $userToView->id) {
-            return true;
-        }
-
-        // Admin pode ver qualquer um
-        if ($user->hasProfile('admin')) {
-            return true;
-        }
-
-        return false;
+        return $actor->hasPermission('users.view');
     }
 
-    public function create(User $user): bool
+    public function create(User $actor): bool
     {
-        return $user->hasProfile('admin');
+        return $actor->hasPermission('users.create');
     }
 
-    public function update(User $user, User $userToUpdate): bool
+    public function update(User $actor, User $user): bool
     {
-        // Admin pode atualizar qualquer um, exceto a si mesmo (não pode remover admin)
-        if ($user->hasProfile('admin') && $user->id !== $userToUpdate->id) {
-            return true;
-        }
-
-        // Usuário pode atualizar a si mesmo
-        return $user->id === $userToUpdate->id;
+        return $actor->hasPermission('users.update')
+            && $this->mayManage($actor, $user);
     }
 
-    public function delete(User $user, User $userToDelete): bool
+    public function delete(User $actor, User $user): bool
     {
-        // Admin não pode deletar a si mesmo
-        if ($user->id === $userToDelete->id) {
+        return ! $actor->is($user)
+            && $actor->hasPermission('users.delete')
+            && $this->mayManage($actor, $user);
+    }
+
+    /**
+     * Anti privilege escalation: an administrator may assign anything (the
+     * domain still protects the last active administrator). Anyone else may
+     * not change their own profiles, touch an administrator's, or add or
+     * remove a profile that grants something they do not hold themselves.
+     *
+     * @param  array<int, mixed>  $profileIds  Requested set, not yet validated.
+     */
+    public function assignProfiles(User $actor, User $user, array $profileIds = []): bool
+    {
+        if (! $actor->hasPermission('users.update')) {
             return false;
         }
 
-        // Admin pode deletar qualquer um
-        if ($user->hasProfile('admin')) {
+        if ($actor->isAdministrator()) {
             return true;
         }
 
-        return false;
+        if ($actor->is($user) || $user->isAdministrator()) {
+            return false;
+        }
+
+        $requested = collect($profileIds)->filter(fn (mixed $id) => is_string($id));
+        $current = $user->profiles()->pluck('profiles.id');
+        $changed = $requested->diff($current)->merge($current->diff($requested));
+
+        return Profile::with('menus')
+            ->whereKey($changed->all())
+            ->get()
+            ->every(fn (Profile $profile) => $actor->holdsPermissionsOf($profile));
     }
 
-    public function assignProfiles(User $user, User $userToUpdate): bool
+    /**
+     * Only an administrator may change or delete an administrator account.
+     */
+    private function mayManage(User $actor, User $user): bool
     {
-        return $user->hasProfile('admin');
+        return $actor->isAdministrator() || ! $user->isAdministrator();
     }
 }

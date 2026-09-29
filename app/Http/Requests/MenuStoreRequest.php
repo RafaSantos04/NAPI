@@ -18,6 +18,8 @@ class MenuStoreRequest extends FormRequest
     public function rules(): array
     {
         return [
+            // Stable permission identifier (ADR-0008): immutable after creation.
+            'key' => ['required', 'string', 'max:100', 'regex:/^[a-z0-9]+(-[a-z0-9]+)*$/', 'unique:menus,key'],
             'label' => ['required', 'string', 'max:100'],
             'route_name' => ['required', 'string', 'max:100', 'unique:menus'],
             'icon' => ['sometimes', 'string', 'max:50'],

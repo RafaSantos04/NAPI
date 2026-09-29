@@ -25,6 +25,7 @@ class ProfileResource extends JsonResource
             'menus' => $this->whenLoaded('menus', function () {
                 return $this->menus->map(fn ($menu) => [
                     'id' => $menu->id,
+                    'key' => $menu->key,
                     'label' => $menu->label,
                     'route_name' => $menu->route_name,
                     'permissions' => [

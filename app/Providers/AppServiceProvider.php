@@ -2,12 +2,6 @@
 
 namespace App\Providers;
 
-use App\Events\PermissionChanged;
-use App\Events\ProfileAssigned;
-use App\Events\UserLoggedIn;
-use App\Listeners\AuditPermissionChange;
-use App\Listeners\AuditProfileAssignment;
-use App\Listeners\AuditUserLogin;
 use App\Models\Menu;
 use App\Models\Profile;
 use App\Models\User;
@@ -18,10 +12,11 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Sanctum\PersonalAccessToken;
+use Laravel\Sanctum\Sanctum;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -45,6 +40,15 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Profile::class, ProfilePolicy::class);
         Gate::policy(Menu::class, MenuPolicy::class);
 
+        // Single enforcement point for deactivated accounts: a token whose
+        // owner is inactive does not authenticate, whether or not it was
+        // revoked when the account was deactivated.
+        Sanctum::authenticateAccessTokensUsing(
+            fn (PersonalAccessToken $token, bool $isValid): bool => $isValid
+                && $token->tokenable instanceof User
+                && $token->tokenable->is_active,
+        );
+
         RateLimiter::for('login', function (Request $request) {
             return Limit::perMinutes(30, 6)
                 ->by('login:'.$request->email.':'.$request->ip())
@@ -54,8 +58,7 @@ class AppServiceProvider extends ServiceProvider
                 ));
         });
 
-        Event::listen(ProfileAssigned::class, AuditProfileAssignment::class);
-        Event::listen(PermissionChanged::class, AuditPermissionChange::class);
-        Event::listen(UserLoggedIn::class, AuditUserLogin::class);
+        // Audit listeners in app/Listeners are registered by Laravel's event
+        // discovery. Registering them here as well ran each one twice (FIND-002).
     }
 }

@@ -7,33 +7,32 @@ use App\Models\User;
 
 class MenuPolicy
 {
-    public function viewAny(User $user): bool
+    public function viewAny(User $actor): bool
     {
-        return $user->hasProfile('admin') || $user->hasProfile('dev');
+        return $actor->hasPermission('menus.view');
     }
 
-    public function view(User $user, Menu $menu): bool
+    public function view(User $actor, Menu $menu): bool
     {
-        return $this->viewAny($user);
+        return $actor->hasPermission('menus.view');
     }
 
-    public function create(User $user): bool
+    public function create(User $actor): bool
     {
-        return $user->hasProfile('admin');
+        return $actor->hasPermission('menus.create');
     }
 
-    public function update(User $user, Menu $menu): bool
+    public function update(User $actor, Menu $menu): bool
     {
-        return $user->hasProfile('admin');
+        return $actor->hasPermission('menus.update');
     }
 
-    public function delete(User $user, Menu $menu): bool
+    public function delete(User $actor, Menu $menu): bool
     {
-        // Não pode deletar se tem filhos
-        if ($menu->children()->exists()) {
-            return false;
-        }
-
-        return $user->hasProfile('admin');
+        // System menus carry the permission keys referenced by the routes;
+        // deleting one would cascade away its matrix rows (FIND-005).
+        return ! $menu->is_system
+            && ! $menu->children()->exists()
+            && $actor->hasPermission('menus.delete');
     }
 }

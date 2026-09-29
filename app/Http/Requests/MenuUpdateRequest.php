@@ -18,6 +18,7 @@ class MenuUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'key' => ['prohibited'],
             'label' => ['sometimes', 'string', 'max:100'],
             'route_name' => ['sometimes', 'string', 'max:100', Rule::unique('menus', 'route_name')->ignore($this->route('menu'))],
             'icon' => ['sometimes', 'string', 'max:50'],

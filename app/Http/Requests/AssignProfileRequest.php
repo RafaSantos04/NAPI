@@ -8,7 +8,10 @@ class AssignProfileRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('assignProfiles', $this->route('user')) ?? false;
+        return $this->user()?->can('assignProfiles', [
+            $this->route('user'),
+            (array) $this->input('profile_ids', []),
+        ]) ?? false;
     }
 
     /**
