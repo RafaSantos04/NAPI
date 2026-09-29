@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Collection;
 use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable(['name', 'email', 'password', 'is_active'])]
@@ -22,6 +23,17 @@ class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, HasUlids, Notifiable, SoftDeletes;
+
+    protected static function booted(): void
+    {
+        // Hygiene only: authentication already rejects tokens of inactive
+        // users (AppServiceProvider), so security does not depend on this.
+        static::updated(function (User $user) {
+            if ($user->wasChanged('is_active') && ! $user->is_active) {
+                $user->tokens()->delete();
+            }
+        });
+    }
 
     /**
      * Get the attributes that should be cast.
@@ -79,9 +91,66 @@ class User extends Authenticatable
         return $this->profiles->contains(fn (Profile $profile) => $profile->slug === $slug);
     }
 
-    public function hasPermission(string $routeName, string $action): bool
+    public function isAdministrator(): bool
     {
-        // Implementado na Fase 2, aqui é só stub
-        return true;
+        return $this->hasProfile(Profile::ADMIN);
+    }
+
+    /**
+     * Functional permission check against the profile x menu matrix, e.g.
+     * hasPermission('users.update'). The single answer used by the route
+     * middleware, the Policies and the navigation tree (ADR-0008).
+     *
+     * The admin profile holds every functional permission, including ones
+     * added after it was seeded. Contextual Policy rules and domain
+     * invariants still apply to it.
+     */
+    public function hasPermission(string $permission): bool
+    {
+        $parts = explode('.', $permission);
+
+        if (count($parts) !== 2 || ! in_array($parts[1], MenuProfile::ACTIONS, true)) {
+            return false;
+        }
+
+        if ($this->isAdministrator()) {
+            return true;
+        }
+
+        return $this->permissionKeys()->contains($permission);
+    }
+
+    /**
+     * Union of the functional permissions granted by all of the user's
+     * profiles. Loaded once per model instance.
+     *
+     * @return Collection<int, string>
+     */
+    public function permissionKeys(): Collection
+    {
+        $this->loadMissing('profiles.menus');
+
+        return $this->profiles
+            ->flatMap(fn (Profile $profile) => $profile->permissionKeys())
+            ->unique()
+            ->values();
+    }
+
+    /**
+     * Whether granting $profile to someone gives them nothing this user does
+     * not already have. Only an administrator can grant the admin profile,
+     * since it implies every present and future permission.
+     */
+    public function holdsPermissionsOf(Profile $profile): bool
+    {
+        if ($this->isAdministrator()) {
+            return true;
+        }
+
+        if ($profile->isAdministrator()) {
+            return false;
+        }
+
+        return $profile->permissionKeys()->diff($this->permissionKeys())->isEmpty();
     }
 }

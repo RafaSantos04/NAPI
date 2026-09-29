@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * @property-read MenuProfile|null $pivot
  */
-#[Fillable(['parent_id', 'label', 'route_name', 'icon', 'order', 'is_active', 'description'])]
+#[Fillable(['parent_id', 'key', 'label', 'route_name', 'icon', 'order', 'is_active', 'description'])]
 class Menu extends Model
 {
     /** @use HasFactory<MenuFactory> */
@@ -25,6 +25,7 @@ class Menu extends Model
     {
         return [
             'is_active' => 'boolean',
+            'is_system' => 'boolean',
         ];
     }
 
@@ -52,6 +53,16 @@ class Menu extends Model
         return $this->belongsToMany(Profile::class, 'menu_profiles')
             ->using(MenuProfile::class)
             ->withPivot('can_view', 'can_create', 'can_update', 'can_delete');
+    }
+
+    /**
+     * Functional permission identifier for an action on this menu's area,
+     * e.g. "users.update". Built from the immutable `key`, never from the
+     * editable `route_name` (ADR-0008).
+     */
+    public function permissionFor(string $action): string
+    {
+        return "{$this->key}.{$action}";
     }
 
     /**

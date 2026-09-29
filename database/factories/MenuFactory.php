@@ -20,6 +20,7 @@ class MenuFactory extends Factory
     public function definition(): array
     {
         return [
+            'key' => fake()->unique()->slug(2),
             'label' => fake()->words(2, true),
             'route_name' => fake()->unique()->slug(3),
             'icon' => 'menu',

@@ -14,11 +14,15 @@ return new class extends Migration
         Schema::create('menus', function (Blueprint $table) {
             $table->ulid('id')->primary();
             $table->ulid('parent_id')->nullable();
+            // Stable permission identifier ("{key}.{action}"), separate from
+            // the editable navigation route (ADR-0008).
+            $table->string('key', 100)->unique();
             $table->string('label', 100);
             $table->string('route_name', 100)->unique();
             $table->string('icon', 50)->nullable();
             $table->integer('order')->default(0);
             $table->boolean('is_active')->default(true);
+            $table->boolean('is_system')->default(false);
             $table->text('description')->nullable();
             $table->timestamps();
 
