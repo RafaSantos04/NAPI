@@ -36,6 +36,16 @@ class User extends Authenticatable
     }
 
     /**
+     * No "remember me": users has no remember_token column. An empty name
+     * makes the session guard skip the token on logout instead of reading a
+     * missing attribute (strict mode).
+     */
+    public function getRememberTokenName(): string
+    {
+        return '';
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
