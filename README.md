@@ -7,6 +7,7 @@ NAPI é um projeto de portfólio: uma "API Page" com duas grandes áreas — **I
 - [Laravel 13](https://laravel.com)
 - [PostgreSQL](https://www.postgresql.org/)
 - [Laravel Sanctum](https://laravel.com/docs/sanctum) (autenticação via API tokens)
+- Blade + sessão web (área administrativa)
 - [Pest](https://pestphp.com/) (testes)
 - [Larastan](https://github.com/larastan/larastan) + [Laravel Pint](https://laravel.com/docs/pint) (análise estática e estilo de código)
 
@@ -51,6 +52,10 @@ composer analyse    # PHPStan / Larastan
 ### IAM
 
 API REST v1 com usuários (ULID), perfis, menus, matriz de permissões perfil × menu, tokens Sanctum e trilha de auditoria (`audit_logs`). A autorização é feita em camadas (autenticação, ability do token, permissão funcional, Policy e invariante de domínio), descritas no [ADR-0008](docs/architecture/decisions/ADR-0008-layered-authorization-model.md). Veja [`docs/modules/iam.md`](docs/modules/iam.md).
+
+### Área administrativa
+
+*Em construção (Fase 4).* Interface Blade em `/admin` com login por sessão web, independente dos tokens da API. Veja [`docs/phases/phase-04-1-admin-shell.md`](docs/phases/phase-04-1-admin-shell.md).
 
 ### Segurança
 

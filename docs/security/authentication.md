@@ -12,7 +12,8 @@ Laravel Sanctum com **personal access tokens** enviados como
 A autenticação SPA por cookie **não está ativa**: `bootstrap/app.php` não
 chama `statefulApi()`, e o grupo `api` contém apenas `SubstituteBindings`.
 `SANCTUM_STATEFUL_DOMAINS` e `guard => ['web']` estão configurados, mas não
-são exercidos pelas rotas da API.
+são exercidos pelas rotas da API. A sessão `web` é usada apenas pela
+[área administrativa](#área-administrativa-sessão-web).
 
 ## Login: `POST /api/v1/auth/login`
 
@@ -82,6 +83,17 @@ higiene já cobre qualquer caminho futuro que use o model.
 Todas as rotas `/api/v1/*` exceto `POST /auth/login`. Sem token válido, a
 resposta é 401. Com token válido, toda rota autenticada também passa pela
 checagem de ability ([autorização](authorization.md#camada-2-abilities-do-token)).
+
+## Área administrativa: sessão web
+
+Desde a [Fase 4.1](../phases/phase-04-1-admin-shell.md), `/admin` usa o
+guard `web` (sessão), independente dos tokens: o login web não emite token e
+o logout web não revoga nenhum. `POST /admin/login` responde
+`Credenciais inválidas.` para e-mail inexistente, senha errada e conta
+inativa, regenera a sessão e audita via `UserLoggedIn`; o logout invalida a
+sessão e rotaciona o token CSRF. `EnsureUserIsActive` (grupo `web`) encerra
+a sessão de quem for desativado depois do login. Rate limit: 5 tentativas
+por `email + IP`.
 
 ## Riscos residuais
 
