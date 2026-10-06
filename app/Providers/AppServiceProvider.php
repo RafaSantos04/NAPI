@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Http\Admin\AdminNavigation;
 use App\Models\Menu;
 use App\Models\Profile;
 use App\Models\User;
@@ -14,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Sanctum\PersonalAccessToken;
 use Laravel\Sanctum\Sanctum;
@@ -56,6 +58,14 @@ class AppServiceProvider extends ServiceProvider
                     ['message' => 'Too many login attempts. Try again later.'],
                     429
                 ));
+        });
+
+        // Sidebar of the signed-in admin area: only the sections the user's
+        // Policies allow (AdminNavigation). Hiding a link is not authorization.
+        View::composer('layouts.admin-shell', function ($view) {
+            $actor = auth()->user();
+
+            $view->with('adminNavigation', $actor instanceof User ? AdminNavigation::for($actor) : []);
         });
 
         // Audit listeners in app/Listeners are registered by Laravel's event

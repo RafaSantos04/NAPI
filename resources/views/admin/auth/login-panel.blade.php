@@ -39,42 +39,10 @@
                 @enderror
             </div>
 
-            <button type="submit" class="btn btn-primary">Entrar</button>
+            <button type="submit" class="btn btn-primary btn-block">Entrar</button>
         </form>
     </div>
 </details>
-
-@push('styles')
-    .login { position: relative; }
-    .login > summary::-webkit-details-marker { display: none; }
-
-    .login-panel {
-        position: absolute;
-        top: calc(100% + .5rem);
-        right: 0;
-        width: min(18rem, calc(100vw - 2.5rem));
-        padding: 1.25rem;
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: .5rem;
-    }
-
-    .field { margin-bottom: 1rem; }
-    .field label { display: block; margin-bottom: .375rem; font-size: .8125rem; color: var(--muted); }
-    .field input {
-        width: 100%;
-        padding: .5rem .625rem;
-        font: inherit;
-        font-size: .875rem;
-        color: var(--text);
-        background: var(--bg);
-        border: 1px solid var(--border);
-        border-radius: .375rem;
-    }
-    .field input:focus-visible { outline-offset: 0; }
-    .field input[aria-invalid="true"] { border-color: var(--danger); }
-    .field-error { margin: .375rem 0 0; font-size: .8125rem; color: var(--danger); }
-@endpush
 
 @push('scripts')
     <script>

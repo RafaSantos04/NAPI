@@ -3,16 +3,17 @@
 namespace App\Http\Controllers\Web\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Contracts\View\View;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
 
-/**
- * Entry point of the admin area. Open to guests: it renders the empty shell
- * with the login panel, or the signed-in state.
- */
 class HomeController extends Controller
 {
-    public function __invoke(): View
+    /**
+     * Guests get the black landing with the login panel; signed-in users
+     * (already cleared by `admin.access`) get the shell.
+     */
+    public function __invoke(Request $request): View
     {
-        return view('admin.index');
+        return view($request->user() ? 'admin.home' : 'admin.index');
     }
 }

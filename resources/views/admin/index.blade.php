@@ -1,13 +1,8 @@
+{{-- Guest landing: black page, only the login button. --}}
 @extends('layouts.admin')
 
 @section('header')
-    @auth
-        <span class="muted">{{ auth()->user()->email }}</span>
-        <form method="POST" action="{{ route('admin.logout') }}">
-            @csrf
-            <button type="submit" class="btn">Sair</button>
-        </form>
-    @else
+    <div class="header-end">
         @include('admin.auth.login-panel')
-    @endauth
+    </div>
 @endsection

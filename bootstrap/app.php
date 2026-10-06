@@ -3,6 +3,7 @@
 use App\Domain\IAM\Exceptions\LastActiveAdministratorException;
 use App\Http\Middleware\CheckPermission;
 use App\Http\Middleware\EnsureTokenAbility;
+use App\Http\Middleware\EnsureUserCanAccessAdmin;
 use App\Http\Middleware\EnsureUserIsActive;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -19,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'permission' => CheckPermission::class,
+            'admin.access' => EnsureUserCanAccessAdmin::class,
             'token.ability' => EnsureTokenAbility::class,
         ]);
 

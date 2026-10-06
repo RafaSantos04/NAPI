@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Web\Admin\Auth;
 
+use App\Http\Admin\AdminNavigation;
+use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -49,6 +51,10 @@ class LoginRequest extends FormRequest
     /**
      * Inactive and soft-deleted accounts fail exactly like a wrong password.
      *
+     * Valid credentials without access to the admin area get no session and
+     * a message of their own (Phase 4.2). It reveals nothing new: the same
+     * credentials already succeed on POST /api/v1/auth/login.
+     *
      * @throws ValidationException
      */
     public function authenticate(): void
@@ -61,7 +67,9 @@ class LoginRequest extends FormRequest
             'is_active' => true,
         ];
 
-        if (! Auth::guard('web')->attempt($credentials)) {
+        $guard = Auth::guard('web');
+
+        if (! $guard->attempt($credentials)) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
@@ -70,6 +78,16 @@ class LoginRequest extends FormRequest
         }
 
         RateLimiter::clear($this->throttleKey());
+
+        $user = $guard->user();
+
+        if (! $user instanceof User || ! AdminNavigation::allows($user)) {
+            $guard->logout();
+
+            throw ValidationException::withMessages([
+                'email' => 'Esta conta não tem acesso à área administrativa.',
+            ]);
+        }
     }
 
     /**
