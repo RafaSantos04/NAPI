@@ -34,6 +34,7 @@ CLAUDE.local.md
 
 # Laravel Boost (tooling local, regenerado por php artisan boost:install)
 .agents/
+AGENTS.md
 /.ai/
 /boost.json
 /.mcp.json
