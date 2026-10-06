@@ -32,6 +32,12 @@ CLAUDE.md
 CLAUDE.local.md
 *.claude.md
 
+# Laravel Boost (tooling local, regenerado por php artisan boost:install)
+.agents/
+/.ai/
+/boost.json
+/.mcp.json
+
 # Segredos
 .env.*
 !.env.example
