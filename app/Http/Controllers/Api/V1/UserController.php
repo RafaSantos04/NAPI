@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Domain\IAM\Actions\CreateUser;
 use App\Domain\IAM\Actions\DeleteUser;
+use App\Domain\IAM\Actions\UpdateUser;
 use App\Domain\IAM\AuditContext;
-use App\Events\UserCreated;
-use App\Events\UserUpdated;
+use App\DTOs\CreateUserDto;
+use App\DTOs\UpdateUserDto;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UserStoreRequest;
 use App\Http\Requests\UserUpdateRequest;
@@ -13,7 +15,6 @@ use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
@@ -48,13 +49,7 @@ class UserController extends Controller
 
     public function store(UserStoreRequest $request): JsonResponse
     {
-        $user = DB::transaction(function () use ($request) {
-            $user = User::create($request->validated());
-
-            event(new UserCreated($user, AuditContext::fromRequest($request)));
-
-            return $user;
-        });
+        $user = CreateUser::execute(CreateUserDto::from($request), AuditContext::fromRequest($request));
 
         return response()->json(
             UserResource::make($user),
@@ -64,16 +59,7 @@ class UserController extends Controller
 
     public function update(UserUpdateRequest $request, User $user): UserResource
     {
-        DB::transaction(function () use ($request, $user) {
-            $user->update($request->validated());
-
-            $changed = array_keys($user->getChanges());
-            $fields = array_values(array_diff($changed, [$user->getUpdatedAtColumn()]));
-
-            if ($fields !== []) {
-                event(new UserUpdated($user, $fields, AuditContext::fromRequest($request)));
-            }
-        });
+        UpdateUser::execute($user, UpdateUserDto::from($request), AuditContext::fromRequest($request));
 
         return UserResource::make($user);
     }

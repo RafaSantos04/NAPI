@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\MenuController;
 use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\UserProfileController;
+use App\Http\Controllers\Api\V1\UserStatusController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -47,6 +48,12 @@ Route::prefix('v1')->group(function () {
         Route::put('/users/{user}/profiles', [UserProfileController::class, 'update'])
             ->middleware('permission:users.update')
             ->name('users.profiles.update');
+        Route::post('/users/{user}/deactivate', [UserStatusController::class, 'deactivate'])
+            ->middleware('permission:users.update')
+            ->name('users.deactivate');
+        Route::post('/users/{user}/activate', [UserStatusController::class, 'activate'])
+            ->middleware('permission:users.update')
+            ->name('users.activate');
 
         // Profiles
         Route::get('/profiles', [ProfileController::class, 'index'])

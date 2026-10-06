@@ -45,6 +45,25 @@ class UserPolicy
     }
 
     /**
+     * A status change is an update of the account, so it needs the same
+     * permission and the same protection of administrator accounts. Nobody
+     * deactivates themselves: it would end their own session and is the
+     * shortest path to an administrative lockout (Phase 4.2).
+     */
+    public function deactivate(User $actor, User $user): bool
+    {
+        return ! $actor->is($user)
+            && $actor->hasPermission('users.update')
+            && $this->mayManage($actor, $user);
+    }
+
+    public function activate(User $actor, User $user): bool
+    {
+        return $actor->hasPermission('users.update')
+            && $this->mayManage($actor, $user);
+    }
+
+    /**
      * Anti privilege escalation: an administrator may assign anything (the
      * domain still protects the last active administrator). Anyone else may
      * not change their own profiles, touch an administrator's, or add or
