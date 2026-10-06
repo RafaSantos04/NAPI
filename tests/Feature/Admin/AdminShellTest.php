@@ -2,7 +2,6 @@
 
 use App\Models\AuditLog;
 use App\Models\User;
-use Illuminate\Support\Facades\Route;
 
 describe('Admin shell', function () {
     it('renders the landing for guests with the login panel', function () {
@@ -17,7 +16,7 @@ describe('Admin shell', function () {
     });
 
     it('shows the signed-in user and the logout action', function () {
-        $user = User::factory()->create();
+        $user = adminUser();
 
         $this->actingAs($user)->get('/admin')
             ->assertOk()
@@ -30,7 +29,7 @@ describe('Admin shell', function () {
 
 describe('Admin session login', function () {
     it('logs in with valid credentials and regenerates the session', function () {
-        $user = User::factory()->create(['password' => 'secret-password']);
+        $user = adminUser(['password' => 'secret-password']);
         $this->startSession();
         $before = session()->getId();
 
@@ -44,10 +43,11 @@ describe('Admin session login', function () {
     });
 
     it('does not issue an API token on web login', function () {
-        $user = User::factory()->create(['password' => 'secret-password']);
+        $user = adminUser(['password' => 'secret-password']);
 
         $this->post('/admin/login', ['email' => $user->email, 'password' => 'secret-password']);
 
+        $this->assertAuthenticatedAs($user, 'web');
         expect($user->tokens()->count())->toBe(0);
     });
 
@@ -132,7 +132,7 @@ describe('Admin session login', function () {
 
 describe('Admin session logout', function () {
     it('logs out, invalidates the session and rotates the CSRF token', function () {
-        $user = User::factory()->create(['password' => 'secret-password']);
+        $user = adminUser(['password' => 'secret-password']);
         $this->post('/admin/login', ['email' => $user->email, 'password' => 'secret-password']);
         session()->put('marker', 'value');
         $token = session()->token();
@@ -150,7 +150,7 @@ describe('Admin session logout', function () {
     });
 
     it('keeps the user API tokens on web logout', function () {
-        $user = User::factory()->create();
+        $user = adminUser();
         $user->createToken('api');
 
         $this->actingAs($user)->post('/admin/logout');
@@ -164,24 +164,18 @@ describe('Admin session logout', function () {
 });
 
 describe('Admin access control', function () {
-    beforeEach(function () {
-        // Stand-in for the internal pages of the next sub-phases.
-        Route::middleware(['web', 'auth'])->get('/admin/_protected', fn () => 'inside');
+    it('sends guests from internal admin routes back to the landing', function () {
+        $this->get('/admin/users')->assertRedirect(route('admin.home'));
     });
 
-    it('sends guests from protected admin routes back to the landing', function () {
-        $this->get('/admin/_protected')->assertRedirect(route('admin.home'));
-    });
-
-    it('lets an authenticated user into protected admin routes', function () {
-        $this->actingAs(User::factory()->create())
-            ->get('/admin/_protected')
-            ->assertOk()
-            ->assertSee('inside');
+    it('lets an authorized user into internal admin routes', function () {
+        $this->actingAs(adminUser())
+            ->get('/admin/users')
+            ->assertOk();
     });
 
     it('ends the session of a user deactivated after logging in', function () {
-        $user = User::factory()->create(['password' => 'secret-password']);
+        $user = adminUser(['password' => 'secret-password']);
         $this->post('/admin/login', ['email' => $user->email, 'password' => 'secret-password']);
         $this->assertAuthenticatedAs($user, 'web');
 
@@ -190,7 +184,7 @@ describe('Admin access control', function () {
         User::whereKey($user->id)->update(['is_active' => false]);
         app('auth')->forgetGuards();
 
-        $this->get('/admin/_protected')->assertRedirect(route('admin.home'));
+        $this->get('/admin/users')->assertRedirect(route('admin.home'));
         $this->assertGuest('web');
     });
 

@@ -26,7 +26,7 @@ pest()->extend(TestCase::class)
 // DatabaseSeeder. Scoped to this directory (not globally) so it doesn't
 // collide with other Feature tests that create their own 'admin'-slug
 // profiles via factories.
-uses()->beforeEach(fn () => $this->seed())->in('Feature/IAM', 'Feature/Security');
+uses()->beforeEach(fn () => $this->seed())->in('Feature/IAM', 'Feature/Security', 'Feature/Admin');
 
 /*
 |--------------------------------------------------------------------------
@@ -120,4 +120,31 @@ function asToken(User $user, string $method, string $uri, array $data = [], arra
     app('auth')->forgetGuards();
 
     return test()->withToken(tokenFor($user, $abilities))->json($method, $uri, $data);
+}
+
+/**
+ * Active user holding the seeded admin profile (every functional permission,
+ * so every admin area section). Factory password: "password".
+ *
+ * @param  array<string, mixed>  $attributes
+ */
+function adminUser(array $attributes = []): User
+{
+    $user = User::factory()->create($attributes);
+    $user->profiles()->attach(Profile::where('slug', Profile::ADMIN)->firstOrFail()->id);
+
+    return $user;
+}
+
+/**
+ * Logs in through the real admin form, so the session holds the login (unlike
+ * actingAs(), which only sets the guard in memory). Guards are reset first so
+ * the next request reads the user back from the session.
+ */
+function adminLogin(User $user, string $password = 'password'): TestResponse
+{
+    $response = test()->post('/admin/login', ['email' => $user->email, 'password' => $password]);
+    app('auth')->forgetGuards();
+
+    return $response;
 }
