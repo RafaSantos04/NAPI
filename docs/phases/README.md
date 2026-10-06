@@ -19,7 +19,8 @@ Fase 3.1 — Documentation & Architecture Reality Check
 Fase 3.2 — IAM Security Hardening & Authorization Consolidation
     ↓
 Fase 4 — Área Administrador (Blade)
-    └ 4.1 — Admin Shell (sessão web)                    ← atual
+    ├ 4.1 — Admin Shell (sessão web)
+    └ 4.2 — Administração de Usuários                   ← atual
 Fase 5 — Área Segurança (Testes)                        planejada
 ```
 
@@ -30,8 +31,9 @@ Fase 5 — Área Segurança (Testes)                        planejada
 | 2 | `7af2c02` | Login, logout, tokens, rate limit, Policies, `CheckPermission`, CRUD de usuários | `AuthorizationTest` (deste commit) diz que ProfileController é "escopo da Fase 3" |
 | 3 | `0ef6ea8` | DTOs, Actions, eventos e listeners, CRUD de perfis e menus, atribuição de perfis, sync de permissões | [phase-03-iam-rest.md](phase-03-iam-rest.md) |
 | 3.1 | `634f194`…`ead930f` | Esta documentação em `docs/`, ADRs 0001–0007, threat model e 22 findings | mensagens dos commits |
-| 3.2 | pending | Correção dos findings prioritários, autorização em camadas ([ADR-0008](../architecture/decisions/ADR-0008-layered-authorization-model.md)), suíte `tests/Feature/Security` | [phase-03-2-iam-hardening.md](phase-03-2-iam-hardening.md) |
-| 4.1 | pending | Shell Blade em `/admin`, login por sessão web (guard `web`), layout base | [phase-04-1-admin-shell.md](phase-04-1-admin-shell.md) |
+| 3.2 | `2392411`…`dc5066a` | Correção dos findings prioritários, autorização em camadas ([ADR-0008](../architecture/decisions/ADR-0008-layered-authorization-model.md)), suíte `tests/Feature/Security` | [phase-03-2-iam-hardening.md](phase-03-2-iam-hardening.md) |
+| 4.1 | `a30deac`…`ea89fad` | Shell Blade em `/admin`, login por sessão web (guard `web`), layout base | [phase-04-1-admin-shell.md](phase-04-1-admin-shell.md) |
+| 4.2 | pending | Administração de usuários (listagem, detalhe, criação, edição, ativação/desativação, perfis), acesso ao admin por permissão, Actions compartilhadas com a API, Laravel Boost | [phase-04-2-user-management.md](phase-04-2-user-management.md) |
 
 Os detalhes históricos das Fases 0 a 2 além do que está nos commits e no
 código **ainda não estão documentados**.
@@ -39,9 +41,10 @@ código **ainda não estão documentados**.
 ## Próximas fases
 
 A Fase 4 começou pela [4.1](phase-04-1-admin-shell.md) (shell Blade e login
-por sessão). A Fase 5 foi citada como próximo passo ao fim da Fase 3; não há
+por sessão) e seguiu com a [4.2](phase-04-2-user-management.md)
+(administração de usuários, que entregou o endpoint de desativação herdado
+da 3.2). As faixas de commit da 3.2 e da 4.1 vêm do `git log`. A Fase 5 foi citada como próximo passo ao fim da Fase 3; não há
 especificação dela no repositório. Os findings que bloqueavam a Fase 4
 (FIND-001, FIND-002, FIND-004, FIND-005, FIND-007 e FIND-010) foram
-resolvidos na Fase 3.2. A Fase 4 herda duas pendências diretas: o endpoint
-de desativação de usuário, que deve usar a invariante de administrador, e o
-FIND-019. Veja [findings](../findings/README.md).
+resolvidos na Fase 3.2. Continuam pendentes para a Fase 4 o FIND-019
+(menus) e, antes de qualquer tela com CPF, o FIND-008. Veja [findings](../findings/README.md).

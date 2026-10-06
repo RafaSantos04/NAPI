@@ -9,7 +9,7 @@
   exercitar `citext`, FKs e cascades de verdade
   ([ADR-0002](../architecture/decisions/ADR-0002-postgresql.md)).
 - `RefreshDatabase` em todo `tests/Feature` (`tests/Pest.php`).
-- `tests/Feature/IAM/*` e `tests/Feature/Security/*` rodam o `DatabaseSeeder`
+- `tests/Feature/IAM/*`, `tests/Feature/Security/*` e `tests/Feature/Admin/*` (desde a Fase 4.2) rodam o `DatabaseSeeder`
   antes de cada teste. O escopo é limitado a esses diretórios para não colidir
   com testes que criam o próprio perfil `admin` via factory (comentário em
   `tests/Pest.php`).
@@ -18,7 +18,7 @@
 - Qualidade complementar: `composer lint` (Pint) e `composer analyse`
   (Larastan nível 6 em `app/`).
 
-## Inventário (133 testes)
+## Inventário (204 testes, Fase 4.2)
 
 | Categoria | Arquivo | Testes | Nível |
 |---|---|---|---|
@@ -36,6 +36,9 @@
 | Security: último admin | `Feature/Security/AdminInvariantTest.php` | 7 | HTTP + Action |
 | Security: auditoria | `Feature/Security/AuditIntegrityTest.php` | 8 | HTTP + banco + evento |
 | Security: árvore de menus | `Feature/Security/MenuTreeTest.php` | 7 | HTTP, Bearer real |
+| Security: cobertura de rotas | `Feature/Security/RouteCoverageTest.php` | 8 | rotas registradas + HTTP |
+| Admin: shell e sessão | `Feature/Admin/AdminShellTest.php` | 19 | HTTP, sessão `web` |
+| Admin: usuários | `Feature/Admin/UserManagementTest.php` | 44 | HTTP (sessão e Bearer) + Action |
 | Model/DB: Users | `Feature/UserTest.php` | 10 | Eloquent + constraints |
 | Model/DB: Profiles | `Feature/ProfileTest.php` | 5 | Eloquent + constraints |
 | Model/DB: Menus | `Feature/MenuTest.php` | 5 | Eloquent + constraints |
@@ -52,6 +55,10 @@ diretamente.
   token Sanctum. Desde a Fase 3.2, `tests/Feature/Security/*` usa tokens reais
   (`asToken()`/`tokenFor()` em `tests/Pest.php`), cobrindo abilities e estado
   do token ([FIND-021](../findings/README.md#find-021--lacunas-de-testes-de-segurança)).
+- `tests/Feature/Admin/*` autentica pela sessão. `adminLogin()` passa pelo
+  formulário real (a sessão guarda o login); `actingAs()` só serve quando a
+  persistência da sessão não importa. `adminUser()` cria um usuário com o
+  perfil `admin`.
 - Auditoria verificada por **cardinalidade** (`count() === 1`), não só por
   `exists()`.
 - Negação de acesso verificada por status (404 ou 403), não pelo corpo.

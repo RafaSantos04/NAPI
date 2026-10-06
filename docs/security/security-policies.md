@@ -94,10 +94,10 @@ se a regra quebrasse.
 - **Risco mitigado**: exclusão em cascata de subárvores, das permissões associadas e das chaves usadas pelas rotas.
 - **Fase 3.2**: a proteção de menus de sistema é nova ([FIND-005](../findings/README.md#find-005--menus-são-chaves-de-autorização-sem-proteção-de-sistema)).
 
-### INV-07 — Ninguém exclui a si mesmo
+### INV-07 — Ninguém exclui nem desativa a si mesmo
 
-- **Aplicação**: `UserPolicy::delete`.
-- **Teste**: `blocks admin from deleting themselves` (403).
+- **Aplicação**: `UserPolicy::delete` e, desde a Fase 4.2, `UserPolicy::deactivate` (API e admin).
+- **Teste**: `blocks admin from deleting themselves` (403); `UserManagementTest › does not let anyone deactivate themselves`, `applies the same Policy to API status changes`.
 - **Risco mitigado**: lockout acidental.
 
 ### INV-08 — Existe sempre pelo menos um administrador ativo
@@ -106,7 +106,7 @@ se a regra quebrasse.
 - **Aplicação**: `EnsureActiveAdministratorRemains::beforeRemoving`, chamado **dentro da transação** por `AssignProfilesToUser` (remover o perfil) e `DeleteUser` (excluir o usuário). Ele faz `SELECT ... FOR UPDATE` na linha do perfil `admin`, o que serializa as remoções concorrentes, e conta só administradores ativos. A violação lança `LastActiveAdministratorException`, que responde **409**.
 - **Teste**: `AdminInvariantTest` (último ativo, admin inativo não conta, admin excluído não conta, remoção com outro admin ativo, exclusão via Action, nenhuma auditoria em caso de rejeição); `UserProfileSyncTest › blocks removing last admin` (409).
 - **Concorrência**: `RefreshDatabase` roda cada teste numa única transação, então um teste Pest com duas conexões simultâneas não é viável. Na Fase 3.2 o bloqueio foi verificado manualmente contra o PostgreSQL: com o lock mantido pela conexão A, a conexão B recebe `55P03 lock_not_available` (com `lock_timeout`) e só adquire o lock depois do commit ou rollback de A.
-- **Caminho não coberto**: desativar um usuário (`is_active = false`) não passa pela invariante, porque não existe endpoint de desativação. A Fase 4 deve usar o mesmo guard.
+- **Desativação (Fase 4.2)**: `DeactivateUser` chama o mesmo guard, na mesma transação, antes de gravar `is_active = false`. Pela Policy o caso não é alcançável (um admin ativo não se desativa), então o teste chama a Action diretamente: `UserManagementTest › never deactivates the last active administrator`. Na web, a mesma exceção vira redirect com mensagem: `turns the last-admin conflict into a flash message`.
 - **Fase 3.2**: antes era check-then-act sem transação, contava admins inativos e respondia 500 ([FIND-006](../findings/README.md#find-006--regra-do-último-administrador-tem-janela-de-corrida-e-resposta-500)). O lockout pela matriz foi eliminado pela imutabilidade de `key` e pela permissão implícita do admin ([FIND-005](../findings/README.md#find-005--menus-são-chaves-de-autorização-sem-proteção-de-sistema)).
 
 ### INV-09 — Ninguém concede mais do que tem
@@ -123,8 +123,8 @@ se a regra quebrasse.
 
 ### INV-11 — Entrada do cliente não define atributos de autorização
 
-- **Aplicação**: controllers persistem só `$request->validated()`; nenhum FormRequest aceita `is_system` ou `is_active`; `key` de menu é `prohibited` na atualização; `#[Fillable]` + `Model::shouldBeStrict()`.
-- **Teste**: `UserTest › has fillable protection`, `does not accept is_system from the client`, `does not allow changing a menu key`.
+- **Aplicação**: controllers persistem só `$request->validated()` (usuários, desde a Fase 4.2, por `CreateUserDto`/`UpdateUserDto`, que só carregam nome, e-mail e senha); nenhum FormRequest aceita `is_system` ou `is_active`; `key` de menu é `prohibited` na atualização; `#[Fillable]` + `Model::shouldBeStrict()`.
+- **Teste**: `UserTest › has fillable protection`, `does not accept is_system from the client`, `does not allow changing a menu key`; `UserManagementTest › ignores privileged fields in the payload`, `does not let the edit form change status, password or profiles`, `creates users through the API with the shared Action`.
 - **Risco mitigado**: mass assignment.
 
 ### INV-12 — Tokens só são geridos pelo dono
@@ -155,6 +155,7 @@ se a regra quebrasse.
 - **Aplicação**: `AuthController::login` rejeita `is_active = false`; `Sanctum::authenticateAccessTokensUsing` recusa tokens cujo dono está inativo (ponto único de enforcement); o hook `User::updated` apaga os tokens ao desativar (higiene).
 - **Teste**: `DisabledUserAuthenticationTest` (5 cenários).
 - **Fase 3.2**: antes, apenas novos logins eram barrados ([FIND-003](../findings/README.md#find-003--usuário-desativado-continua-autenticado)).
+- **Fase 4.2**: a sessão web segue a mesma regra (`EnsureUserIsActive`), e `DeactivateUser` apaga os tokens e remove as sessões (driver `database`). Reativar não restaura nenhum dos dois. Teste: `UserManagementTest › Deactivate user`, `Activate user`.
 
 ### INV-17 — Um token nunca excede suas abilities (Fase 3.2)
 
@@ -167,3 +168,15 @@ se a regra quebrasse.
 - **Aplicação**: `menus.key` único e imutável (`prohibited` na atualização), separado do `route_name` de navegação; menus-chave `is_system` não são excluídos.
 - **Teste**: `keeps authorization when a menu route_name or label is renamed`, `does not allow changing a menu key`, `does not allow deleting a system menu`.
 - **Risco mitigado**: lockout administrativo por edição de dados de navegação ([FIND-005](../findings/README.md#find-005--menus-são-chaves-de-autorização-sem-proteção-de-sistema)).
+
+### INV-19 — Só quem pode usar a área administrativa tem sessão nela (Fase 4.2)
+
+- **Aplicação**: `AdminNavigation::allows()` (ao menos uma seção visível pela Policy correspondente) no login web (`LoginRequest::authenticate`) e em cada request (`EnsureUserCanAccessAdmin`, alias `admin.access`). Sem flag nem permission key própria.
+- **Teste**: `UserManagementTest › Admin area access`; `RouteCoverageTest › keeps guests and users without admin access out of every internal admin route`.
+- **Risco mitigado**: exposição de dados administrativos a qualquer usuário ativo (o estado da Fase 4.1) e devolução acidental da listagem ao `dev`.
+
+### INV-20 — Os dois adapters aplicam as mesmas regras e não trocam credenciais (Fase 4.2)
+
+- **Aplicação**: API e admin chamam as mesmas Policies e Actions ([ADR-0009](../architecture/decisions/ADR-0009-web-session-and-bearer-adapters.md)); FormRequests web estendem os da API. O grupo `api` não inicia sessão (`statefulApi()` desligado), então um cookie de sessão não autentica a API, e o login web não emite token.
+- **Teste**: `UserManagementTest › Same rules through the API and the admin area`; `RouteCoverageTest` (API sem sessão, `permission:` em toda rota de recurso); `AdminShellTest › does not issue an API token on web login`.
+- **Risco mitigado**: regra aplicada num canal e esquecida no outro; uso cruzado de credenciais.

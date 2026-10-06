@@ -6,6 +6,8 @@ Observações encontradas ao investigar o código após a Fase 3. A Fase 3.1 só
 documentou. A **Fase 3.2** corrigiu os prioritários e adicionou a cada finding
 um bloco **"Status (Fase 3.2)"**, preservando a descrição original, que
 registra o comportamento como era ([Fase 3.2](../phases/phase-03-2-iam-hardening.md)).
+A **Fase 4.2** acrescentou blocos "Status (Fase 4.2)" onde houve mudança
+([Fase 4.2](../phases/phase-04-2-user-management.md)).
 
 Status usados: `OPEN` · `RESOLVED` · `DEFERRED` · `ACCEPTED RISK`. "RESOLVED
 (parcial)" indica que o bloco descreve o que foi resolvido e o que continua
@@ -28,32 +30,34 @@ Nos demais casos, a evidência é a leitura do código citado.
 
 ## Resumo
 
-| ID | Título | Categoria | Severidade | Status (Fase 3.2) |
-|---|---|---|---|---|
-| [FIND-001](#find-001--abilities-de-token-não-são-aplicadas) | Abilities de token não são aplicadas | Security | **High** | RESOLVED |
-| [FIND-002](#find-002--listeners-de-auditoria-registrados-em-duplicidade) | Listeners de auditoria registrados em duplicidade | Architecture | Medium | RESOLVED |
-| [FIND-003](#find-003--usuário-desativado-continua-autenticado) | Usuário desativado continua autenticado | Security | Medium | RESOLVED |
-| [FIND-004](#find-004--duas-fontes-de-autorização-que-não-se-conhecem) | Duas fontes de autorização que não se conhecem | Architecture | Medium | RESOLVED |
-| [FIND-005](#find-005--menus-são-chaves-de-autorização-sem-proteção-de-sistema) | Menus são chaves de autorização sem proteção de sistema | Security | Medium | RESOLVED |
-| [FIND-006](#find-006--regra-do-último-administrador-tem-janela-de-corrida-e-resposta-500) | Regra do último administrador tem janela de corrida e resposta 500 | Security | Medium | RESOLVED |
-| [FIND-007](#find-007--userhaspermission-é-um-stub-que-sempre-autoriza) | `User::hasPermission()` é um stub que sempre autoriza | Security | Medium | RESOLVED |
-| [FIND-008](#find-008--hash-de-cpf-é-reversível-por-força-bruta) | Hash de CPF é reversível por força bruta | Security | Medium | OPEN |
-| [FIND-009](#find-009--perfil-dev-lista-todos-os-usuários-mas-não-pode-ver-nenhum) | Perfil `dev` lista todos os usuários mas não pode ver nenhum | Security | Medium | RESOLVED |
-| [FIND-010](#find-010--árvore-de-menus-não-filtra-filhos-nem-inativos) | Árvore de menus não filtra filhos nem inativos | Architecture | Low | RESOLVED |
-| [FIND-011](#find-011--validação-incompleta-na-sincronização-de-permissões) | Validação incompleta na sincronização de permissões | Maintainability | Low | RESOLVED |
-| [FIND-012](#find-012--lacunas-de-cobertura-da-auditoria) | Lacunas de cobertura da auditoria | Security | Medium | RESOLVED (parcial) |
-| [FIND-013](#find-013--contexto-de-auditoria-acoplado-ao-processo-http-e-sem-atomicidade) | Contexto de auditoria acoplado ao processo HTTP e sem atomicidade | Architecture | Low | RESOLVED (parcial) |
-| [FIND-014](#find-014--audit_logs-é-mutável) | `audit_logs` é mutável | Security | Low | OPEN |
-| [FIND-015](#find-015--expiração-de-token-aceita-valores-que-nunca-terão-efeito) | Expiração de token aceita valores que nunca terão efeito | Security | Low | RESOLVED (parcial) |
-| [FIND-016](#find-016--rate-limiting-restrito-ao-login-e-por-emailip) | Rate limiting restrito ao login e por email+IP | Security | Low | OPEN |
-| [FIND-017](#find-017--assigned_by-não-é-preenchido-pela-api) | `assigned_by` não é preenchido pela API | Maintainability | Low | RESOLVED |
-| [FIND-018](#find-018--sinais-de-enumeração-no-login) | Sinais de enumeração no login | Security | Low | OPEN |
-| [FIND-019](#find-019--menu-pode-ser-pai-de-si-mesmo) | Menu pode ser pai de si mesmo | Maintainability | Low | OPEN |
-| [FIND-020](#find-020--respostas-de-autorização-e-de-tokens-inconsistentes) | Respostas de autorização e de tokens inconsistentes | Maintainability | Improvement | RESOLVED (parcial) |
-| [FIND-021](#find-021--lacunas-de-testes-de-segurança) | Lacunas de testes de segurança | Testing | Improvement | RESOLVED (parcial) |
-| [FIND-022](#find-022--documentação-e-histórico-divergem-do-código) | Documentação e histórico divergem do código | Documentation | Improvement | RESOLVED (parcial) |
+| ID | Título | Categoria | Severidade | Status (Fase 3.2) | Status (Fase 4.2) |
+|---|---|---|---|---|---|
+| [FIND-001](#find-001--abilities-de-token-não-são-aplicadas) | Abilities de token não são aplicadas | Security | **High** | RESOLVED | = |
+| [FIND-002](#find-002--listeners-de-auditoria-registrados-em-duplicidade) | Listeners de auditoria registrados em duplicidade | Architecture | Medium | RESOLVED | = |
+| [FIND-003](#find-003--usuário-desativado-continua-autenticado) | Usuário desativado continua autenticado | Security | Medium | RESOLVED | = |
+| [FIND-004](#find-004--duas-fontes-de-autorização-que-não-se-conhecem) | Duas fontes de autorização que não se conhecem | Architecture | Medium | RESOLVED | = |
+| [FIND-005](#find-005--menus-são-chaves-de-autorização-sem-proteção-de-sistema) | Menus são chaves de autorização sem proteção de sistema | Security | Medium | RESOLVED | = |
+| [FIND-006](#find-006--regra-do-último-administrador-tem-janela-de-corrida-e-resposta-500) | Regra do último administrador tem janela de corrida e resposta 500 | Security | Medium | RESOLVED | = |
+| [FIND-007](#find-007--userhaspermission-é-um-stub-que-sempre-autoriza) | `User::hasPermission()` é um stub que sempre autoriza | Security | Medium | RESOLVED | = |
+| [FIND-008](#find-008--hash-de-cpf-é-reversível-por-força-bruta) | Hash de CPF é reversível por força bruta | Security | Medium | OPEN | OPEN (deferred) |
+| [FIND-009](#find-009--perfil-dev-lista-todos-os-usuários-mas-não-pode-ver-nenhum) | Perfil `dev` lista todos os usuários mas não pode ver nenhum | Security | Medium | RESOLVED | = |
+| [FIND-010](#find-010--árvore-de-menus-não-filtra-filhos-nem-inativos) | Árvore de menus não filtra filhos nem inativos | Architecture | Low | RESOLVED | = |
+| [FIND-011](#find-011--validação-incompleta-na-sincronização-de-permissões) | Validação incompleta na sincronização de permissões | Maintainability | Low | RESOLVED | = |
+| [FIND-012](#find-012--lacunas-de-cobertura-da-auditoria) | Lacunas de cobertura da auditoria | Security | Medium | RESOLVED (parcial) | = |
+| [FIND-013](#find-013--contexto-de-auditoria-acoplado-ao-processo-http-e-sem-atomicidade) | Contexto de auditoria acoplado ao processo HTTP e sem atomicidade | Architecture | Low | RESOLVED (parcial) | = |
+| [FIND-014](#find-014--audit_logs-é-mutável) | `audit_logs` é mutável | Security | Low | OPEN | = |
+| [FIND-015](#find-015--expiração-de-token-aceita-valores-que-nunca-terão-efeito) | Expiração de token aceita valores que nunca terão efeito | Security | Low | RESOLVED (parcial) | = |
+| [FIND-016](#find-016--rate-limiting-restrito-ao-login-e-por-emailip) | Rate limiting restrito ao login e por email+IP | Security | Low | OPEN | = |
+| [FIND-017](#find-017--assigned_by-não-é-preenchido-pela-api) | `assigned_by` não é preenchido pela API | Maintainability | Low | RESOLVED | = |
+| [FIND-018](#find-018--sinais-de-enumeração-no-login) | Sinais de enumeração no login | Security | Low | OPEN | = |
+| [FIND-019](#find-019--menu-pode-ser-pai-de-si-mesmo) | Menu pode ser pai de si mesmo | Maintainability | Low | OPEN | = |
+| [FIND-020](#find-020--respostas-de-autorização-e-de-tokens-inconsistentes) | Respostas de autorização e de tokens inconsistentes | Maintainability | Improvement | RESOLVED (parcial) | = |
+| [FIND-021](#find-021--lacunas-de-testes-de-segurança) | Lacunas de testes de segurança | Testing | Improvement | RESOLVED (parcial) | RESOLVED |
+| [FIND-022](#find-022--documentação-e-histórico-divergem-do-código) | Documentação e histórico divergem do código | Documentation | Improvement | RESOLVED (parcial) | RESOLVED |
 
 Contagem: 1 High · 9 Medium · 9 Low · 3 Improvement. Nenhum Critical.
+
+Após a Fase 4.2: **17 RESOLVED**, agora só 4 deles parcialmente (FIND-021 e FIND-022 passaram de parcial a completo), e **5 OPEN**. O FIND-008 continua aberto e adiado, sem aumento de superfície. Nenhum finding novo foi aberto. Na tabela, `=` indica sem mudança na fase.
 
 Após a Fase 3.2: **17 RESOLVED**, 6 deles parcialmente (o bloco de status diz o que ficou aberto ou adiado), e **5 OPEN** (FIND-008, 014, 016, 018, 019). O único High (FIND-001) e 8 dos 9 Medium foram resolvidos; o Medium restante é o FIND-008.
 
@@ -102,7 +106,7 @@ Hardening, antes da Fase 4.
 
 **Tests:** `tests/Feature/Security/TokenAbilityTest.php`
 
-**Commit:** pending
+**Commit:** `85ed964` · testes em `e6e11c8`
 
 ---
 
@@ -147,7 +151,7 @@ Hardening. Correção de uma linha; o erro foi introduzido na Fase 3.
 
 **Tests:** `tests/Feature/Security/AuditIntegrityTest.php` (`count() === 1` por ação)
 
-**Commit:** pending
+**Commit:** `6ba00f0` · testes em `e6e11c8`
 
 ---
 
@@ -192,7 +196,11 @@ Hardening / Fase 4 (a área administrativa vai precisar desativar usuários).
 
 **Tests:** `tests/Feature/Security/DisabledUserAuthenticationTest.php`
 
-**Commit:** pending
+**Commit:** `85ed964` (enforcement), `2392411` (higiene) · testes em `e6e11c8`
+
+### Status (Fase 4.2)
+
+**Status:** RESOLVED (sem mudança). O endpoint adiado foi entregue: `DeactivateUser` (API `POST /users/{id}/deactivate` e área administrativa) revoga os tokens, remove as sessões web e respeita a invariante de administrador; `ActivateUser` não restaura credenciais. **Tests:** `tests/Feature/Admin/UserManagementTest.php` (`Deactivate user`, `Activate user`).
 
 ---
 
@@ -240,7 +248,7 @@ funcionarem.
 
 **Tests:** `tests/Feature/Security/AuthorizationMatrixTest.php`, `PrivilegeEscalationTest.php`
 
-**Commit:** pending
+**Commit:** `2392411`, `85ed964` · testes em `e6e11c8`
 
 ---
 
@@ -292,7 +300,7 @@ Hardening, antes da Fase 4.
 
 **Tests:** `tests/Feature/Security/AuthorizationMatrixTest.php` (`Stable permission keys`)
 
-**Commit:** pending
+**Commit:** `2392411`, `85ed964`; seed em `dc5066a` · testes em `e6e11c8`
 
 ---
 
@@ -340,7 +348,7 @@ Hardening.
 
 **Tests:** `tests/Feature/Security/AdminInvariantTest.php`, `IAM/UserProfileSyncTest.php` (500 → 409)
 
-**Commit:** pending
+**Commit:** `6ba00f0` · testes em `e6e11c8`
 
 ---
 
@@ -383,7 +391,7 @@ Antes da Fase 4.
 
 **Tests:** `tests/Feature/Security/AuthorizationMatrixTest.php` (`Functional permissions`)
 
-**Commit:** pending
+**Commit:** `2392411` · testes em `e6e11c8`
 
 ---
 
@@ -422,6 +430,10 @@ Antes de qualquer fase que colete CPF.
 **Status:** OPEN
 
 **Nota:** Fora do escopo da Fase 3.2. Deve ser tratado antes de qualquer fase que colete CPF.
+
+### Status (Fase 4.2)
+
+**Status:** OPEN (DEFERRED). A administração de usuários **não** lê, exibe, busca nem edita CPF, então a Fase 4.2 não aumentou a superfície do finding. A correção recomendada (HMAC-SHA-256 sobre o CPF normalizado, com uma chave própria vinda de configuração, fora do banco e distinta de `APP_KEY` para não acoplar a rotação) exige migração dos hashes existentes e uma decisão sobre rotação da chave. Fica como pré-requisito de qualquer tela que use CPF. **Tests:** `UserManagementTest › lists users with status and profiles, without sensitive data` (o hash não aparece).
 
 ---
 
@@ -463,7 +475,7 @@ Hardening.
 
 **Tests:** `tests/Feature/Security/AuthorizationMatrixTest.php` (`limits dev to self-service`, `keeps list and detail consistent…`)
 
-**Commit:** pending
+**Commit:** `85ed964`; seed em `dc5066a` · testes em `e6e11c8`
 
 ---
 
@@ -511,7 +523,7 @@ Fase 4 (a área administrativa vai consumir a árvore).
 
 **Tests:** `tests/Feature/Security/MenuTreeTest.php`
 
-**Commit:** pending
+**Commit:** `6ba00f0`, `85ed964` (rota) · testes em `e6e11c8`
 
 ---
 
@@ -552,7 +564,7 @@ Hardening.
 
 **Tests:** `tests/Feature/Security/PrivilegeEscalationTest.php` (`rejects unknown menu ids…`, `allows revoking every permission…`)
 
-**Commit:** pending
+**Commit:** `85ed964` · testes em `e6e11c8`
 
 ---
 
@@ -594,7 +606,7 @@ Hardening / Fase 5.
 
 **Tests:** `tests/Feature/Security/AuditIntegrityTest.php`
 
-**Commit:** pending
+**Commit:** `6ba00f0` · testes em `e6e11c8`
 
 ---
 
@@ -637,7 +649,7 @@ Hardening.
 
 **Tests:** `tests/Feature/Security/AuditIntegrityTest.php` (`takes the actor from the event…`), `AdminInvariantTest.php` (`leaves no audit trail for a rejected change`)
 
-**Commit:** pending
+**Commit:** `6ba00f0` · testes em `e6e11c8`
 
 ---
 
@@ -709,7 +721,7 @@ Hardening.
 
 **Tests:** `tests/Feature/Security/TokenAbilityTest.php` (`caps token lifetime…`)
 
-**Commit:** pending
+**Commit:** `85ed964` · testes em `e6e11c8`
 
 ---
 
@@ -778,7 +790,7 @@ Hardening.
 
 **Tests:** `tests/Feature/Security/AuditIntegrityTest.php` (`records the assigning actor on the pivot`)
 
-**Commit:** pending
+**Commit:** `6ba00f0` · testes em `e6e11c8`
 
 ---
 
@@ -841,6 +853,10 @@ Fase 4.
 
 **Nota:** Fora do escopo. Mitigação parcial: a nova árvore é montada a partir das raízes e nunca alcança nós de um ciclo, então não entra em loop. O dado inválido continua sendo aceito (Fase 4).
 
+### Status (Fase 4.2)
+
+**Status:** OPEN. Fora do escopo: a Fase 4.2 não criou tela de menus.
+
 ---
 
 ## FIND-020 — Respostas de autorização e de tokens inconsistentes
@@ -877,7 +893,11 @@ Hardening.
 
 **Tests:** `tests/Feature/Security/TokenAbilityTest.php` (`returns 404 when revoking a token…`)
 
-**Commit:** pending
+**Commit:** `85ed964`, `6ba00f0` · testes em `e6e11c8`
+
+### Status (Fase 4.2)
+
+**Status:** sem mudança. A área administrativa não alterou envelopes JSON. Ela segue a mesma política de códigos: página 404 para negação funcional (o `CheckPermission` responde HTML fora da API) e 403 para regra contextual.
 
 ---
 
@@ -914,7 +934,15 @@ Fase 5.
 
 **Tests:** `tests/Feature/Security/*` (80 testes)
 
-**Commit:** pending
+**Commit:** `e6e11c8`
+
+### Status (Fase 4.2)
+
+**Status:** RESOLVED
+
+**Resolution:** `tests/Feature/Security/RouteCoverageTest.php` percorre as rotas registradas e aplica uma regra por área, sem depender da ordem do `route:list`. Na API, toda rota exceto login tem `auth:sanctum` e `token.ability`, e tem `permission:` ou está numa lista explícita de autoatendimento; nenhuma inicia sessão. No admin, toda rota está no grupo `web`, exige `auth` e `admin.access` conforme o papel e, se for de recurso, `permission:`. Além disso, visitante e `dev` são barrados em todas as rotas internas por requisição real. O teste falha quando se remove `admin.access` das rotas de usuários (verificado por mutação).
+
+**Commit:** pending (Fase 4.2)
 
 ---
 
@@ -944,4 +972,12 @@ README: feito na Fase 3.1. Restante: junto com FIND-007 e antes da Fase 4.
 
 **Resolution:** O stub de `hasPermission()` foi substituído pela implementação real (FIND-007). A decisão sobre ativar ou abandonar a autenticação SPA por cookie continua pendente.
 
-**Commit:** pending
+**Commit:** `2392411` · testes em `e6e11c8`
+
+### Status (Fase 4.2)
+
+**Status:** RESOLVED
+
+**Resolution:** A decisão pendente foi registrada no [ADR-0009](../architecture/decisions/ADR-0009-web-session-and-bearer-adapters.md): a autenticação SPA por cookie não será usada. A área administrativa é Blade com sessão `web`, a API usa só Bearer e `statefulApi()` continua desligado. Um cookie de sessão real recebe 401 na API (verificado por HTTP), e `RouteCoverageTest` impede que uma rota da API passe a iniciar sessão.
+
+**Commit:** pending (Fase 4.2)

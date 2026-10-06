@@ -55,7 +55,7 @@ API REST v1 com usuários (ULID), perfis, menus, matriz de permissões perfil ×
 
 ### Área administrativa
 
-*Em construção (Fase 4).* Interface Blade em `/admin` com login por sessão web, independente dos tokens da API. Veja [`docs/phases/phase-04-1-admin-shell.md`](docs/phases/phase-04-1-admin-shell.md).
+*Em construção (Fase 4).* Interface Blade em `/admin` com login por sessão web, independente dos tokens da API ([Fase 4.1](docs/phases/phase-04-1-admin-shell.md)). Administração de usuários em `/admin/users`, com as mesmas Policies, Actions e auditoria da API; entram só usuários com permissão funcional sobre alguma área disponível ([Fase 4.2](docs/phases/phase-04-2-user-management.md)).
 
 ### Segurança
 

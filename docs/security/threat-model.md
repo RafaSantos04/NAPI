@@ -37,7 +37,7 @@ Veja [phases](../phases/README.md).
 - **Antes**: confirmado. Token emitido antes de `is_active = false` continuava com 200 ([FIND-003](../findings/README.md#find-003--usuário-desativado-continua-autenticado)).
 - **Mitigação**: `Sanctum::authenticateAccessTokensUsing` recusa o token de dono inativo (401); hook de higiene apaga os tokens ao desativar.
 - **Teste de regressão**: `tests/Feature/Security/DisabledUserAuthenticationTest.php`.
-- **Risco residual**: não há endpoint de desativação, e ele ficará para a Fase 4.
+- **Risco residual**: resolvido na Fase 4.2. `DeactivateUser` (API e admin) apaga tokens e remove as sessões web, e `EnsureUserIsActive` encerra a sessão no próximo request. Com um driver de sessão diferente de `database`, uma reativação feita antes desse request devolveria a sessão antiga; com o driver do projeto, isso não ocorre.
 
 ### Custom profiles ignored or divergent authorization
 
@@ -58,7 +58,7 @@ Veja [phases](../phases/README.md).
 - **Antes**: confirmado. Havia janela de corrida, admins inativos contavam como restantes e a resposta era 500 ([FIND-006](../findings/README.md#find-006--regra-do-último-administrador-tem-janela-de-corrida-e-resposta-500)); renomear `menus.index` trancava o admin ([FIND-005](../findings/README.md#find-005--menus-são-chaves-de-autorização-sem-proteção-de-sistema)).
 - **Mitigação**: invariante "≥ 1 administrador ativo" em transação com `SELECT … FOR UPDATE` no perfil admin, aplicada à remoção de perfil e à exclusão de usuário, respondendo 409. Chave de permissão `menus.key` imutável e separada do `route_name`; menus de sistema não excluíveis; admin com todas as permissões implícitas.
 - **Teste de regressão**: `tests/Feature/Security/AdminInvariantTest.php`, `AuthorizationMatrixTest › Stable permission keys`.
-- **Risco residual**: a concorrência não tem teste automatizado (limitação do `RefreshDatabase`); o lock foi verificado manualmente contra o PostgreSQL. A desativação de usuário não passa pela invariante, porque ainda não há endpoint.
+- **Risco residual**: a concorrência não tem teste automatizado (limitação do `RefreshDatabase`); o lock foi verificado manualmente contra o PostgreSQL. Desde a Fase 4.2, a desativação de usuário também passa pela invariante (`DeactivateUser`).
 
 ### Audit trail not trustworthy
 

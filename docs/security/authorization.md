@@ -87,7 +87,7 @@ $user->hasPermission('users.update'); // única resposta funcional do sistema
 |---|---|
 | `GET /users`, `GET /users/{id}` | `users.view` |
 | `POST /users` | `users.create` |
-| `PUT /users/{id}`, `PUT /users/{id}/profiles` | `users.update` |
+| `PUT /users/{id}`, `PUT /users/{id}/profiles`, `POST /users/{id}/deactivate`, `POST /users/{id}/activate` | `users.update` |
 | `DELETE /users/{id}` | `users.delete` |
 | `profiles.*` | `profiles.{ação}` |
 | `PUT /profiles/{id}/menus` | `permissions.update` |
@@ -113,6 +113,8 @@ apenas o que depende da instância ou do ator:
 | `UserPolicy::view`/`viewAny` | nenhuma: as duas usam `users.view` e nunca divergem ([FIND-009](../findings/README.md#find-009--perfil-dev-lista-todos-os-usuários-mas-não-pode-ver-nenhum)) |
 | `UserPolicy::update` | só admin altera conta de administrador |
 | `UserPolicy::delete` | nunca a si mesmo; só admin exclui administrador |
+| `UserPolicy::deactivate` | nunca a si mesmo; só admin desativa administrador (Fase 4.2) |
+| `UserPolicy::activate` | só admin reativa administrador (Fase 4.2) |
 | `UserPolicy::assignProfiles` | admin: livre (a invariante protege o último). Os demais não alteram os próprios perfis, não mexem em administrador e não adicionam nem removem perfil com permissão que não têm |
 | `ProfilePolicy::update/delete` | perfil `is_system` imutável; `delete` também sem usuários |
 | `ProfilePolicy::syncMenus` | perfil `is_system` imutável (inclusive para admin). Os demais não editam a matriz de um perfil que possuem e não concedem flags que não têm |
@@ -130,6 +132,35 @@ apenas o que depende da instância ou do ator:
 | Delegado edita a matriz do próprio perfil | `ProfilePolicy::syncMenus` | `PrivilegeEscalationTest` |
 | Delegado concede flag que não tem | `ProfilePolicy::syncMenus` | `PrivilegeEscalationTest` |
 | Renomear/excluir menu-chave bloqueia a API | `key` imutável + `is_system` | `AuthorizationMatrixTest` |
+
+## Área administrativa (Blade)
+
+Desde a [Fase 4.2](../phases/phase-04-2-user-management.md), a área
+administrativa é um segundo adapter das mesmas camadas. Nada foi duplicado: a
+permissão funcional usa o mesmo `CheckPermission`, as autorizações de escrita
+usam as mesmas Policies (os FormRequests web estendem os da API) e as regras
+de negócio estão nas mesmas Actions.
+
+| # | Camada | API (Bearer) | Admin (sessão `web`) |
+|---|---|---|---|
+| 1 | Autenticação | token válido + dono ativo → 401 | sessão + `EnsureUserIsActive` → redirect para `/admin` |
+| 1b | Entrada na área | — | `admin.access` (`EnsureUserCanAccessAdmin`): ao menos uma seção visível em `AdminNavigation`. Sem isso, o login é recusado e uma sessão existente é encerrada |
+| 2 | Capacidade do token | `token.ability` → 403 | não se aplica (sessão não tem abilities); CSRF em toda mutação |
+| 3 | Permissão funcional | `permission:` → 404 JSON | o mesmo `permission:` → página 404 |
+| 4 | Regra contextual | Policy → 403 | a mesma Policy → 403 |
+| 5 | Invariante | `LastActiveAdministratorException` → 409 | a mesma exceção → redirect de volta com mensagem |
+
+**Quem entra.** Não existe flag nem permission key de "admin". Uma seção da
+navegação aparece quando a Policy dela permite (`Usuários` ↔
+`UserPolicy::viewAny` ↔ `users.view`), e o usuário entra quando ao menos uma
+aparece. Por isso o `admin` entra e o `dev` e o `viewer` não, e um perfil
+customizado com `users.view` entra. Permissões de áreas que ainda não têm
+tela (por exemplo, só `menus.*`) não dão entrada, porque não haveria nada a
+usar. Quando novas seções forem criadas, elas passam a contar automaticamente.
+
+**Esconder link não é autorizar.** A navegação e os botões usam `@can` com as
+mesmas abilities, mas cada rota mantém `permission:` e Policy próprios.
+`RouteCoverageTest` impõe isso a todas as rotas `admin/*`.
 
 ## Visibilidade de menu ≠ autorização
 

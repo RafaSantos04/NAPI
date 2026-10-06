@@ -33,10 +33,29 @@ correção correspondente.
 | `PrivilegeEscalationTest` | 15 | FIND-004, 011, 021 | atribuir perfis sem `users.update`; atribuir a si; conceder `admin`; conceder perfil acima do próprio; rebaixar/editar/excluir administrador; alterar matriz sem permissão; editar a matriz do próprio perfil; conceder flag que não tem; perfil de sistema imutável; menu inexistente → 422; revogar tudo |
 | `AdminInvariantTest` | 7 | FIND-006 | último admin ativo → 409; admin inativo e admin excluído não contam; com dois admins ativos a mudança passa; exclusão via Action respeita a invariante; rejeição não gera auditoria |
 | `AuditIntegrityTest` | 8 | FIND-002, 012, 013, 017 | `count() === 1` para login, logout, atribuição, matriz, usuário (criar/alterar/excluir) e token (criar/revogar); ator correto; `assigned_by` no pivot; contexto vem do evento, não da sessão |
+| `RouteCoverageTest` (Fase 4.2) | 8 | FIND-021, 022 | toda rota `api/*` exceto login tem `auth:sanctum` e `token.ability`; toda rota autenticada da API tem `permission:` ou está na lista explícita de autoatendimento; nenhuma rota da API inicia sessão (`statefulApi` desligado); toda rota `admin*` está no grupo `web`, exige `auth` (exceto landing e login) e `admin.access` (exceto login e logout); toda rota `admin/*` de recurso tem `permission:`; visitante e `dev` são barrados em **todas** as rotas internas do admin |
 | `MenuTreeTest` | 7 | FIND-010 | admin vê todos os ativos; inativos (raiz e filho) ocultos; filho sem `view` oculto; filho de pai oculto oculto; `dev` recebe 200 com árvore vazia; mais de um nível; aparecer na árvore não concede acesso |
 
-## Invariante → teste
+## Área administrativa: `tests/Feature/Admin/` (Fase 4.2)
 
+`UserManagementTest` (44 testes) prova que a área administrativa usa as
+mesmas regras da API:
+
+| Grupo | Garante |
+|---|---|
+| Acesso | `dev` e `viewer` não abrem sessão nem geram auditoria de login; sessão existente sem acesso é encerrada; quem perde o perfil perde a sessão; perfil customizado com `users.view` entra; permissão de área sem tela não dá entrada; permissão ausente numa página → 404; botões sem permissão não aparecem |
+| Listagem e detalhe | perfis carregados antecipadamente; CPF, hash de senha e telefone não aparecem; paginação de 15; busca por nome ou e-mail, sem curingas LIKE; `dev` não lista nem inspeciona; usuário excluído → 404 |
+| Criação e edição | senha com hash e fora da auditoria; `is_active`, `is_admin` e `profile_ids` ignorados; mensagens de validação sem eco da senha; `users.create`/`users.update` exigidos (404); não-admin não edita administrador (403); só os campos alterados são auditados |
+| Status | desativar revoga tokens (token antigo → 401), remove sessões (`database`) e audita; sessão web existente fica inutilizável; ninguém se desativa (403, sem botão); não-admin não desativa administrador; último admin ativo protegido pela Action; reativar não devolve tokens nem sessões |
+| Perfis | `assigned_by` com o ator; formulário vazio remove tudo; autoescalação e concessão de `admin` por delegado → 403; delegado só concede o que tem; último admin → redirect com mensagem e sem auditoria |
+| Entre canais | desativação e reativação pela API usam a mesma Action e auditoria; a mesma Policy responde pela API (403/404 e ability `read` → 403); a mesma exceção dá 409 na API e mensagem na web; criação pela API ignora `is_active` |
+
+A sessão web não autentica a API. Isso foi verificado com HTTP real (cookie
+→ 401), porque nos testes o session store em memória é compartilhado entre
+requisições e a reprodução daria um falso 200. A garantia permanente é
+estrutural, em `RouteCoverageTest`.
+
+## Invariante → teste
 | Invariante | Teste | Arquivo |
 |---|---|---|
 | INV-01 autenticação obrigatória | `returns 401 when accessing protected route without token`, `rejects an invalid bearer token` | `IAM/AuthenticationTest`, `Security/TokenAbilityTest` |
@@ -67,7 +86,6 @@ correção correspondente.
 | Lacuna | Motivo / relacionado |
 |---|---|
 | Corrida concorrente na invariante de administrador | `RefreshDatabase` usa uma única transação por teste, então duas conexões simultâneas não enxergam os dados. O lock foi verificado manualmente no PostgreSQL (INV-08) |
-| Toda rota autenticada declara `permission:` ou é intencionalmente pública (teste de varredura de rotas) | threat model, Fase 5 |
 | 401 em cada rota individual de Profiles, Menus e Tokens | INV-01; o grupo é único, e o 401 é testado em `/auth/me` e com token inválido |
 | Login falho auditado | adiado (FIND-012) |
 | Enumeração no login por tempo | FIND-018, Fase 5 |

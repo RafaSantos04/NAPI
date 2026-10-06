@@ -4,7 +4,8 @@
 
 ## Status
 
-Accepted (Fase 3)
+Accepted (Fase 3). Complementado pela Fase 4.2; veja
+[Evolução na Fase 4.2](#evolução-na-fase-42).
 
 ## Context
 
@@ -69,8 +70,29 @@ proteger nenhuma regra.
 Centraliza a proteção contra lockout administrativo e garante que toda
 mudança de perfis ou permissões pela Action gere evento de auditoria.
 
+## Evolução na Fase 4.2
+
+O critério não mudou: DTO + Action quando há regra de negócio ou efeito que
+precisa valer em todo ponto de entrada. Com a área administrativa (segundo
+adapter, [ADR-0009](ADR-0009-web-session-and-bearer-adapters.md)), mais quatro
+casos de uso passaram a se enquadrar:
+
+| Caso de uso | Por que |
+|---|---|
+| `CreateUserDto` → `CreateUser` | API e admin criariam a conta e a auditoria em dois lugares; o DTO fixa os únicos campos aceitos (sem `is_active`, perfis ou flags) |
+| `UpdateUserDto` → `UpdateUser` | mesma duplicação, mais o cálculo dos campos alterados para a auditoria |
+| `DeactivateUser` | invariante do último admin, revogação de tokens e remoção de sessões |
+| `ActivateUser` | operação explícita e auditada, que não restaura credenciais antigas |
+
+Status não tem DTO: a entrada é só o usuário da rota. O restante do CRUD de
+perfis e menus continua chamando o model no controller. As consequências
+negativas sobre `request()->ip()`, transações e `\Exception` genérica foram
+resolvidas na Fase 3.2 (`AuditContext`, `DB::transaction`,
+`LastActiveAdministratorException`).
+
 ## References
 
 - `app/DTOs/*`, `app/Domain/IAM/Actions/*`
+- `app/Http/Controllers/Api/V1/UserController.php`, `UserStatusController.php`, `app/Http/Controllers/Web/Admin/*` (Fase 4.2)
 - `app/Http/Controllers/Api/V1/UserProfileController.php`, `ProfileController::syncMenus`
 - `tests/Feature/IAM/UserProfileSyncTest.php`

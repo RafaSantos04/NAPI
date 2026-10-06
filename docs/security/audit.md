@@ -27,10 +27,12 @@ carregado pelo evento.
 
 | `action` | Evento | Disparado em | Subject | `meta` |
 |---|---|---|---|---|
-| `login` | `UserLoggedIn` | `AuthController::login` | — | — |
-| `logout` | `UserLoggedOut` | `AuthController::logout` | — | `revoked_tokens` |
-| `user_created` | `UserCreated` | `UserController::store` | `App\Models\User` | — |
-| `user_updated` | `UserUpdated` | `UserController::update` (só se algo mudou) | `App\Models\User` | `fields`: nomes dos campos alterados, **sem valores** |
+| `login` | `UserLoggedIn` | `AuthController::login`, `Web\Admin\Auth\LoginController::store` | — | — |
+| `logout` | `UserLoggedOut` | `AuthController::logout`, `Web\Admin\Auth\LoginController::destroy` | — | `revoked_tokens` (0 no logout web) |
+| `user_created` | `UserCreated` | `CreateUser` (API e admin) | `App\Models\User` | — |
+| `user_updated` | `UserUpdated` | `UpdateUser` (API e admin; só se algo mudou) | `App\Models\User` | `fields`: nomes dos campos alterados, **sem valores** |
+| `user_deactivated` | `UserDeactivated` | `DeactivateUser` (API e admin) | `App\Models\User` | `revoked_tokens`, `ended_sessions` |
+| `user_activated` | `UserActivated` | `ActivateUser` (API e admin) | `App\Models\User` | — |
 | `user_deleted` | `UserDeleted` | `DeleteUser` | `App\Models\User` | — |
 | `profile_assigned` | `ProfileAssigned` | `AssignProfilesToUser` | `App\Models\User` | `profile_ids` (conjunto final) |
 | `permission_changed` | `PermissionChanged` | `SyncMenuPermissions` | `App\Models\Profile` | `permissions` (matriz final completa) |
@@ -51,6 +53,7 @@ Classificação feita na Fase 3.2 ([FIND-012](../findings/README.md#find-012--la
 | Atribuição de perfil | já auditado | mudança de privilégio |
 | Mudança de permissão | já auditado | mudança de privilégio |
 | Usuário criado / atualizado / excluído | **audit now** | mudança de identidade; o e-mail é credencial de login |
+| Usuário ativado / desativado | **audit now** (Fase 4.2) | concede ou retira a capacidade de autenticar |
 | Token criado / revogado | **audit now** | criação e destruição de credencial |
 | Login falho | **defer** (Fase 5) | exige decidir como guardar o e-mail tentado (dado pessoal, possivelmente de terceiros) e se relaciona com a revisão do rate limit ([FIND-016](../findings/README.md#find-016--rate-limiting-restrito-ao-login-e-por-emailip), [FIND-018](../findings/README.md#find-018--sinais-de-enumeração-no-login)) |
 | CRUD de perfil | **defer** (Fase 5, com o ADR do conjunto mínimo auditável) | criar ou excluir perfil não concede nada sozinho; o que concede é a matriz e a atribuição, que já são auditadas |
@@ -110,6 +113,12 @@ deixa a regra de negócio intocada quando o formato da auditoria muda.
   nem expurgo definida.
 
 ## Testes
+
+Desde a [Fase 4.2](../phases/phase-04-2-user-management.md), cada fato é
+auditado num único ponto, a Action, e por isso a API e a área administrativa
+produzem a mesma linha. `tests/Feature/Admin/UserManagementTest.php` verifica
+ator, subject e `meta` das operações feitas pela área administrativa, e que a
+senha não aparece na trilha.
 
 `tests/Feature/Security/AuditIntegrityTest.php` usa tokens reais e verifica
 **cardinalidade** (`count() === 1`) para cada ação, o ator gravado, o

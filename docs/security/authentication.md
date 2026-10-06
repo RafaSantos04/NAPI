@@ -12,7 +12,7 @@ Laravel Sanctum com **personal access tokens** enviados como
 A autenticação SPA por cookie **não está ativa**: `bootstrap/app.php` não
 chama `statefulApi()`, e o grupo `api` contém apenas `SubstituteBindings`.
 `SANCTUM_STATEFUL_DOMAINS` e `guard => ['web']` estão configurados, mas não
-são exercidos pelas rotas da API. A sessão `web` é usada apenas pela
+são exercidos pelas rotas da API ([ADR-0009](../architecture/decisions/ADR-0009-web-session-and-bearer-adapters.md)). A sessão `web` é usada apenas pela
 [área administrativa](#área-administrativa-sessão-web).
 
 ## Login: `POST /api/v1/auth/login`
@@ -75,8 +75,12 @@ Há duas proteções distintas:
 - **Higiene**, um hook `updated` em `User` que apaga os tokens quando
   `is_active` passa de `true` para `false`.
 
-Não há endpoint que altere `is_active`. Ele fica para a Fase 4, e o hook de
-higiene já cobre qualquer caminho futuro que use o model.
+Desde a [Fase 4.2](../phases/phase-04-2-user-management.md), `is_active`
+muda só pelas Actions `DeactivateUser` e `ActivateUser`
+(`POST /users/{id}/deactivate|activate` na API e os botões equivalentes em
+`/admin/users/{id}`). A desativação apaga os tokens e remove as sessões web
+do usuário (driver `database`). A reativação não devolve nenhum dos dois:
+ela só volta a permitir um login novo.
 
 ## Rotas que exigem autenticação
 
@@ -94,6 +98,18 @@ inativa, regenera a sessão e audita via `UserLoggedIn`; o logout invalida a
 sessão e rotaciona o token CSRF. `EnsureUserIsActive` (grupo `web`) encerra
 a sessão de quem for desativado depois do login. Rate limit: 5 tentativas
 por `email + IP`.
+
+Desde a Fase 4.2, credenciais válidas de quem não tem acesso à área
+administrativa (por exemplo `dev` e `viewer`) não abrem sessão e recebem
+`Esta conta não tem acesso à área administrativa.`. A mensagem não cria um
+sinal de enumeração novo, porque as mesmas credenciais já são confirmadas
+por `POST /api/v1/auth/login`. Uma sessão aberta que perde o acesso é
+encerrada no próximo request (`EnsureUserCanAccessAdmin`).
+
+A sessão web nunca autentica a API: o grupo `api` não inicia sessão
+(`statefulApi()` desligado), o que foi verificado com HTTP real (cookie da
+sessão → 401) e é imposto por `RouteCoverageTest`. A decisão está no
+[ADR-0009](../architecture/decisions/ADR-0009-web-session-and-bearer-adapters.md).
 
 ## Riscos residuais
 

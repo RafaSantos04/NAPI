@@ -2,7 +2,7 @@
 
 [← Fases](README.md) · [Findings](../findings/README.md) · [ADR-0008](../architecture/decisions/ADR-0008-layered-authorization-model.md)
 
-**Commit:** pending
+**Commits:** `2392411` (permissão funcional e `menus.key`), `85ed964` (abilities, usuário inativo, Policies), `6ba00f0` (invariante e auditoria), `e6e11c8` (suíte de segurança), `dc5066a` (documentação)
 
 ## Objetivo
 

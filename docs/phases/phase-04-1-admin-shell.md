@@ -2,7 +2,7 @@
 
 [← Fases](README.md) · [Autenticação](../security/authentication.md#área-administrativa-sessão-web)
 
-**Commit:** pending
+**Commits:** `a30deac` (sessão web), `5d759dd` (shell), `562b118` (testes), `ea89fad` (documentação)
 
 ## Objetivo
 
@@ -69,9 +69,9 @@ para `/admin` (`bootstrap/app.php`).
 
 ## Fora do escopo / próximos passos
 
-- Restringir a área administrativa por permissão funcional
-  (`hasPermission`): hoje qualquer usuário ativo entra no shell, que ainda
-  não expõe nenhum dado.
+- ~~Restringir a área administrativa por permissão funcional~~: feito na
+  [Fase 4.2](phase-04-2-user-management.md#acesso-à-área-administrativa).
 - Dashboard, navegação pela árvore de menus e páginas internas.
-- Decidir se as telas consumirão Actions do domínio diretamente ou a API.
+- ~~Decidir se as telas consumirão Actions do domínio diretamente ou a API~~:
+  Actions diretamente ([ADR-0009](../architecture/decisions/ADR-0009-web-session-and-bearer-adapters.md)).
 - Auditar tentativas de login falhas (mesma pendência da API).

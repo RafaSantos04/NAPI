@@ -96,7 +96,9 @@ existir fora de ambiente local.
 |---|---|---|---|---|
 | Login | `LoginRequest` | pública + rate limit | usuário ativo | `login` |
 | Logout | — | autenticado + `write` | revoga **todos** os tokens | `logout` |
-| CRUD de usuário | `UserStore/UpdateRequest` | `users.{ação}` + `UserPolicy` | ninguém exclui a si mesmo; só admin altera ou exclui administrador; exclusão via `DeleteUser` protege o último admin ativo | `user_created`, `user_updated`, `user_deleted` |
+| CRUD de usuário | `UserStore/UpdateRequest` → `CreateUserDto`/`UpdateUserDto` → `CreateUser`/`UpdateUser` | `users.{ação}` + `UserPolicy` | só nome, e-mail e senha (criação); ninguém exclui a si mesmo; só admin altera ou exclui administrador; exclusão via `DeleteUser` protege o último admin ativo | `user_created`, `user_updated`, `user_deleted` |
+| Desativar usuário | — → `DeactivateUser` | `users.update` + `UserPolicy::deactivate` | ninguém desativa a si mesmo; só admin desativa administrador; último admin ativo (409); revoga tokens e remove sessões web | `user_deactivated` |
+| Reativar usuário | — → `ActivateUser` | `users.update` + `UserPolicy::activate` | só admin reativa administrador; não devolve tokens nem sessões | `user_activated` |
 | Atribuir perfis | `AssignProfileRequest` → DTO → `AssignProfilesToUser` | `users.update` + `assignProfiles` (anti-escalação) | último admin ativo (409), em transação com lock | `profile_assigned` |
 | CRUD de perfil | `ProfileStore/UpdateRequest` | `profiles.{ação}` + `ProfilePolicy` | perfil de sistema imutável; não excluir com usuários | não (adiado) |
 | Sincronizar permissões | `SyncMenusRequest` → DTO → `SyncMenuPermissions` | `permissions.update` + `syncMenus` (anti-escalação) | perfil de sistema imutável; delegado não edita o próprio perfil nem concede o que não tem | `permission_changed` |
@@ -111,9 +113,12 @@ Estão catalogadas, com local de aplicação e teste, em
 
 ## Limitações conhecidas
 
-- Não há endpoint para desativar um usuário. A Fase 4 deve usar a invariante de administrador e a limpeza de tokens já existentes.
 - CRUD de perfis e menus não é auditado (adiado, veja [audit.md](../security/audit.md#cobertura)).
 - Um menu pode ser pai de si mesmo ([FIND-019](../findings/README.md#find-019--menu-pode-ser-pai-de-si-mesmo)). A árvore ignora ciclos, mas o dado inválido é aceito.
+
+Desde a [Fase 4.2](../phases/phase-04-2-user-management.md) os casos de uso
+de usuário servem dois adapters, a API (`Api\V1`) e a área administrativa
+(`Web\Admin`), com as mesmas Policies, Actions e eventos.
 
 As limitações estruturais registradas na Fase 3.1 (FIND-004, FIND-005,
 FIND-007, FIND-010) foram resolvidas na Fase 3.2; veja
@@ -125,6 +130,7 @@ FIND-007, FIND-010) foram resolvidas na Fase 3.2; veja
 - Policies: `app/Policies/*`
 - Actions: `app/Domain/IAM/Actions/*`
 - Invariante e contexto: `app/Domain/IAM/{EnsureActiveAdministratorRemains,AuditContext}.php`
-- Middleware: `app/Http/Middleware/{CheckPermission,EnsureTokenAbility}.php`
+- Middleware: `app/Http/Middleware/{CheckPermission,EnsureTokenAbility,EnsureUserIsActive,EnsureUserCanAccessAdmin}.php`
+- Adapters: `app/Http/Controllers/Api/V1/*` (JSON) e `app/Http/Controllers/Web/Admin/*` (Blade); seções da área administrativa em `app/Http/Admin/AdminNavigation.php`
 - Eventos e auditoria: `app/Events/*`, `app/Listeners/RecordAuditLog.php`
 - Seeders: `database/seeders/*`
