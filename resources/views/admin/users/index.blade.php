@@ -55,6 +55,14 @@
                                 <time datetime="{{ $user->created_at->toIso8601String() }}">{{ $user->created_at->format('d/m/Y') }}</time>
                             </td>
                             <td class="actions">
+                                @can('delete', $user)
+                                    <form method="POST" action="{{ route('admin.users.destroy', $user) }}"
+                                          data-confirm="Excluir {{ $user->name }}? A conta será removida da listagem e perderá o acesso. O histórico será preservado.">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-danger">Excluir<span class="sr-only"> {{ $user->name }}</span></button>
+                                    </form>
+                                @endcan
                                 <a href="{{ route('admin.users.show', $user) }}">Ver<span class="sr-only"> {{ $user->name }}</span></a>
                                 @can('update', $user)
                                     <a href="{{ route('admin.users.edit', $user) }}">Editar<span class="sr-only"> {{ $user->name }}</span></a>

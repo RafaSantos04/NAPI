@@ -10,6 +10,14 @@
         </div>
 
         <div class="page-actions">
+            @can('delete', $user)
+                <form method="POST" action="{{ route('admin.users.destroy', $user) }}"
+                      data-confirm="Excluir {{ $user->name }}? A conta será removida da listagem e perderá o acesso. O histórico será preservado.">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn btn-danger">Excluir<span class="sr-only"> {{ $user->name }}</span></button>
+                </form>
+            @endcan
             @can('update', $user)
                 <a class="btn" href="{{ route('admin.users.edit', $user) }}">Editar</a>
             @endcan

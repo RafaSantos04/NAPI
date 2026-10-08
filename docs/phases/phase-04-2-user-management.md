@@ -65,12 +65,12 @@ entra quem vê ≥ 1 seção           admin: sim · dev/viewer: não · perfil 
 | GET | `/admin/users/{user}` | `admin.users.show` | … `permission:users.view` | detalhe + perfis |
 | GET | `/admin/users/{user}/edit` | `admin.users.edit` | … `permission:users.update` | formulário |
 | PUT | `/admin/users/{user}` | `admin.users.update` | … `permission:users.update` | `UpdateUser` |
+| DELETE | `/admin/users/{user}` | `admin.users.destroy` | … `permission:users.delete` | `DeleteUser` |
 | POST | `/admin/users/{user}/deactivate` | `admin.users.deactivate` | … `permission:users.update` | `DeactivateUser` |
 | POST | `/admin/users/{user}/activate` | `admin.users.activate` | … `permission:users.update` | `ActivateUser` |
 | PUT | `/admin/users/{user}/profiles` | `admin.users.profiles.update` | … `permission:users.update` | `AssignProfilesToUser` |
 
-Não há `DELETE` no admin: a desativação preserva histórico e é reversível.
-A exclusão continua só na API (`DELETE /users/{id}`, `users.delete`). Na
+O admin oferece DELETE /admin/users/{user} (admin.users.destroy), com users.delete, UserPolicy::delete e DeleteUser. A exclusão lógica preserva histórico. Na
 API, `POST /api/v1/users/{user}/deactivate|activate` foram adicionadas com
 as mesmas Actions, o endpoint herdado da 3.2.
 
@@ -220,5 +220,13 @@ da API inicia sessão).
 ## Fora do escopo
 
 UI de perfis, menus, tokens e auditoria; dashboard; troca de senha pelo
-admin; exclusão pelo admin; FIND-008, FIND-014, FIND-016, FIND-018,
+admin; FIND-008, FIND-014, FIND-016, FIND-018,
 FIND-019 e o restante do FIND-020.
+
+## Complemento — exclusão de usuários e página inicial
+
+- Exclusão na listagem e no detalhe, com confirmação, CSRF e método DELETE.
+- Mesma Policy e Action da API: sem autoexclusão, proteção das contas de
+  administrador e invariante do último administrador; auditoria user_deleted.
+- Exclusão lógica: preserva os dados históricos e impede autenticação da conta.
+- A rota pública / mantém somente um fundo preto, sem o cartão inicial do Laravel.
