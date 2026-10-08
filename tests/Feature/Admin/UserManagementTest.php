@@ -578,3 +578,70 @@ describe('Same rules through the API and the admin area', function () {
     });
 
 });
+
+describe('Admin user deletion', function () {
+    it('excludes a user and preserves the audit history', function () {
+        $actor = seededUser('admin');
+        $user = User::factory()->create();
+
+        $this->actingAs($actor)
+            ->delete(route('admin.users.destroy', $user))
+            ->assertRedirect(route('admin.users.index'))
+            ->assertSessionHas('status', 'Usuário excluído.');
+
+        $this->assertSoftDeleted($user);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'user_deleted',
+            'user_id' => $actor->id,
+            'subject_id' => $user->id,
+        ]);
+        $this->get(route('admin.users.show', $user))->assertNotFound();
+        $this->get(route('admin.users.index'))->assertDontSee($user->email);
+    });
+
+    it('refuses deletion without the functional permission', function () {
+        $user = User::factory()->create();
+
+        $this->actingAs(userWithPermissions(['users' => ['view']]))
+            ->delete(route('admin.users.destroy', $user))
+            ->assertNotFound();
+
+        $this->assertNotSoftDeleted($user);
+        $this->assertDatabaseMissing('audit_logs', ['action' => 'user_deleted', 'subject_id' => $user->id]);
+    });
+
+    it('refuses self deletion even for an administrator', function () {
+        $actor = seededUser('admin');
+
+        $this->actingAs($actor)
+            ->delete(route('admin.users.destroy', $actor))
+            ->assertForbidden();
+
+        $this->assertNotSoftDeleted($actor);
+    });
+
+    it('protects administrator accounts from a delegated deleter', function () {
+        $user = seededUser('admin');
+
+        $this->actingAs(userWithPermissions(['users' => ['view', 'delete']]))
+            ->delete(route('admin.users.destroy', $user))
+            ->assertForbidden();
+
+        $this->assertNotSoftDeleted($user);
+    });
+
+    it('renders deletion only for targets allowed by the policy', function () {
+        $actor = seededUser('admin');
+        $user = User::factory()->create();
+
+        $this->actingAs($actor)->get(route('admin.users.index'))
+            ->assertSee('action="'.route('admin.users.destroy', $user).'"', false)
+            ->assertDontSee('action="'.route('admin.users.destroy', $actor).'"', false);
+        $this->get(route('admin.users.show', $user))
+            ->assertSee('action="'.route('admin.users.destroy', $user).'"', false);
+
+        $this->actingAs(userWithPermissions(['users' => ['view']]))
+            ->get(route('admin.users.show', $user))
+            ->assertDontSee('action="'.route('admin.users.destroy', $user).'"', false);
+    });
+});

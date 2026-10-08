@@ -48,6 +48,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::put('/{user}', [UserController::class, 'update'])
                 ->middleware('permission:users.update')
                 ->name('update');
+            Route::delete('/{user}', [UserController::class, 'destroy'])
+                ->middleware('permission:users.delete')
+                ->name('destroy');
             Route::post('/{user}/deactivate', [UserStatusController::class, 'deactivate'])
                 ->middleware('permission:users.update')
                 ->name('deactivate');

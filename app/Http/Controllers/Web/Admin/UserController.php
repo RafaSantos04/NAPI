@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web\Admin;
 
 use App\Domain\IAM\Actions\CreateUser;
+use App\Domain\IAM\Actions\DeleteUser;
 use App\Domain\IAM\Actions\UpdateUser;
 use App\Domain\IAM\AuditContext;
 use App\DTOs\CreateUserDto;
@@ -74,6 +75,15 @@ class UserController extends Controller
             'user' => $user->load('profiles')->loadCount('tokens'),
             'profiles' => Profile::query()->orderBy('name')->get(),
         ]);
+    }
+
+    public function destroy(Request $request, User $user): RedirectResponse
+    {
+        $this->authorize('delete', $user);
+
+        DeleteUser::execute($user, AuditContext::fromRequest($request));
+
+        return redirect()->route('admin.users.index')->with('status', 'Usuário excluído.');
     }
 
     public function edit(User $user): View
