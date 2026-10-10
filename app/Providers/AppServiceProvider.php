@@ -5,9 +5,13 @@ namespace App\Providers;
 use App\Http\Admin\AdminNavigation;
 use App\Models\Menu;
 use App\Models\Profile;
+use App\Models\SecurityLabResource;
+use App\Models\SecurityTestRun;
 use App\Models\User;
 use App\Policies\MenuPolicy;
 use App\Policies\ProfilePolicy;
+use App\Policies\SecurityLabResourcePolicy;
+use App\Policies\SecurityTestRunPolicy;
 use App\Policies\UserPolicy;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
@@ -41,6 +45,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(User::class, UserPolicy::class);
         Gate::policy(Profile::class, ProfilePolicy::class);
         Gate::policy(Menu::class, MenuPolicy::class);
+        Gate::policy(SecurityTestRun::class, SecurityTestRunPolicy::class);
+        Gate::policy(SecurityLabResource::class, SecurityLabResourcePolicy::class);
 
         // Single enforcement point for deactivated accounts: a token whose
         // owner is inactive does not authenticate, whether or not it was
