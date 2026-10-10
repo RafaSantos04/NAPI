@@ -27,7 +27,7 @@
             </nav>
 
             <main class="admin-main" id="content" tabindex="-1">
-                <div class="content">
+                <div class="content @yield('content-class')">
                     @include('admin.partials.flash')
                     @yield('content')
                 </div>
