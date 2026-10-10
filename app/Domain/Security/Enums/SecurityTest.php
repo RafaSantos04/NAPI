@@ -10,11 +10,13 @@ namespace App\Domain\Security\Enums;
 enum SecurityTest: string
 {
     case Idor = 'idor';
+    case MassAssignment = 'mass_assignment';
 
     public function label(): string
     {
         return match ($this) {
             self::Idor => 'IDOR / BOLA',
+            self::MassAssignment => 'Mass Assignment',
         };
     }
 }
