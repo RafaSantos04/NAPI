@@ -3,6 +3,7 @@
 use App\Http\Controllers\Web\Admin\Auth\LoginController;
 use App\Http\Controllers\Web\Admin\HomeController;
 use App\Http\Controllers\Web\Admin\Security\IdorTestController;
+use App\Http\Controllers\Web\Admin\Security\MassAssignmentTestController;
 use App\Http\Controllers\Web\Admin\UserController;
 use App\Http\Controllers\Web\Admin\UserProfileController;
 use App\Http\Controllers\Web\Admin\UserStatusController;
@@ -63,10 +64,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 ->name('profiles.update');
         });
 
-        // Security Lab (Fase 5.1, ADR-0010). Além das camadas do admin, a
-        // feature flag `security.lab`: desligado, tudo aqui responde 404.
-        // Não existe rota que sirva um recurso sem checar o dono; o cenário
-        // vulnerável só roda dentro do caso de uso RunIdorTest.
+        // Security Lab (Fases 5.1 e 5.2, ADR-0010). Além das camadas do
+        // admin, a feature flag `security.lab`: desligado, tudo aqui
+        // responde 404. Nenhuma rota serve um recurso sem checar o dono nem
+        // grava um payload num model: os cenários vulneráveis só rodam
+        // dentro dos casos de uso RunIdorTest e RunMassAssignmentTest.
         Route::middleware(['admin.access', 'security.lab'])->prefix('security')->name('security.')->group(function () {
             Route::view('/', 'admin.security.index')
                 ->middleware('permission:security-lab.view')
@@ -77,6 +79,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/idor/run', [IdorTestController::class, 'run'])
                 ->middleware('permission:security-lab.create')
                 ->name('idor.run');
+            Route::get('/mass-assignment', [MassAssignmentTestController::class, 'show'])
+                ->middleware('permission:security-lab.view')
+                ->name('mass-assignment.show');
+            Route::post('/mass-assignment/run', [MassAssignmentTestController::class, 'run'])
+                ->middleware('permission:security-lab.create')
+                ->name('mass-assignment.run');
         });
     });
 });

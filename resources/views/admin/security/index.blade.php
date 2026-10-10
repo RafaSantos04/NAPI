@@ -17,5 +17,9 @@
             <a href="{{ route('admin.security.idor.show') }}">IDOR / BOLA</a>
             <span class="muted">Um actor pede, pelo identificador, um recurso que pertence a outra pessoa.</span>
         </li>
+        <li>
+            <a href="{{ route('admin.security.mass-assignment.show') }}">Mass Assignment</a>
+            <span class="muted">O dono de um recurso envia, junto com uma alteração permitida, uma propriedade que não cabe a ele mudar.</span>
+        </li>
     </ul>
 @endsection

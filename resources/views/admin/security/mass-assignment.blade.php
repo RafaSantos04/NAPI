@@ -3,32 +3,38 @@
 @use('App\Domain\Security\Enums\SecurityTestScenario')
 @use('App\Models\SecurityTestRun')
 
-@section('title', 'IDOR / BOLA')
+@section('title', 'Mass Assignment')
 
 {{-- Three columns need more room than the reading width of the other pages. --}}
 @section('content-class', 'content-wide')
 
 @php
-    // After a run the form keeps the same pair, so the other scenario can be
-    // run against it. On a first visit the target defaults to a resource of
-    // another persona, which is the case the test is about.
-    $selectedActor = old('actor_user_id', $result?->acting_as_user_id ?? $actors->first()?->id);
-    $selectedTarget = old('target_resource_id', $result?->target_resource_id
-        ?? $resources->firstWhere('owner_user_id', '!=', $selectedActor)?->id);
+    // After a run the form keeps the same document and payload, so the other
+    // scenario can be run against them. On a first visit the protected
+    // property is attempted, which is the case the test is about.
+    $context = $result?->result_context ?? [];
+    $selectedTarget = old('target_resource_id', $result?->target_resource_id ?? $resources->first()?->id);
     $selectedScenario = old('scenario', $result?->scenario->value ?? SecurityTestScenario::Vulnerable->value);
+    $newName = old('payload.name', $context['after']['name'] ?? 'Documento renomeado');
+    // An unchecked box sends nothing, so old() alone cannot tell "unchecked"
+    // from "first visit".
+    $attemptApproval = session()->hasOldInput()
+        ? (bool) old('payload.is_approved')
+        : in_array('is_approved', $context['attempted'] ?? ['is_approved'], true);
 @endphp
 
 @section('content')
     <div class="page-header">
         <div>
             <a class="back" href="{{ route('admin.security.index') }}">← Security Lab</a>
-            <h1>IDOR / BOLA</h1>
+            <h1>Mass Assignment</h1>
         </div>
     </div>
 
     <p class="lead">
-        Um actor pede um recurso pelo identificador. No cenário vulnerável, encontrar o recurso basta para devolvê-lo.
-        No protegido, uma Policy verifica antes se o actor é o dono. Os recursos são documentos sintéticos.
+        O dono de um documento o renomeia e envia, no mesmo payload, uma propriedade que essa operação não deveria
+        alterar. No cenário vulnerável, tudo o que chega é atribuído ao model. No protegido, a operação repassa só as
+        propriedades do seu contrato. Os recursos são documentos sintéticos, restaurados depois de cada execução.
     </p>
 
     {{-- Configuration, result of the last run, history. On narrow screens the
@@ -43,28 +49,11 @@
                         Não há dados sintéticos. Rode <code>php artisan db:seed --class=SecurityLabSeeder</code>.
                     </p>
                 @else
-                    <form method="POST" action="{{ route('admin.security.idor.run') }}" novalidate>
+                    <form method="POST" action="{{ route('admin.security.mass-assignment.run') }}" novalidate>
                         @csrf
 
-                        <fieldset class="choices" aria-describedby="actor-hint @error('actor_user_id') actor-error @enderror">
-                            <legend>Actor</legend>
-                            <div class="choice-list">
-                                @foreach ($actors as $actor)
-                                    <label class="choice">
-                                        <input type="radio" name="actor_user_id" value="{{ $actor->id }}" required
-                                               @checked($selectedActor === $actor->id)>
-                                        <span>{{ $actor->name }}</span>
-                                    </label>
-                                @endforeach
-                            </div>
-                            <p id="actor-hint" class="field-hint">Identidade simulada pelo teste. A sua sessão continua sendo a sua.</p>
-                            @error('actor_user_id')
-                                <p id="actor-error" class="field-error">{{ $message }}</p>
-                            @enderror
-                        </fieldset>
-
-                        <fieldset class="choices" @error('target_resource_id') aria-describedby="target-error" @enderror>
-                            <legend>Recurso alvo</legend>
+                        <fieldset class="choices" aria-describedby="target-hint @error('target_resource_id') target-error @enderror">
+                            <legend>Documento alvo</legend>
                             <div class="choice-list">
                                 @foreach ($resources as $resource)
                                     <label class="choice">
@@ -72,13 +61,49 @@
                                                @checked($selectedTarget === $resource->id)>
                                         <span>
                                             {{ $resource->name }}
-                                            <span class="choice-note">dono: {{ $resource->owner?->name ?? 'removido' }}</span>
+                                            <span class="choice-note">actor: {{ $resource->owner?->name ?? 'removido' }}</span>
                                         </span>
                                     </label>
                                 @endforeach
                             </div>
+                            <p id="target-hint" class="field-hint">
+                                O actor é o dono do documento: ele pode editá-lo. A sua sessão continua sendo a sua.
+                            </p>
                             @error('target_resource_id')
                                 <p id="target-error" class="field-error">{{ $message }}</p>
+                            @enderror
+                        </fieldset>
+
+                        <fieldset class="choices" @error('payload') aria-describedby="payload-error" @enderror>
+                            <legend>Payload enviado pelo actor</legend>
+
+                            <div class="field">
+                                <label for="payload-name">
+                                    <code>name</code> <span class="badge">permitida</span>
+                                </label>
+                                <input id="payload-name" name="payload[name]" type="text" value="{{ $newName }}"
+                                       maxlength="100" autocomplete="off" required
+                                       @error('payload.name') aria-invalid="true" aria-describedby="payload-name-error" @enderror>
+                                @error('payload.name')
+                                    <p id="payload-name-error" class="field-error">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <label class="choice">
+                                <input type="checkbox" name="payload[is_approved]" value="1" @checked($attemptApproval)
+                                       aria-describedby="approval-hint @error('payload.is_approved') approval-error @enderror">
+                                <span>
+                                    <code>is_approved = true</code> <span class="badge badge-protected">protegida</span>
+                                </span>
+                            </label>
+                            <p id="approval-hint" class="field-hint">
+                                Aprovar cabe a uma revisão, não a quem renomeia. Desmarque para enviar só a alteração legítima.
+                            </p>
+                            @error('payload.is_approved')
+                                <p id="approval-error" class="field-error">{{ $message }}</p>
+                            @enderror
+                            @error('payload')
+                                <p id="payload-error" class="field-error">{{ $message }}</p>
                             @enderror
                         </fieldset>
 
@@ -116,7 +141,7 @@
                     Execução de {{ $result->created_at->format('d/m/Y H:i') }}
                     · por {{ $result->operator?->name ?? 'operador removido' }}
                 </p>
-                @include('admin.security.partials.idor-result', ['run' => $result])
+                @include('admin.security.partials.mass-assignment-result', ['run' => $result])
             @else
                 <p class="lab-placeholder">O resultado do teste aparece aqui depois da execução.</p>
             @endif
@@ -141,12 +166,9 @@
                                         <span class="verdict verdict-{{ $run->security_verdict->value }}">{{ $run->security_verdict->label() }}</span>
                                         <time datetime="{{ $run->created_at->toIso8601String() }}">{{ $run->created_at->format('d/m H:i') }}</time>
                                     </div>
-                                    <p>@include('admin.security.partials.idor-outcome', ['run' => $run])</p>
+                                    <p>@include('admin.security.partials.mass-assignment-outcome', ['run' => $run])</p>
                                     <p class="muted">
                                         {{ $run->actor?->name ?? 'actor removido' }} → {{ $run->target?->name ?? 'recurso removido' }}
-                                        @if ($run->target?->owner)
-                                            (dono: {{ $run->target->owner->name }})
-                                        @endif
                                     </p>
                                     <p class="muted">por {{ $run->operator?->name ?? 'operador removido' }}</p>
                                 </a>

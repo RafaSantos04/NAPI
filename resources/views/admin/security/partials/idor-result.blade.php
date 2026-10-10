@@ -12,7 +12,7 @@
 <div class="result result-{{ $run->security_verdict->value }}" role="status">
     <p class="result-head">
         <span class="verdict verdict-{{ $run->security_verdict->value }}">{{ $run->security_verdict->label() }}</span>
-        <span class="muted">@include('admin.security.partials.outcome', ['run' => $run])</span>
+        <span class="muted">@include('admin.security.partials.idor-outcome', ['run' => $run])</span>
     </p>
 
     @if ($run->security_verdict === SecurityTestVerdict::Exposed)

@@ -284,6 +284,9 @@ code { padding: .05rem .3rem; font-size: .8125rem; background: var(--surface-2);
 .verdict-protected { color: var(--success); }
 .verdict-inconclusive { color: var(--warning); }
 
+/* The link of a run jumps to the result; keep its title clear of the fixed header. */
+#result-title { scroll-margin-top: calc(var(--header-h) + 1rem); }
+.result-meta { margin: -.5rem 0 .75rem; }
 .result { padding: 1rem 1.125rem; font-size: .9375rem; background: var(--surface); border: 1px solid var(--border); border-left-width: 3px; border-radius: .5rem; }
 .result p { margin: 0 0 .625rem; }
 .result p:last-child { margin-bottom: 0; }
@@ -294,6 +297,18 @@ code { padding: .05rem .3rem; font-size: .8125rem; background: var(--surface-2);
 
 .disclosed { margin-top: .875rem; padding: .75rem .875rem; background: var(--bg); border: 1px dashed var(--border); border-radius: var(--radius); overflow-wrap: anywhere; }
 
+/* Mass Assignment: the payload sent and the state it left behind. */
+.choices .field label { display: flex; align-items: center; gap: .5rem; }
+.badge-protected { color: var(--warning); border-color: color-mix(in srgb, var(--warning) 40%, transparent); }
+.state { margin: .875rem 0; background: var(--bg); }
+/* Four columns have to fit a phone: tighter cells, and the tag may drop
+   under the property name. */
+.state .table { font-size: .8125rem; }
+.state .table th, .state .table td { padding: .5rem; }
+.state .table tbody th { white-space: normal; }
+.state td { overflow-wrap: break-word; }
+.state .is-violation { color: var(--danger); font-weight: 600; }
+
 /* Fixed height: the history scrolls inside its box and the page stays put. */
 .runs-scroll { height: clamp(18rem, calc(100vh - 17rem), 38rem); overflow-y: auto; border: 1px solid var(--border); border-radius: .5rem; }
 .runs-scroll:focus-visible { outline-offset: 0; }
@@ -302,8 +317,13 @@ code { padding: .05rem .3rem; font-size: .8125rem; background: var(--surface-2);
 @media (max-width: 56rem) {
     .runs-scroll { height: auto; max-height: 26rem; }
 }
-.run { padding: .75rem .875rem; font-size: .875rem; border-bottom: 1px solid var(--border); }
+.run { font-size: .875rem; border-bottom: 1px solid var(--border); }
 .run:last-child { border-bottom: 0; }
+/* Each run is a link that opens it in the result panel. */
+.run-link { display: block; padding: .75rem .875rem; color: inherit; text-decoration: none; border-left: 2px solid transparent; }
+.run-link:hover { color: inherit; background: var(--surface); }
+.run-link[aria-current="true"] { background: var(--surface-2); border-left-color: var(--text); }
+.run-link:focus-visible { outline-offset: -2px; }
 .run p { margin: .25rem 0 0; overflow-wrap: anywhere; }
 .run-head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
 .run-head time { color: var(--muted); font-size: .8125rem; white-space: nowrap; }
