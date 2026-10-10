@@ -6,3 +6,7 @@ parameters:
         - app
 
     level: 6
+
+    # Read each model's casts() so cast attributes (enums, arrays, dates) are
+    # analysed with their real type instead of the raw column type.
+    parseModelCastsMethod: true
