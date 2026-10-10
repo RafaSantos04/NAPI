@@ -120,3 +120,33 @@ describe('Admin route coverage', function () {
         expect($subject->fresh()->is_active)->toBeTrue();
     });
 });
+
+// Phase 5.1: the Security Lab holds deliberately vulnerable code, so its
+// boundary is checked route by route.
+describe('Security Lab route coverage', function () {
+    it('puts every Security Lab route behind the feature flag', function () {
+        $routes = routesUnder('admin/security*');
+
+        expect($routes)->not->toBeEmpty();
+
+        foreach ($routes as $route) {
+            expect($route->gatherMiddleware())->toContain('security.lab');
+        }
+    });
+
+    it('has no route that serves a lab resource by its identifier', function () {
+        // The vulnerable read exists only inside RunIdorTest. A route with a
+        // parameter here would be a URL that can be probed.
+        foreach (routesUnder('admin/security*') as $route) {
+            expect($route->parameterNames())->toBe([], "{$route->uri()} takes a parameter");
+        }
+    });
+
+    it('keeps the Security Lab out of the API and of public routes', function () {
+        $elsewhere = collect(Route::getRoutes()->getRoutes())
+            ->reject(fn (RoutingRoute $route) => Str::is('admin/security*', $route->uri()))
+            ->filter(fn (RoutingRoute $route) => Str::contains($route->uri(), ['security', 'lab', 'idor']));
+
+        expect($elsewhere->map->uri()->all())->toBe([]);
+    });
+});

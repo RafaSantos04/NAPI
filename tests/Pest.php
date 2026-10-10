@@ -26,7 +26,11 @@ pest()->extend(TestCase::class)
 // DatabaseSeeder. Scoped to this directory (not globally) so it doesn't
 // collide with other Feature tests that create their own 'admin'-slug
 // profiles via factories.
-uses()->beforeEach(fn () => $this->seed())->in('Feature/IAM', 'Feature/Security', 'Feature/Admin');
+uses()->beforeEach(fn () => $this->seed())->in('Feature/IAM', 'Feature/Security', 'Feature/Admin', 'Feature/SecurityLab');
+
+// The Security Lab is off by default (config/security.php). Its own tests turn
+// it on; each test that needs it off says so.
+uses()->beforeEach(fn () => config(['security.lab.enabled' => true]))->in('Feature/SecurityLab');
 
 /*
 |--------------------------------------------------------------------------

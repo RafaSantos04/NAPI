@@ -24,6 +24,7 @@ describe('Menu tree', function () {
             'profiles' => ['permissions' => []],
             'menus' => [],
             'audit-logs' => [],
+            'security-lab' => [],
         ]);
     });
 
@@ -32,7 +33,7 @@ describe('Menu tree', function () {
 
         $tree = asToken(seededUser('admin'), 'GET', '/api/v1/menus/tree')->json('data');
 
-        expect(treeKeys($tree))->toBe(['users' => [], 'profiles' => [], 'menus' => []]);
+        expect(treeKeys($tree))->toBe(['users' => [], 'profiles' => [], 'menus' => [], 'security-lab' => []]);
     });
 
     it('hides children the user cannot view', function () {
