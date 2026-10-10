@@ -2,6 +2,7 @@
 
 namespace App\Http\Admin;
 
+use App\Models\SecurityTestRun;
 use App\Models\User;
 
 /**
@@ -18,7 +19,10 @@ use App\Models\User;
 final class AdminNavigation
 {
     /**
-     * @return list<array{label: string, route: string, active: string, ability: string, subject: class-string}>
+     * `feature`, when present, is a config flag that must be on for the
+     * section to exist at all, whatever the user's permissions.
+     *
+     * @return list<array{label: string, route: string, active: string, ability: string, subject: class-string, feature?: string}>
      */
     private static function sections(): array
     {
@@ -30,6 +34,14 @@ final class AdminNavigation
                 'ability' => 'viewAny',
                 'subject' => User::class,
             ],
+            [
+                'label' => 'Segurança',
+                'route' => 'admin.security.index',
+                'active' => 'admin.security.*',
+                'ability' => 'viewAny',
+                'subject' => SecurityTestRun::class,
+                'feature' => 'security.lab.enabled',
+            ],
         ];
     }
 
@@ -40,7 +52,8 @@ final class AdminNavigation
     {
         $visible = array_filter(
             self::sections(),
-            fn (array $section) => $user->can($section['ability'], $section['subject']),
+            fn (array $section) => (! isset($section['feature']) || config($section['feature']))
+                && $user->can($section['ability'], $section['subject']),
         );
 
         return array_values(array_map(

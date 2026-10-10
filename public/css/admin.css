@@ -14,6 +14,8 @@
     --muted: #a1a09a;
     --danger: #f87171;
     --success: #4ade80;
+    --warning: #fbbf24;
+    --scrollbar: #3f3f3f;
     --focus: #ededec;
     --radius: .375rem;
     --header-h: 3.5rem;
@@ -22,6 +24,16 @@
 }
 
 html, body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); }
+
+/* Thin scrollbars, for the page and for inner scroll areas. The -webkit-
+   rules only serve browsers without the standard properties. */
+* { scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent; }
+
+@supports not (scrollbar-width: thin) {
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 4px; }
+}
 
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
@@ -83,6 +95,7 @@ h2 { margin: 0 0 1rem; font-size: 1rem; font-weight: 600; }
 
 .admin-shell .admin-main { flex: 1; min-width: 0; min-height: auto; padding: 1.75rem 2rem 3rem; }
 .content { max-width: 64rem; }
+.content-wide { max-width: 96rem; }
 
 @media (max-width: 48rem) {
     .admin-shell { flex-direction: column; }
@@ -218,3 +231,79 @@ h2 { margin: 0 0 1rem; font-size: 1rem; font-weight: 600; }
     border-radius: .5rem;
 }
 .table .actions form { display: inline-block; margin: 0 0 0 .75rem; }
+
+/* Security Lab ----------------------------------------------------------- */
+
+.lead { max-width: 46rem; margin: 0 0 1.5rem; color: var(--muted); font-size: .9375rem; }
+
+code { padding: .05rem .3rem; font-size: .8125rem; background: var(--surface-2); border-radius: .25rem; }
+
+.lab-tests { margin: 0; padding: 0; list-style: none; }
+.lab-tests li { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem .75rem; padding: .875rem 0; border-top: 1px solid var(--border); }
+.lab-tests li:last-child { border-bottom: 1px solid var(--border); }
+.lab-tests a { font-weight: 500; }
+
+/* Configuration, result, history. With less room the result drops under the
+   form; on a single column it goes above it, since it is what was just asked
+   for, and an empty result is not shown at all. */
+.lab { display: grid; grid-template-columns: minmax(17rem, 24rem) minmax(0, 1fr) minmax(18rem, 24rem); grid-template-areas: "config result history"; gap: 2rem 2.5rem; align-items: start; }
+.lab-config { grid-area: config; min-width: 0; }
+.lab-result { grid-area: result; min-width: 0; }
+.lab-history { grid-area: history; min-width: 0; }
+
+.lab-placeholder { margin: 0; padding: 1.5rem 1.125rem; color: var(--muted); font-size: .875rem; text-align: center; border: 1px dashed var(--border); border-radius: .5rem; }
+
+@media (max-width: 85rem) {
+    .lab { grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem); grid-template-areas: "config history" "result history"; }
+}
+
+@media (max-width: 56rem) {
+    .lab { grid-template-columns: minmax(0, 1fr); grid-template-areas: "result" "config" "history"; }
+    .lab-result.is-empty { display: none; }
+}
+
+.choices { min-width: 0; margin: 0 0 1.25rem; padding: 0; border: 0; }
+.choices legend { margin-bottom: .375rem; padding: 0; font-size: .8125rem; color: var(--muted); }
+.choice-list { display: grid; gap: .375rem; }
+.choice { display: flex; align-items: baseline; gap: .625rem; padding: .5rem .75rem; font-size: .875rem; border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; }
+.choice:hover { border-color: var(--muted); }
+.choice:has(input:checked) { background: var(--surface-2); border-color: var(--muted); }
+.choice input { flex: none; margin: 0; accent-color: var(--text); }
+.choice-note { margin-left: .375rem; color: var(--muted); font-size: .8125rem; }
+
+.segmented { margin: 0 0 1.25rem; padding: 0; border: 0; }
+.segmented legend { margin-bottom: .375rem; padding: 0; font-size: .8125rem; color: var(--muted); }
+.segmented-options { display: flex; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.segmented label { flex: 1; padding: .45rem .75rem; font-size: .875rem; text-align: center; color: var(--muted); cursor: pointer; }
+.segmented label + label { border-left: 1px solid var(--border); }
+.segmented label:has(input:checked) { color: var(--text); background: var(--surface-2); }
+.segmented label:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: -2px; }
+
+.verdict { display: inline-block; padding: .1rem .5rem; font-size: .75rem; font-weight: 600; letter-spacing: .04em; border: 1px solid currentColor; border-radius: .25rem; white-space: nowrap; }
+.verdict-exposed { color: var(--danger); }
+.verdict-protected { color: var(--success); }
+.verdict-inconclusive { color: var(--warning); }
+
+.result { padding: 1rem 1.125rem; font-size: .9375rem; background: var(--surface); border: 1px solid var(--border); border-left-width: 3px; border-radius: .5rem; }
+.result p { margin: 0 0 .625rem; }
+.result p:last-child { margin-bottom: 0; }
+.result-head { display: flex; flex-wrap: wrap; align-items: center; gap: .625rem; }
+.result-exposed { border-left-color: var(--danger); }
+.result-protected { border-left-color: var(--success); }
+.result-inconclusive { border-left-color: var(--warning); }
+
+.disclosed { margin-top: .875rem; padding: .75rem .875rem; background: var(--bg); border: 1px dashed var(--border); border-radius: var(--radius); overflow-wrap: anywhere; }
+
+/* Fixed height: the history scrolls inside its box and the page stays put. */
+.runs-scroll { height: clamp(18rem, calc(100vh - 17rem), 38rem); overflow-y: auto; border: 1px solid var(--border); border-radius: .5rem; }
+.runs-scroll:focus-visible { outline-offset: 0; }
+.runs { margin: 0; padding: 0; list-style: none; }
+
+@media (max-width: 56rem) {
+    .runs-scroll { height: auto; max-height: 26rem; }
+}
+.run { padding: .75rem .875rem; font-size: .875rem; border-bottom: 1px solid var(--border); }
+.run:last-child { border-bottom: 0; }
+.run p { margin: .25rem 0 0; overflow-wrap: anywhere; }
+.run-head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.run-head time { color: var(--muted); font-size: .8125rem; white-space: nowrap; }

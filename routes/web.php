@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Web\Admin\Auth\LoginController;
 use App\Http\Controllers\Web\Admin\HomeController;
+use App\Http\Controllers\Web\Admin\Security\IdorTestController;
 use App\Http\Controllers\Web\Admin\UserController;
 use App\Http\Controllers\Web\Admin\UserProfileController;
 use App\Http\Controllers\Web\Admin\UserStatusController;
@@ -11,7 +12,7 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-// Área administrativa (Fases 4.1 e 4.2): Blade + guard `web` (sessão), sem
+// Área administrativa (Fases 4.1, 4.2 e 5.1): Blade + guard `web` (sessão), sem
 // consumir a API REST. Mesmas camadas da API, adaptadas à sessão (ADR-0008):
 // sessão válida e usuário ativo → acesso à área (`admin.access`) →
 // permissão funcional (`permission:{key}.{action}`, 404) → Policy (403) →
@@ -60,6 +61,22 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::put('/{user}/profiles', [UserProfileController::class, 'update'])
                 ->middleware('permission:users.update')
                 ->name('profiles.update');
+        });
+
+        // Security Lab (Fase 5.1, ADR-0010). Além das camadas do admin, a
+        // feature flag `security.lab`: desligado, tudo aqui responde 404.
+        // Não existe rota que sirva um recurso sem checar o dono; o cenário
+        // vulnerável só roda dentro do caso de uso RunIdorTest.
+        Route::middleware(['admin.access', 'security.lab'])->prefix('security')->name('security.')->group(function () {
+            Route::view('/', 'admin.security.index')
+                ->middleware('permission:security-lab.view')
+                ->name('index');
+            Route::get('/idor', [IdorTestController::class, 'show'])
+                ->middleware('permission:security-lab.view')
+                ->name('idor.show');
+            Route::post('/idor/run', [IdorTestController::class, 'run'])
+                ->middleware('permission:security-lab.create')
+                ->name('idor.run');
         });
     });
 });

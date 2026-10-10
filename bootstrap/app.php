@@ -2,6 +2,7 @@
 
 use App\Domain\IAM\Exceptions\LastActiveAdministratorException;
 use App\Http\Middleware\CheckPermission;
+use App\Http\Middleware\EnsureSecurityLabEnabled;
 use App\Http\Middleware\EnsureTokenAbility;
 use App\Http\Middleware\EnsureUserCanAccessAdmin;
 use App\Http\Middleware\EnsureUserIsActive;
@@ -21,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'permission' => CheckPermission::class,
             'admin.access' => EnsureUserCanAccessAdmin::class,
+            'security.lab' => EnsureSecurityLabEnabled::class,
             'token.ability' => EnsureTokenAbility::class,
         ]);
 
