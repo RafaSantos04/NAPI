@@ -2,7 +2,7 @@
 
 [← Fases](README.md) · [Módulo Security Lab](../modules/security.md) · [IDOR / BOLA](../security/idor.md) · [ADR-0010](../architecture/decisions/ADR-0010-controlled-security-lab.md)
 
-**Commit:** pending
+**Commits:** `6d8ee6e` (Larastan), `1995ac8` (domínio Security), `2ae9044` e `4ee5b81` (admin), `a1e4664` (testes), `b27ba9e` e `585b3d4` (documentação e `.env.example`)
 
 ## Objetivo
 
@@ -182,7 +182,7 @@ manual num navegador interativo (foco por teclado no controle segmentado).
 | `tests/Feature/SecurityLab/SecurityLabHistoryTest.php` (novo) | 7 |
 | `tests/Feature/Security/RouteCoverageTest.php` | +3 (fronteira do laboratório) |
 
-O que cada um garante está em [security-tests.md](../testing/security-tests.md#security-lab-testsfeaturesecuritylab-fase-51).
+O que cada um garante está em [security-tests.md](../testing/security-tests.md#security-lab-testsfeaturesecuritylab-fases-51-e-52).
 Sete mutações do código foram detectadas pela suíte.
 
 ### Testes antigos alterados

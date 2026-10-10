@@ -5,7 +5,7 @@
 ## Status
 
 Accepted (Fase 5.1). Confirma as fronteiras propostas para o módulo na
-Fase 3.1.
+Fase 3.1. Complementado na Fase 5.2 (veja [Adendo](#adendo-fase-52)).
 
 ## Context
 
@@ -112,13 +112,46 @@ quando a fase começar".
 
 Introduz no repositório código que, fora do laboratório, seria uma falha. As
 mitigações estão no [threat model](../../security/threat-model.md#security-lab)
-e nas invariantes INV-21 a INV-23.
+e nas invariantes INV-21 a INV-24.
+
+## Adendo (Fase 5.2)
+
+O segundo teste, [Mass Assignment](../../security/mass-assignment.md), foi
+implementado dentro das decisões acima, sem ADR novo. Ele acrescenta uma
+regra e confirma outra.
+
+9. **Um teste que escreve desfaz a própria escrita.** O cenário vulnerável
+   do Mass Assignment altera um recurso sintético de verdade. A escrita roda
+   numa transação que o caso de uso sempre desfaz, depois de ler do banco o
+   estado que ela deixou. Só a execução e a auditoria são gravadas, numa
+   segunda transação (decisão 6). Alternativas descartadas: restaurar o
+   estado antes de cada execução (exige conhecer e manter uma linha de base,
+   e o documento fica alterado entre uma execução e outra) e criar um
+   recurso efêmero por execução (a execução perderia o alvo, que é FK). O
+   `ROLLBACK` do PostgreSQL já faz a restauração, sem código próprio.
+10. **Nenhum model real é enfraquecido para um teste.** A lista de
+    atribuição em massa deliberadamente larga fica no model sintético
+    (`SecurityLabResource`), e nada usa `Model::unguard()`, que é global.
+
+**Sobre a decisão 8.** Com dois testes concretos, a comparação foi feita e
+está em [phase-05-2](../../phases/phase-05-2-security-lab-mass-assignment.md#abstraction-review).
+Ela encontrou repetição na camada HTTP e nas views, e nenhuma razão para
+interface, classe base ou registro de testes: os dois casos de uso continuam
+separados. A extração do que se repetiu fica para a fase seguinte.
+
+**Sobre a consequência negativa "`target_resource_id` supõe alvo sintético
+desse tipo".** O segundo teste usou o mesmo tipo de alvo, com uma coluna a
+mais, e não precisou mudar `security_test_runs`. A ressalva continua valendo
+para um teste futuro com outro tipo de alvo.
+
+As personas administráveis pela área de usuários viraram o
+[FIND-024](../../findings/README.md#find-024--personas-do-security-lab-são-contas-administráveis).
 
 ## References
 
 - `config/security.php`, `app/Http/Middleware/EnsureSecurityLabEnabled.php`
-- `app/Domain/Security/Actions/RunIdorTest.php`, `app/Domain/Security/Enums/*`
+- `app/Domain/Security/Actions/{RunIdorTest,RunMassAssignmentTest}.php`, `app/Domain/Security/Enums/*`
 - `app/Models/{SecurityLabResource,SecurityTestRun}.php`, `app/Policies/{SecurityLabResourcePolicy,SecurityTestRunPolicy}.php`
-- `database/migrations/2026_10_10_080103_create_security_lab_resources_table.php`, `2026_10_10_080105_create_security_test_runs_table.php`
+- `database/migrations/2026_10_10_080103_create_security_lab_resources_table.php`, `2026_10_10_080105_create_security_test_runs_table.php`, `2026_10_10_100241_add_is_approved_to_security_lab_resources_table.php`
 - `database/seeders/{MenuSeeder,SecurityLabSeeder}.php`
 - `tests/Feature/SecurityLab/*`, `tests/Feature/Security/RouteCoverageTest.php`

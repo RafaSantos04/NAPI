@@ -1,6 +1,6 @@
 # IDOR / BOLA
 
-[← Segurança](README.md) · [Módulo Security Lab](../modules/security.md) · [ADR-0010](../architecture/decisions/ADR-0010-controlled-security-lab.md) · [Autorização](authorization.md)
+[← Segurança](README.md) · [Módulo Security Lab](../modules/security.md) · [Mass Assignment](mass-assignment.md) · [ADR-0010](../architecture/decisions/ADR-0010-controlled-security-lab.md) · [Autorização](authorization.md)
 
 ## O que é
 

@@ -7,7 +7,8 @@ documentou. A **Fase 3.2** corrigiu os prioritários e adicionou a cada finding
 um bloco **"Status (Fase 3.2)"**, preservando a descrição original, que
 registra o comportamento como era ([Fase 3.2](../phases/phase-03-2-iam-hardening.md)).
 A **Fase 4.2** acrescentou blocos "Status (Fase 4.2)" onde houve mudança
-([Fase 4.2](../phases/phase-04-2-user-management.md)).
+([Fase 4.2](../phases/phase-04-2-user-management.md)). As Fases 5.1 e 5.2
+abriram os FIND-023 a FIND-025, cada um com o seu bloco de status.
 
 Status usados: `OPEN` · `RESOLVED` · `DEFERRED` · `ACCEPTED RISK`. "RESOLVED
 (parcial)" indica que o bloco descreve o que foi resolvido e o que continua
@@ -55,8 +56,12 @@ Nos demais casos, a evidência é a leitura do código citado.
 | [FIND-021](#find-021--lacunas-de-testes-de-segurança) | Lacunas de testes de segurança | Testing | Improvement | RESOLVED (parcial) | RESOLVED |
 | [FIND-022](#find-022--documentação-e-histórico-divergem-do-código) | Documentação e histórico divergem do código | Documentation | Improvement | RESOLVED (parcial) | RESOLVED |
 | [FIND-023](#find-023--análise-estática-ignorava-os-casts-dos-models) | Análise estática ignorava os casts dos models | Maintainability | Improvement | — | — (aberto e resolvido na Fase 5.1) |
+| [FIND-024](#find-024--personas-do-security-lab-são-contas-administráveis) | Personas do Security Lab são contas administráveis | Security | Low | — | — (aberto na Fase 5.2, OPEN deferred) |
+| [FIND-025](#find-025--resultado-da-última-execução-não-era-filtrado-por-teste) | Resultado da última execução não era filtrado por teste | Maintainability | Low | — | — (aberto e resolvido na Fase 5.2) |
 
-Contagem: 1 High · 9 Medium · 9 Low · 4 Improvement. Nenhum Critical.
+Contagem: 1 High · 9 Medium · 11 Low · 4 Improvement. Nenhum Critical.
+
+Após a Fase 5.2: **19 RESOLVED** (o FIND-025 foi aberto e resolvido na própria fase), 4 deles parcialmente, e **6 OPEN** (FIND-008, 014, 016, 018, 019 e o novo FIND-024, que registra uma dívida já descrita no ADR-0010). O teste de Mass Assignment não abriu finding de segurança; os riscos que ele introduz estão no [threat model](../security/threat-model.md#security-lab).
 
 Após a Fase 5.1: **18 RESOLVED** (o FIND-023 foi aberto e resolvido na própria fase), 4 deles parcialmente, e **5 OPEN** (FIND-008, 014, 016, 018, 019). O Security Lab não abriu finding de segurança; os riscos que ele introduz estão no [threat model](../security/threat-model.md#security-lab).
 
@@ -1024,4 +1029,95 @@ Ligar `parseModelCastsMethod` no `phpstan.neon`.
 
 **Tests:** `composer analyse` (0 erros).
 
-**Commit:** pending (Fase 5.1)
+**Commit:** `6d8ee6e`
+
+---
+
+## FIND-024 — Personas do Security Lab são contas administráveis
+
+**Categoria:** Security · **Severidade:** Low
+
+### Evidence
+
+Registrado na Fase 5.2, ao reavaliar a decisão da 5.1 de manter as personas
+em `users` ([ADR-0010](../architecture/decisions/ADR-0010-controlled-security-lab.md),
+consequência negativa). `SecurityLabSeeder` cria Alice e Bob como linhas de
+`users`: inativas, sem perfil, com senha aleatória e e-mail
+`@security-lab.invalid`. Leitura do código: nada as distingue de uma conta
+comum além desses valores. Elas aparecem em `/admin/users` e em
+`GET /api/v1/users`, e as Policies de usuário as tratam como qualquer conta.
+
+### Current behavior
+
+Quem tem `users.update` pode ativar uma persona, trocar a senha dela e
+atribuir perfis. Quem tem `users.delete` pode excluí-la: os documentos
+sintéticos vão junto (cascade) e as execuções antigas ficam com o alvo nulo.
+
+### Risk
+
+Baixo. Uma persona ativada e com senha conhecida vira uma conta sem perfil:
+autentica na API, só alcança o autoatendimento e não entra no admin. Dar um
+perfil a ela exige o mesmo poder que já permite criar um usuário qualquer,
+então não há escalação. O efeito prático é operacional: personas misturadas
+aos usuários reais nas listagens e nas contagens, e um laboratório que deixa
+de funcionar se alguém excluir uma delas (o seeder a recria).
+
+A Fase 5.2 não aumentou a superfície: o teste de Mass Assignment escreve só
+no documento sintético, nunca na persona.
+
+### Recommendation
+
+Decidir em ADR, numa fase de hardening, entre: (a) aceitar o risco como
+está; (b) dar às personas uma identidade própria fora de `users`, o que
+exige que as Policies do laboratório aceitem outro tipo de ator; (c) marcar
+as personas no banco e fazer a regra valer nas Policies de usuário. Esconder
+as personas só na interface não é opção: seria um filtro de tela sem regra
+por trás, e a API continuaria listando.
+
+### Status (Fase 5.2)
+
+**Status:** OPEN (deferred)
+
+Dívida conhecida e documentada, sem mitigação nova nesta fase.
+
+---
+
+## FIND-025 — Resultado da última execução não era filtrado por teste
+
+**Categoria:** Maintainability · **Severidade:** Low
+
+### Evidence
+
+Encontrado na Fase 5.2, ao criar o segundo teste do laboratório.
+`IdorTestController::show` buscava a execução recém-feita pelo id guardado
+em flash (`security_run`) sem conferir o `test_key`. Com um teste só, não
+havia o que confundir. Os dois testes usam a mesma chave de flash.
+
+### Current behavior
+
+Antes da correção, a execução de um teste, se consumida pela página do
+outro (duas abas, ou uma requisição entre o POST e o redirect), seria
+entregue à parcial errada. A parcial de Mass Assignment lê chaves de
+`result_context` que uma execução de IDOR não tem.
+
+### Risk
+
+Sem risco de segurança: as duas páginas exigem a mesma permissão e a
+execução não traz nada que o operator não possa ver. O efeito seria um
+resultado incoerente ou um erro 500 numa situação rara.
+
+### Recommendation
+
+Consultar histórico e resultado pelo `test_key` da página.
+
+### Status (Fase 5.2)
+
+**Status:** RESOLVED
+
+**Root cause:** A consulta do resultado foi escrita quando existia um único teste.
+
+**Resolution:** Os dois controllers montam o histórico e o resultado a partir da mesma consulta, filtrada por `test_key`.
+
+**Tests:** `MassAssignmentTestExecutionTest › keeps each test with its own history and its own result` (falha ao remover o filtro: mutação M7 da fase).
+
+**Commit:** pending (Fase 5.2)

@@ -125,7 +125,7 @@ se a regra quebrasse.
 
 - **Aplicação**: controllers persistem só `$request->validated()` (usuários, desde a Fase 4.2, por `CreateUserDto`/`UpdateUserDto`, que só carregam nome, e-mail e senha); nenhum FormRequest aceita `is_system` ou `is_active`; `key` de menu é `prohibited` na atualização; `#[Fillable]` + `Model::shouldBeStrict()`.
 - **Teste**: `UserTest › has fillable protection`, `does not accept is_system from the client`, `does not allow changing a menu key`; `UserManagementTest › ignores privileged fields in the payload`, `does not let the edit form change status, password or profiles`, `creates users through the API with the shared Action`.
-- **Risco mitigado**: mass assignment.
+- **Risco mitigado**: mass assignment. O [Security Lab](mass-assignment.md) demonstra a falha e este controle sobre dados sintéticos (Fase 5.2).
 
 ### INV-12 — Tokens só são geridos pelo dono
 
@@ -183,18 +183,24 @@ se a regra quebrasse.
 
 ### INV-21 — O Security Lab só existe onde foi ligado (Fase 5.1)
 
-- **Aplicação**: `config('security.lab.enabled')` (padrão `false`), conferida em quatro pontos: middleware `security.lab` em toda rota `admin/security*` (404), `AdminNavigation` (seção oculta e sem valor como acesso ao admin), `RunIdorTest` (recusa a execução) e `SecurityLabSeeder` (não cria personas).
+- **Aplicação**: `config('security.lab.enabled')` (padrão `false`), conferida em quatro pontos: middleware `security.lab` em toda rota `admin/security*` (404), `AdminNavigation` (seção oculta e sem valor como acesso ao admin), os casos de uso `RunIdorTest` e `RunMassAssignmentTest` (recusam a execução) e `SecurityLabSeeder` (não cria personas). Uma flag só para o laboratório inteiro.
 - **Teste**: `SecurityLabAccessTest › Security Lab feature flag`; `RouteCoverageTest › puts every Security Lab route behind the feature flag`.
 - **Risco mitigado**: código deliberadamente vulnerável ativo num ambiente que não o pediu.
 
 ### INV-22 — O comportamento vulnerável não tem endereço e só toca dados sintéticos (Fase 5.1)
 
-- **Aplicação**: a leitura sem verificação de dono existe apenas dentro de `RunIdorTest`; nenhuma rota do laboratório recebe identificador de recurso. O alvo é sempre um `SecurityLabResource` (validação do formulário e FK `security_test_runs.target_resource_id`), e o actor é sempre uma persona (dona de um recurso sintético).
-- **Teste**: `RouteCoverageTest › has no route that serves a lab resource by its identifier`, `keeps the Security Lab out of the API and of public routes`; `IdorTestExecutionTest › Synthetic data only`.
+- **Aplicação**: a leitura sem verificação de dono existe apenas dentro de `RunIdorTest`, e a atribuição do payload inteiro, apenas dentro de `RunMassAssignmentTest` (Fase 5.2); nenhuma rota do laboratório recebe identificador de recurso. O alvo é sempre um `SecurityLabResource` (validação do formulário e FK `security_test_runs.target_resource_id`), e o actor é sempre uma persona (dona de um recurso sintético). O payload do Mass Assignment só aceita `name` e `is_approved`; nenhum model real teve `#[Fillable]` alterado para o laboratório. O único identificador que uma página do laboratório aceita é `?run=`, de uma **execução** do histórico: é leitura já autorizada por `security-lab.view`, filtrada pelo teste da página, e não executa cenário nenhum.
+- **Teste**: `RouteCoverageTest › has no route that serves a lab resource by its identifier`, `keeps the Security Lab out of the API and of public routes`; `IdorTestExecutionTest › Synthetic data only`; `MassAssignmentTestExecutionTest › Synthetic data only`, `does not unguard the models to make the vulnerable write work`.
 - **Risco mitigado**: o laboratório virar uma vulnerabilidade real ou um vazamento de dados do IAM ([ADR-0010](../architecture/decisions/ADR-0010-controlled-security-lab.md)).
 
 ### INV-23 — Uma execução do laboratório tem operator real, não troca a sessão e não confunde falha com proteção (Fase 5.1)
 
-- **Aplicação**: `RunIdorTest` grava `initiated_by_user_id` (operator) separado de `acting_as_user_id` (actor) e avalia a Policy com `Gate::forUser($actor)`, sem `Auth::login()`. A execução e o `audit_logs` (`security_test_executed`, ator = operator) são gravados na mesma transação. Erro técnico vira `error` + `inconclusive`, e CHECK constraints recusam outra combinação.
-- **Teste**: `IdorTestExecutionTest › Operator, actor and session`, `Operational errors`.
+- **Aplicação**: os casos de uso gravam `initiated_by_user_id` (operator) separado de `acting_as_user_id` (actor), sem `Auth::login()`: `RunIdorTest` avalia a Policy com `Gate::forUser($actor)`, e `RunMassAssignmentTest` toma como actor o dono do alvo. A execução e o `audit_logs` (`security_test_executed`, ator = operator) são gravados na mesma transação. Erro técnico vira `error` + `inconclusive`, e CHECK constraints recusam outra combinação.
+- **Teste**: `IdorTestExecutionTest › Operator, actor and session`, `Operational errors`; os mesmos grupos em `MassAssignmentTestExecutionTest`.
 - **Risco mitigado**: execução sem responsável, sequestro de sessão pelo actor simulado e falso "protegido".
+
+### INV-24 — Um teste do laboratório que escreve não deixa estado (Fase 5.2)
+
+- **Aplicação**: a escrita do cenário roda numa transação que `RunMassAssignmentTest` sempre desfaz (`DB::rollBack()` em `finally`), depois de ler do banco o estado que ela deixou. Só `security_test_runs` e `audit_logs` são gravados, numa segunda transação. O veredito sai do estado observado, guardado em `result_context`.
+- **Teste**: `MassAssignmentTestExecutionTest › Repeatability`, `stores the run and restores the document when the database refuses the write`.
+- **Risco mitigado**: execução contaminada pela anterior (um documento já aprovado faria o cenário vulnerável parecer protegido) e dado sintético alterado de forma permanente por código inseguro.

@@ -59,7 +59,7 @@ API REST v1 com usuários (ULID), perfis, menus, matriz de permissões perfil ×
 
 ### Segurança
 
-*Em construção (Fase 5).* **Security Lab** em `/admin/security`: testes controlados que executam a versão vulnerável e a versão protegida de uma operação, lado a lado, só sobre dados sintéticos. O primeiro é [IDOR / BOLA](docs/security/idor.md). Desligado por padrão; ligue com `SECURITY_LAB_ENABLED=true` e rode `php artisan db:seed --class=SecurityLabSeeder`. Veja [`docs/modules/security.md`](docs/modules/security.md).
+*Em construção (Fase 5).* **Security Lab** em `/admin/security`: testes controlados que executam a versão vulnerável e a versão protegida de uma operação, lado a lado, só sobre dados sintéticos. Há dois: [IDOR / BOLA](docs/security/idor.md) e [Mass Assignment](docs/security/mass-assignment.md). Desligado por padrão; ligue com `SECURITY_LAB_ENABLED=true` e rode `php artisan migrate` e `php artisan db:seed --class=SecurityLabSeeder`. Veja [`docs/modules/security.md`](docs/modules/security.md).
 
 ## Documentação
 

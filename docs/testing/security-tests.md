@@ -55,24 +55,36 @@ A sessão web não autentica a API. Isso foi verificado com HTTP real (cookie
 requisições e a reprodução daria um falso 200. A garantia permanente é
 estrutural, em `RouteCoverageTest`.
 
-## Security Lab: `tests/Feature/SecurityLab/` (Fase 5.1)
+## Security Lab: `tests/Feature/SecurityLab/` (Fases 5.1 e 5.2)
 
-52 testes, mais 3 em `RouteCoverageTest`. Rodam com o laboratório ligado por
-`config()`; os testes da feature flag o desligam explicitamente.
+103 testes (52 na Fase 5.1), mais 3 em `RouteCoverageTest`. Rodam com o
+laboratório ligado por `config()`; os testes da feature flag o desligam
+explicitamente.
 
 | Arquivo | Testes | Garante |
 |---|---|---|
-| `SecurityLabAccessTest` | 22 | visitante → landing; usuário do admin sem a permissão → 404 nas três rotas; `dev` → sessão encerrada; `security-lab.view` vê o laboratório mas não executa (404, sem formulário); `admin` pela permissão implícita; perfil só com o laboratório entra no admin e vê só a seção dele; operator desativado perde a sessão. **Flag**: padrão desligado; desligado → 404 até para `admin`, menu oculto, permissão do laboratório não vale como acesso, `RunIdorTest` recusa sem gravar nada, seeder não cria personas; personas não conseguem autenticar |
+| `SecurityLabAccessTest` | 31 | visitante → landing; usuário do admin sem a permissão → 404 nas cinco rotas; `dev` → sessão encerrada; `security-lab.view` vê os dois testes mas não executa nenhum (404, sem formulário); `admin` pela permissão implícita; perfil só com o laboratório entra no admin e vê só a seção dele; operator desativado perde a sessão. **Flag**: padrão desligado; desligado → 404 até para `admin`, menu oculto, permissão do laboratório não vale como acesso, `RunIdorTest` e `RunMassAssignmentTest` recusam sem gravar nem escrever nada, seeder não cria personas; personas não conseguem autenticar |
 | `IdorTestExecutionTest` | 23 | vulnerável → `completed`/`allowed`/`exposed`; protegido, mesmo par → `completed`/`denied`/`protected`; dono lendo o próprio recurso nunca é exposição (nos dois cenários); a interface mostra o conteúdo só quando exposto; matriz da `SecurityLabResourcePolicy` (dono, não dono, `admin` sem exceção); operator ≠ actor gravados; sessão continua com o operator; 1 execução = 1 auditoria, com o operator; conta real como actor e registro de tabela real como alvo são recusados; a FK recusa alvo não sintético; só personas listadas; mensagens de validação; falha técnica → `error`/`inconclusive`; CHECK constraints recusam falha com resultado de segurança |
-| `SecurityLabHistoryTest` | 7 | lista veredito, cenário, actor, alvo e operator; mais recente primeiro; paginação de 10; relações carregadas antecipadamente; conteúdo exposto não se repete no histórico; execução legível depois de o alvo ser excluído; nomes escapados |
+| `MassAssignmentTestExecutionTest` (Fase 5.2) | 36 | vulnerável → `completed`/`allowed`/`exposed`, com `name` e `is_approved` alteradas; protegido, mesmo payload → `completed`/`denied`/`protected`, só `name` alterada; payload só com a propriedade permitida nunca é exposição (nos dois cenários); a interface marca a alteração indevida só quando exposto; **repetibilidade**: a linha do documento fica idêntica depois de cada cenário, e a sequência vulnerável/protegido/vulnerável/protegido dá sempre o mesmo veredito a partir do mesmo estado; `Model::unguard()` não é usado; operator gravado e actor = dono do alvo; sessão continua com o operator; 1 execução = 1 auditoria, com o operator; registro de tabela real como alvo e propriedade fora do experimento (`owner_user_id`) são recusados; mensagens de validação; alvo inexistente e escrita recusada pelo banco (UNIQUE) → `error`/`inconclusive`, com a execução gravada e o documento intacto; histórico só deste teste, paginado, legível sem o alvo e com o nome do payload escapado; a execução de um teste não aparece como resultado na página do outro; **abrir uma execução pelo histórico** (`?run=`): mesmo resultado de quando rodou, com só `view` e sem executar nada, um único item marcado como atual, painel vazio para id desconhecido, texto qualquer, lista ou execução de outro teste, seleção mantida na paginação, e a execução recém-feita vence a escolhida |
+| `SecurityLabHistoryTest` | 13 | lista veredito, cenário, actor, alvo e operator; mais recente primeiro; paginação de 10; relações carregadas antecipadamente; abrir uma execução pelo histórico, com os mesmos casos do Mass Assignment (EXPOSED reexibe o conteúdo sintético, PROTECTED a negação pela Policy); conteúdo exposto não se repete no histórico; execução legível depois de o alvo ser excluído; nomes escapados |
 | `RouteCoverageTest` (+3) | — | toda rota `admin/security*` tem `security.lab`; nenhuma recebe identificador de recurso; não há rota do laboratório na API nem pública |
 
-Verificação por mutação: os testes falham ao trocar a Policy do cenário
-protegido por `true`, ao fazer a Policy permitir todos, ao ignorar o dono no
-veredito, ao tirar a flag das rotas, da Action ou da navegação, e ao tratar
-erro como `protected`.
+Verificação por mutação (Fase 5.1): os testes falham ao trocar a Policy do
+cenário protegido por `true`, ao fazer a Policy permitir todos, ao ignorar o
+dono no veredito, ao tirar a flag das rotas, da Action ou da navegação, e ao
+tratar erro como `protected`.
 
-## Invariante → teste| Invariante | Teste | Arquivo |
+Verificação por mutação (Fase 5.2), doze alterações em `RunMassAssignmentTest`
+e ao redor, todas detectadas: cenário protegido repassando o payload inteiro;
+cenário vulnerável filtrando o payload; flag ignorada pelo caso de uso;
+veredito invertido; resposta observada invertida; erro lido como `protected`
+(barrado também pelo CHECK do banco); operator trocado pelo actor; sessão
+entregue ao actor; `commit` no lugar do `rollBack`; histórico sem filtro por
+teste; payload aceitando qualquer chave; rota de execução pedindo só `view`.
+
+## Invariante → teste
+
+| Invariante | Teste | Arquivo |
 |---|---|---|
 | INV-01 autenticação obrigatória | `returns 401 when accessing protected route without token`, `rejects an invalid bearer token` | `IAM/AuthenticationTest`, `Security/TokenAbilityTest` |
 | Rate limit de login | `rate limits login after 6 attempts in 30 minutes` | `IAM/AuthenticationTest` |
@@ -87,7 +99,7 @@ erro como `protected`.
 | INV-08 admin ativo | `AdminInvariantTest` (7), `blocks removing last admin` (409) | `Security/AdminInvariantTest`, `IAM/UserProfileSyncTest` |
 | INV-09 ninguém concede mais do que tem | `Profile assignment escalation` (7), `blocks user from assigning profiles to themselves` | `Security/PrivilegeEscalationTest`, `IAM/UserProfileSyncTest` |
 | INV-10 listagem = detalhe | `keeps list and detail consistent…`, `limits dev to self-service`, `prevents user from viewing other users`, `allows user to view themselves through /auth/me` | `Security/AuthorizationMatrixTest`, `IAM/AuthorizationTest` |
-| INV-11 entrada não define autorização | `has fillable protection`, `does not accept is_system from the client`, `does not allow changing a menu key` | `UserTest`, `Security/AuthorizationMatrixTest` |
+| INV-11 entrada não define autorização | `has fillable protection`, `does not accept is_system from the client`, `does not allow changing a menu key`; demonstração em `Mass Assignment scenarios` | `UserTest`, `Security/AuthorizationMatrixTest`, `SecurityLab/MassAssignmentTestExecutionTest` |
 | INV-12 tokens do dono | `returns 404 when revoking a token that is not the caller's` | `Security/TokenAbilityTest` |
 | INV-13 uma entrada por evento | `AuditIntegrityTest` (8), `leaves no audit trail for a rejected change` | `Security/*` |
 | INV-14 trilha sobrevive | `force deleting a user nullifies its audit logs instead of deleting them` | `UserTest` |
@@ -95,6 +107,12 @@ erro como `protected`.
 | INV-16 inativo não autentica | `DisabledUserAuthenticationTest` (6) | `Security/DisabledUserAuthenticationTest` |
 | INV-17 token não excede abilities | `TokenAbilityTest` | `Security/TokenAbilityTest` |
 | INV-18 identidade estável de permissão | `Stable permission keys` | `Security/AuthorizationMatrixTest` |
+| INV-19 sessão no admin só com acesso | `Admin area access`, `keeps guests and users without admin access out of every internal admin route` | `Admin/UserManagementTest`, `Security/RouteCoverageTest` |
+| INV-20 dois adapters, mesmas regras | `Same rules through the API and the admin area`, `does not issue an API token on web login` | `Admin/UserManagementTest`, `Admin/AdminShellTest`, `Security/RouteCoverageTest` |
+| INV-21 laboratório só onde foi ligado | `Security Lab feature flag`, `puts every Security Lab route behind the feature flag` | `SecurityLab/SecurityLabAccessTest`, `Security/RouteCoverageTest` |
+| INV-22 vulnerável sem endereço, só dado sintético | `Synthetic data only` (dos dois testes), `has no route that serves a lab resource by its identifier`, `does not unguard the models to make the vulnerable write work` | `SecurityLab/*`, `Security/RouteCoverageTest` |
+| INV-23 operator real, sessão intacta, falha ≠ proteção | `Operator, actor and session`, `Operational errors` (dos dois testes) | `SecurityLab/IdorTestExecutionTest`, `SecurityLab/MassAssignmentTestExecutionTest` |
+| INV-24 teste que escreve não deixa estado | `Repeatability`, `stores the run and restores the document when the database refuses the write` | `SecurityLab/MassAssignmentTestExecutionTest` |
 | Integridade de vínculos | testes de `force deleting … cascades` | `UserTest`, `ProfileTest`, `MenuTest` |
 
 ## Lacunas

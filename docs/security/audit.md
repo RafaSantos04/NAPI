@@ -38,7 +38,7 @@ carregado pelo evento.
 | `permission_changed` | `PermissionChanged` | `SyncMenuPermissions` | `App\Models\Profile` | `permissions` (matriz final completa) |
 | `token_created` | `TokenCreated` | `TokenController::store` | `App\Models\User` (dono) | `token_id`, `name`, `abilities`, `expires_at` |
 | `token_revoked` | `TokenRevoked` | `TokenController::destroy` | `App\Models\User` (dono) | `token_id`, `name` |
-| `security_test_executed` | `SecurityTestExecuted` | `RunIdorTest` (Fase 5.1) | `App\Models\SecurityTestRun` | `test_key`, `scenario`, `acting_as_user_id`, `verdict` |
+| `security_test_executed` | `SecurityTestExecuted` | `RunIdorTest` (Fase 5.1), `RunMassAssignmentTest` (Fase 5.2) | `App\Models\SecurityTestRun` | `test_key`, `scenario`, `acting_as_user_id`, `verdict` |
 
 O id do token vai em `meta` porque é inteiro e `subject_id` é ULID. O segredo
 do token nunca é gravado.
@@ -48,6 +48,11 @@ do token nunca é gravado.
 é o operator real, nunca o actor simulado, e o `subject` aponta para a linha
 de `security_test_runs`, que guarda o que o teste observou. O log de
 auditoria não repete esse contexto nem o conteúdo exibido.
+
+O evento é o mesmo para todos os testes: `meta.test_key` diz qual foi
+(`idor`, `mass_assignment`). No Mass Assignment a escrita no documento
+sintético é desfeita e **não** gera auditoria própria; o que fica auditado é
+a execução, uma linha por teste executado.
 
 ## Cobertura
 

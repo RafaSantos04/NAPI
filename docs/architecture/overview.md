@@ -6,8 +6,9 @@
 
 O NAPI é hoje uma **API REST stateless autenticada por token**, construída em
 Laravel 13 sobre PostgreSQL, que implementa um módulo de IAM. Não há frontend,
-filas em uso nem integrações externas. O módulo Security Lab ainda não existe
-em código.
+filas em uso nem integrações externas. Desde as Fases 4 e 5 há também uma
+área administrativa Blade (sessão `web`) e, nela, o módulo
+[Security Lab](../modules/security.md); o diagrama abaixo cobre só a API.
 
 ```mermaid
 flowchart LR

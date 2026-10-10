@@ -17,14 +17,17 @@ app/
 │   ├── Exceptions/LastActiveAdministratorException.php   409 na API, flash no admin
 │   ├── AuditContext.php       Ator, IP e User-Agent carregados pelos eventos
 │   └── EnsureActiveAdministratorRemains.php              Invariante INV-08
-├── Domain/Security/           Security Lab (Fase 5.1, ADR-0010)
-│   ├── Actions/RunIdorTest.php    Único lugar com o cenário vulnerável
+├── Domain/Security/           Security Lab (Fases 5.1 e 5.2, ADR-0010)
+│   ├── Actions/               Únicos lugares com cenário vulnerável
+│   │   ├── RunIdorTest.php                               (Fase 5.1)
+│   │   └── RunMassAssignmentTest.php                     (Fase 5.2)
 │   └── Enums/                 SecurityTest, SecurityTestScenario,
 │                              SecurityTestExecutionStatus, ...ObservedOutcome, ...Verdict
 ├── DTOs/                      Dados validados HTTP → Action
 │   ├── AssignProfilesToUserDto.php
 │   ├── CreateUserDto.php, UpdateUserDto.php              (Fase 4.2)
 │   ├── RunIdorTestDto.php                                (Fase 5.1)
+│   ├── RunMassAssignmentTestDto.php                      (Fase 5.2)
 │   └── SyncMenuPermissionsDto.php
 ├── Events/                    Fatos de domínio (síncronos)
 │   ├── Contracts/Auditable.php
@@ -49,7 +52,7 @@ app/
 │   │   ├── Auth/LoginController.php
 │   │   ├── HomeController.php
 │   │   ├── User{,Profile,Status}Controller.php
-│   │   └── Security/IdorTestController.php   Security Lab (Fase 5.1)
+│   │   └── Security/{Idor,MassAssignment}TestController.php   Security Lab (Fases 5.1 e 5.2)
 │   ├── Middleware/
 │   │   ├── CheckPermission.php            Permissão funcional por rota (404 JSON ou página)
 │   │   ├── EnsureTokenAbility.php         Ability do token pelo método HTTP (403)
@@ -80,13 +83,14 @@ tests/
 ├── Feature/IAM/               Testes HTTP (seed automático via tests/Pest.php)
 ├── Feature/Security/          Regressão de segurança com tokens Bearer reais (Fase 3.2) e cobertura de rotas
 ├── Feature/Admin/             Área administrativa por sessão web (Fases 4.1 e 4.2)
-├── Feature/SecurityLab/       Security Lab: acesso, flag, teste IDOR e histórico (Fase 5.1)
+├── Feature/SecurityLab/       Security Lab: acesso, flag, testes IDOR e Mass Assignment, histórico (Fases 5.1 e 5.2)
 └── Feature/{User,Profile,Menu}Test.php   Testes de model/constraints
 ```
 
 ## Regra de engenharia (permanente desde a Fase 5.1)
 
-Antes de criar qualquer classe, tabela, coluna ou abstração, três perguntas:
+Antes de criar qualquer classe, tabela, coluna ou abstração, três perguntas
+(e uma quarta no Security Lab):
 
 1. **Esse código precisa existir?** Há uma responsabilidade real e
    independente que o justifique?
@@ -94,10 +98,27 @@ Antes de criar qualquer classe, tabela, coluna ou abstração, três perguntas:
    duplicar.
 3. **Laravel, PHP ou PostgreSQL já resolvem?** Policy, FormRequest, enum,
    FK, CHECK, transação e paginação nativos antes de solução própria.
+4. **No Security Lab: isso precisa ser vulnerável de verdade, ou dá para
+   demonstrar dentro do runner controlado?** (desde a Fase 5.2) Código
+   inseguro só dentro do caso de uso, só sobre dado sintético, e nenhum
+   model, rota ou configuração real é enfraquecido para o teste funcionar.
 
 O relatório de cada fase traz a tabela **Engineering Gate** com a resposta
 por componente, inclusive para o que foi avaliado e **não** criado. A
 primeira está em [phase-05-1-security-lab-idor.md](../phases/phase-05-1-security-lab-idor.md#engineering-gate).
+
+**Generalizar só depois de dois casos concretos** (desde a Fase 5.2). Com o
+segundo caso implementado e verde, e antes de refatorar, três perguntas:
+
+1. **O que se repetiu?** Só repetição real, encontrada no código.
+2. **O que merece abstração?** O que reduz duplicação relevante, tem
+   semântica estável, simplifica a manutenção e não esconde diferença
+   importante entre os casos.
+3. **O que continua específico?**
+
+A resposta entra no relatório da fase como **Abstraction Review** e orienta
+a fase seguinte; a abstração não é criada na mesma fase em que aparece. A
+primeira está em [phase-05-2](../phases/phase-05-2-security-lab-mass-assignment.md#abstraction-review).
 Padrões são ferramentas: Action para caso de uso real, DTO para fronteira
 real, evento quando há consumidor, e nada de Repository, Service, interface
 ou hierarquia sem um problema concreto que eles resolvam.

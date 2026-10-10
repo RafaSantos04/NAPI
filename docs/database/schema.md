@@ -116,10 +116,11 @@ Veja [audit.md](../security/audit.md).
 indexados) · `name` text · `token` varchar(64) UNIQUE (hash SHA-256) ·
 `abilities` text · `last_used_at` · `expires_at` (indexado) · timestamps.
 
-### `security_lab_resources` (Fase 5.1)
+### `security_lab_resources` (Fases 5.1 e 5.2)
 
 Documentos sintéticos do [Security Lab](../modules/security.md). Existem para
-que nenhuma tabela real seja alvo de um cenário vulnerável.
+que nenhuma tabela real seja alvo de um cenário vulnerável. O mesmo
+documento é lido pelo teste IDOR e escrito pelo teste Mass Assignment.
 
 | Coluna | Tipo | Constraint |
 |---|---|---|
@@ -127,7 +128,12 @@ que nenhuma tabela real seja alvo de um cenário vulnerável.
 | `owner_user_id` | ULID | FK `users` cascade (persona dona) |
 | `name` | varchar(100) | UNIQUE com `owner_user_id` (também é o índice por dono) |
 | `content` | text | começa com `Synthetic Security Lab Data` no seed |
+| `is_approved` | boolean | NOT NULL, default `false` (Fase 5.2). Propriedade protegida do teste [Mass Assignment](../security/mass-assignment.md) |
 | `created_at`, `updated_at` | timestamp | |
+
+`is_approved` não tem CHECK nem índice: o tipo e o default são toda a regra
+de integridade, e nada consulta por ela. A coluna entrou por migration
+própria (`add_is_approved_to_security_lab_resources_table`), reversível.
 
 ### `security_test_runs` (Fase 5.1)
 
@@ -137,18 +143,29 @@ Uma linha por execução de teste do laboratório. Só inserção, como
 | Coluna | Tipo | Constraint |
 |---|---|---|
 | `id` | ULID | PK |
-| `test_key` | varchar(50) | identidade estável do teste (`idor`); o rótulo é apresentação |
+| `test_key` | varchar(50) | identidade estável do teste (`idor`, `mass_assignment`); o rótulo é apresentação |
 | `scenario` | varchar(20) | CHECK `vulnerable` \| `protected` |
 | `initiated_by_user_id` | ULID | nullable; FK `users` **set null**; indexado. O operator |
-| `acting_as_user_id` | ULID | nullable; FK `users` **set null**; indexado. O actor simulado |
+| `acting_as_user_id` | ULID | nullable; FK `users` **set null**; indexado. O actor simulado (no Mass Assignment, o dono do alvo) |
 | `target_resource_id` | ULID | nullable; FK `security_lab_resources` **set null**; indexado |
-| `observed_outcome` | varchar(20) | nullable; CHECK `allowed` \| `denied` |
+| `observed_outcome` | varchar(20) | nullable; CHECK `allowed` \| `denied`. O pedido foi atendido como feito, ou não |
 | `security_verdict` | varchar(20) | CHECK `exposed` \| `protected` \| `inconclusive` |
 | `execution_status` | varchar(20) | CHECK `completed` \| `error` |
-| `result_context` | **jsonb** | nullable; dado específico do teste (IDOR: `target_owner_id`, ou `error`) |
+| `result_context` | **jsonb** | nullable; dado específico do teste, ou `error` (veja abaixo) |
 | `created_at` | timestamp | default `CURRENT_TIMESTAMP` |
 
 Índice `(test_key, created_at)` para o histórico de um teste.
+
+`result_context` por teste:
+
+| `test_key` | Chaves | Por quê |
+|---|---|---|
+| `idor` | `target_owner_id` | o alvo pode ser excluído depois, e a execução ainda precisa dizer de quem era |
+| `mass_assignment` | `attempted` (nomes das propriedades enviadas), `before` e `after` (`name` e `is_approved`), `protected_changed` | o documento é restaurado ao fim da execução; o registro é o único lugar que ainda sabe o que a escrita fez |
+| qualquer, com falha | `error` (nome da classe da exceção) | sem mensagem nem stack trace |
+
+A Fase 5.2 não mudou `security_test_runs`: o segundo teste coube na tabela,
+nas constraints e nos índices da 5.1.
 
 Duas CHECK constraints mantêm os três fatos coerentes:
 

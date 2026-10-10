@@ -93,8 +93,8 @@ $user->hasPermission('users.update'); // única resposta funcional do sistema
 | `PUT /profiles/{id}/menus` | `permissions.update` |
 | `menus.*` | `menus.{ação}` |
 | `GET /menus/tree`, `auth.*`, `tokens.*` | nenhuma (só camadas 1 e 2) |
-| `/admin/security`, `/admin/security/idor` (só admin, Fase 5.1) | `security-lab.view` |
-| `POST /admin/security/idor/run` (só admin, Fase 5.1) | `security-lab.create` |
+| `/admin/security`, `/admin/security/idor`, `/admin/security/mass-assignment` (só admin, Fases 5.1 e 5.2) | `security-lab.view` |
+| `POST /admin/security/idor/run`, `POST /admin/security/mass-assignment/run` (só admin, Fases 5.1 e 5.2) | `security-lab.create` |
 
 Perfis padrão:
 
@@ -121,7 +121,7 @@ apenas o que depende da instância ou do ator:
 | `ProfilePolicy::update/delete` | perfil `is_system` imutável; `delete` também sem usuários |
 | `ProfilePolicy::syncMenus` | perfil `is_system` imutável (inclusive para admin). Os demais não editam a matriz de um perfil que possuem e não concedem flags que não têm |
 | `MenuPolicy::delete` | menu `is_system` não é excluído; menu com filhos também não |
-| `SecurityTestRunPolicy::viewAny`/`create` | nenhuma: `security-lab.view` e `security-lab.create` (Fase 5.1) |
+| `SecurityTestRunPolicy::viewAny`/`create` | nenhuma: `security-lab.view` e `security-lab.create` (Fase 5.1). Vale para todos os testes do laboratório |
 | `SecurityLabResourcePolicy::view` | só o dono do recurso sintético, sem exceção para `admin`. É o controle que o [teste IDOR](idor.md) demonstra, avaliado para o actor com `Gate::forUser()` |
 
 ## Anti privilege escalation
@@ -168,6 +168,14 @@ mais, a feature flag: com `SECURITY_LAB_ENABLED=false` a seção não existe, as
 rotas respondem 404 (middleware `security.lab`) e a permissão do laboratório
 não conta como acesso ao admin. Executar um teste usa a ação `create` da
 matriz. Veja [security.md](../modules/security.md#fronteiras).
+
+**Objeto × propriedade (Fase 5.2).** Uma Policy responde se o ator pode
+agir sobre **este objeto**. Ela não responde quais **propriedades** uma
+operação pode alterar: isso é o contrato de entrada da operação
+(`validated()`, DTO), descrito em [mass-assignment.md](mass-assignment.md) e
+garantido no IAM pela [INV-11](security-policies.md#inv-11--entrada-do-cliente-não-define-atributos-de-autorização).
+A Policy do laboratório (`SecurityTestRunPolicy`) continua decidindo só quem
+opera o laboratório.
 
 **Esconder link não é autorizar.** A navegação e os botões usam `@can` com as
 mesmas abilities, mas cada rota mantém `permission:` e Policy próprios.

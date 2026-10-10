@@ -13,8 +13,10 @@ organizado em duas áreas conceituais:
 - **IAM (Identity and Access Management)**: usuários, perfis, menus, matriz de
   permissões, autenticação por token e auditoria. Existe como API REST
   (`/api/v1`).
-- **Security Lab**: área futura de testes e ferramentas de segurança. Ainda
-  não há código; veja [modules/security.md](modules/security.md).
+- **Security Lab**: laboratório controlado, na área administrativa, que
+  executa a versão vulnerável e a protegida de uma operação sobre dados
+  sintéticos. Dois testes: IDOR/BOLA e Mass Assignment. Desligado por
+  padrão; veja [modules/security.md](modules/security.md).
 
 Stack confirmada no repositório: Laravel 13.32, PHP 8.4 (constraint `^8.3`),
 PostgreSQL, Sanctum 4, Pest 4, Larastan (nível 6) e Pint (preset `laravel`).
@@ -40,6 +42,8 @@ PostgreSQL, Sanctum 4, Pest 4, Larastan (nível 6) e Pint (preset `laravel`).
 - [Políticas e invariantes de segurança](security/security-policies.md)
 - [Auditoria](security/audit.md)
 - [Threat model](security/threat-model.md)
+- [IDOR / BOLA](security/idor.md) (Security Lab)
+- [Mass Assignment](security/mass-assignment.md) (Security Lab)
 
 ## API
 
@@ -61,6 +65,8 @@ PostgreSQL, Sanctum 4, Pest 4, Larastan (nível 6) e Pint (preset `laravel`).
 - [Fases](phases/README.md)
 - [Fase 3: IAM REST](phases/phase-03-iam-rest.md)
 - [Fase 3.2: IAM Security Hardening](phases/phase-03-2-iam-hardening.md)
+- [Fase 5.1: Security Lab e IDOR/BOLA](phases/phase-05-1-security-lab-idor.md)
+- [Fase 5.2: Security Lab, Mass Assignment](phases/phase-05-2-security-lab-mass-assignment.md)
 - [Findings](findings/README.md): problemas e riscos encontrados no Reality
   Check da Fase 3.1, com o status de cada um após a Fase 3.2
 
