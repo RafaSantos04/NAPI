@@ -2,21 +2,31 @@
 
 use App\Domain\IAM\AuditContext;
 use App\Domain\Security\Actions\RunIdorTest;
+use App\Domain\Security\Actions\RunMassAssignmentTest;
 use App\Domain\Security\Enums\SecurityTestScenario;
 use App\DTOs\RunIdorTestDto;
+use App\DTOs\RunMassAssignmentTestDto;
 use App\Models\AuditLog;
 use App\Models\SecurityLabResource;
 use App\Models\SecurityTestRun;
 use App\Models\User;
 use Database\Seeders\SecurityLabSeeder;
 
-// Phase 5.1: who reaches the Security Lab. Feature flag, session, active
-// account and functional permission each close the door on their own.
+// Phases 5.1 and 5.2: who reaches the Security Lab. Feature flag, session,
+// active account and functional permission each close the door on their own,
+// for every test of the lab.
 
 dataset('lab routes', [
     'landing' => ['GET', '/admin/security'],
     'idor page' => ['GET', '/admin/security/idor'],
     'idor run' => ['POST', '/admin/security/idor/run'],
+    'mass assignment page' => ['GET', '/admin/security/mass-assignment'],
+    'mass assignment run' => ['POST', '/admin/security/mass-assignment/run'],
+]);
+
+dataset('lab tests', [
+    'idor' => ['admin.security.idor.show', 'admin.security.idor.run'],
+    'mass assignment' => ['admin.security.mass-assignment.show', 'admin.security.mass-assignment.run'],
 ]);
 
 describe('Security Lab access', function () {
@@ -43,38 +53,37 @@ describe('Security Lab access', function () {
 
         $this->get('/admin/security')
             ->assertOk()
-            ->assertSee('href="'.route('admin.security.idor.show').'"', false);
+            ->assertSee('href="'.route('admin.security.idor.show').'"', false)
+            ->assertSee('href="'.route('admin.security.mass-assignment.show').'"', false);
 
         $this->get('/admin/security/idor')->assertOk()->assertSee('IDOR / BOLA');
+        $this->get('/admin/security/mass-assignment')->assertOk()->assertSee('Mass Assignment');
     });
 
-    it('does not let a view-only user run a test', function () {
-        $target = SecurityLabResource::factory()->create();
+    it('does not let a view-only user run a test', function (string $page, string $run) {
+        SecurityLabResource::factory()->create();
 
         $this->actingAs(userWithPermissions(['security-lab' => ['view']]));
 
-        $this->get('/admin/security/idor')
+        $this->get(route($page))
             ->assertOk()
             ->assertSee('não executar testes')
-            ->assertDontSee(route('admin.security.idor.run'));
+            ->assertDontSee(route($run));
 
-        $this->post('/admin/security/idor/run', [
-            'actor_user_id' => $target->owner_user_id,
-            'target_resource_id' => $target->id,
-            'scenario' => 'vulnerable',
-        ])->assertNotFound();
+        // 404 from the permission layer: validation would have redirected.
+        $this->post(route($run))->assertNotFound();
 
         expect(SecurityTestRun::count())->toBe(0);
-    });
+    })->with('lab tests');
 
-    it('gives the administrator the lab through the implicit permission', function () {
+    it('gives the administrator the lab through the implicit permission', function (string $page, string $run) {
         SecurityLabResource::factory()->create();
 
         $this->actingAs(seededUser('admin'))
-            ->get('/admin/security/idor')
+            ->get(route($page))
             ->assertOk()
-            ->assertSee('action="'.route('admin.security.idor.run').'"', false);
-    });
+            ->assertSee('action="'.route($run).'"', false);
+    })->with('lab tests');
 
     it('lets a lab-only profile into the admin area and shows only its section', function () {
         $user = userWithPermissions(['security-lab' => ['view']]);
@@ -135,18 +144,26 @@ describe('Security Lab feature flag', function () {
         $this->assertGuest('web');
     });
 
-    it('refuses to run the use case when disabled, whoever calls it', function () {
-        $target = SecurityLabResource::factory()->create();
+    it('refuses to run a use case when disabled, whoever calls it', function (Closure $execute) {
+        $target = SecurityLabResource::factory()->create(['name' => 'Documento A']);
         config(['security.lab.enabled' => false]);
 
-        $dto = new RunIdorTestDto($target->owner_user_id, $target->id, SecurityTestScenario::Vulnerable);
-
-        expect(fn () => RunIdorTest::execute($dto, AuditContext::system()))
+        expect(fn () => $execute($target))
             ->toThrow(LogicException::class, 'The Security Lab is disabled.');
 
         expect(SecurityTestRun::count())->toBe(0)
-            ->and(AuditLog::where('action', 'security_test_executed')->exists())->toBeFalse();
-    });
+            ->and(AuditLog::where('action', 'security_test_executed')->exists())->toBeFalse()
+            ->and($target->fresh()->only(['name', 'is_approved']))->toBe(['name' => 'Documento A', 'is_approved' => false]);
+    })->with([
+        'idor' => [fn (SecurityLabResource $target) => RunIdorTest::execute(
+            new RunIdorTestDto($target->owner_user_id, $target->id, SecurityTestScenario::Vulnerable),
+            AuditContext::system(),
+        )],
+        'mass assignment' => [fn (SecurityLabResource $target) => RunMassAssignmentTest::execute(
+            new RunMassAssignmentTestDto($target->id, SecurityTestScenario::Vulnerable, ['name' => 'Renomeado', 'is_approved' => true]),
+            AuditContext::system(),
+        )],
+    ]);
 
     it('seeds no synthetic persona while disabled', function () {
         config(['security.lab.enabled' => false]);

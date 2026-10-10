@@ -74,6 +74,71 @@ describe('Security Lab history', function () {
             ->and($run->target->relationLoaded('owner'))->toBeTrue();
     });
 
+    it('opens a past run in the result panel when it is picked in the history', function () {
+        $exposed = ($this->run)(SecurityTestScenario::Vulnerable);
+        $protected = ($this->run)(SecurityTestScenario::Protected);
+
+        $this->actingAs($this->viewer);
+
+        // Reading the history is enough for this: nothing is executed.
+        $page = $this->get('/admin/security/idor?run='.$exposed->id)
+            ->assertOk()
+            ->assertSee('EXPOSED')
+            ->assertSee('conteúdo de Bob')
+            ->assertSee('run='.$exposed->id.'#result-title', false);
+
+        expect($page->viewData('result')->is($exposed))->toBeTrue()
+            // Only the picked run is marked as the current one.
+            ->and(substr_count($page->getContent(), 'aria-current="true"'))->toBe(1);
+
+        $this->get('/admin/security/idor?run='.$protected->id)
+            ->assertOk()
+            ->assertSee('SecurityLabResourcePolicy::view')
+            ->assertDontSee('conteúdo de Bob');
+
+        expect(SecurityTestRun::count())->toBe(2);
+    });
+
+    it('shows no result for a run it cannot open', function (string $query) {
+        ($this->run)(SecurityTestScenario::Vulnerable);
+
+        $page = $this->actingAs($this->viewer)->get('/admin/security/idor?'.$query)->assertOk();
+
+        expect($page->viewData('result'))->toBeNull();
+    })->with([
+        'an unknown id' => ['run=01jzzzzzzzzzzzzzzzzzzzzzzz'],
+        'something that is not an id' => ['run=not-an-id'],
+        'a list' => ['run[]=01jzzzzzzzzzzzzzzzzzzzzzzz'],
+    ]);
+
+    it('keeps the picked run while paging through the history', function () {
+        $oldest = ($this->run)(SecurityTestScenario::Vulnerable);
+
+        foreach (range(1, 11) as $_) {
+            ($this->run)(SecurityTestScenario::Protected);
+        }
+
+        $page = $this->actingAs($this->viewer)
+            ->get('/admin/security/idor?run='.$oldest->id.'&page=2')
+            ->assertOk()
+            // The link back to the first page carries the selection.
+            ->assertSee('run='.$oldest->id.'&amp;page=1', false);
+
+        expect($page->viewData('result')->is($oldest))->toBeTrue()
+            ->and($page->viewData('runs')->count())->toBe(2);
+    });
+
+    it('shows the run just executed rather than the one picked before', function () {
+        $picked = ($this->run)(SecurityTestScenario::Vulnerable);
+        $executed = ($this->run)(SecurityTestScenario::Protected);
+
+        $page = $this->actingAs($this->viewer)
+            ->withSession(['security_run' => $executed->id])
+            ->get('/admin/security/idor?run='.$picked->id);
+
+        expect($page->viewData('result')->is($executed))->toBeTrue();
+    });
+
     it('never repeats the disclosed content in the history', function () {
         ($this->run)(SecurityTestScenario::Vulnerable);
 

@@ -135,8 +135,9 @@ describe('Security Lab route coverage', function () {
     });
 
     it('has no route that serves a lab resource by its identifier', function () {
-        // The vulnerable read exists only inside RunIdorTest. A route with a
-        // parameter here would be a URL that can be probed.
+        // The vulnerable read and write exist only inside the use cases
+        // (RunIdorTest, RunMassAssignmentTest). A route with a parameter
+        // here would be a URL that can be probed.
         foreach (routesUnder('admin/security*') as $route) {
             expect($route->parameterNames())->toBe([], "{$route->uri()} takes a parameter");
         }
@@ -145,7 +146,7 @@ describe('Security Lab route coverage', function () {
     it('keeps the Security Lab out of the API and of public routes', function () {
         $elsewhere = collect(Route::getRoutes()->getRoutes())
             ->reject(fn (RoutingRoute $route) => Str::is('admin/security*', $route->uri()))
-            ->filter(fn (RoutingRoute $route) => Str::contains($route->uri(), ['security', 'lab', 'idor']));
+            ->filter(fn (RoutingRoute $route) => Str::contains($route->uri(), ['security', 'lab', 'idor', 'assignment']));
 
         expect($elsewhere->map->uri()->all())->toBe([]);
     });
