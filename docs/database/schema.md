@@ -18,6 +18,10 @@ erDiagram
     menus ||--o{ menu_profiles : "menu_id, cascade"
     menus |o--o{ menus : "parent_id, cascade"
     users |o--o{ audit_logs : "user_id, set null"
+    users ||--o{ security_lab_resources : "owner_user_id, cascade"
+    users |o--o{ security_test_runs : "initiated_by_user_id, set null"
+    users |o--o{ security_test_runs : "acting_as_user_id, set null"
+    security_lab_resources |o--o{ security_test_runs : "target_resource_id, set null"
 ```
 
 ## Tabelas
@@ -112,17 +116,67 @@ Veja [audit.md](../security/audit.md).
 indexados) · `name` text · `token` varchar(64) UNIQUE (hash SHA-256) ·
 `abilities` text · `last_used_at` · `expires_at` (indexado) · timestamps.
 
+### `security_lab_resources` (Fase 5.1)
+
+Documentos sintéticos do [Security Lab](../modules/security.md). Existem para
+que nenhuma tabela real seja alvo de um cenário vulnerável.
+
+| Coluna | Tipo | Constraint |
+|---|---|---|
+| `id` | ULID | PK |
+| `owner_user_id` | ULID | FK `users` cascade (persona dona) |
+| `name` | varchar(100) | UNIQUE com `owner_user_id` (também é o índice por dono) |
+| `content` | text | começa com `Synthetic Security Lab Data` no seed |
+| `created_at`, `updated_at` | timestamp | |
+
+### `security_test_runs` (Fase 5.1)
+
+Uma linha por execução de teste do laboratório. Só inserção, como
+`audit_logs`: `created_at` vem do banco e não há `updated_at`.
+
+| Coluna | Tipo | Constraint |
+|---|---|---|
+| `id` | ULID | PK |
+| `test_key` | varchar(50) | identidade estável do teste (`idor`); o rótulo é apresentação |
+| `scenario` | varchar(20) | CHECK `vulnerable` \| `protected` |
+| `initiated_by_user_id` | ULID | nullable; FK `users` **set null**; indexado. O operator |
+| `acting_as_user_id` | ULID | nullable; FK `users` **set null**; indexado. O actor simulado |
+| `target_resource_id` | ULID | nullable; FK `security_lab_resources` **set null**; indexado |
+| `observed_outcome` | varchar(20) | nullable; CHECK `allowed` \| `denied` |
+| `security_verdict` | varchar(20) | CHECK `exposed` \| `protected` \| `inconclusive` |
+| `execution_status` | varchar(20) | CHECK `completed` \| `error` |
+| `result_context` | **jsonb** | nullable; dado específico do teste (IDOR: `target_owner_id`, ou `error`) |
+| `created_at` | timestamp | default `CURRENT_TIMESTAMP` |
+
+Índice `(test_key, created_at)` para o histórico de um teste.
+
+Duas CHECK constraints mantêm os três fatos coerentes:
+
+- `(execution_status = 'completed') = (observed_outcome IS NOT NULL)`: nada é
+  observado quando o runner falha;
+- `execution_status = 'completed' OR security_verdict = 'inconclusive'`: uma
+  falha nunca afirma um resultado de segurança.
+
+Colunas avaliadas e **não** criadas, por serem redundantes ou deriváveis:
+`target_type` (a FK já fixa o tipo e garante que o alvo é sintético),
+`expected_outcome` (derivável do dono do alvo, guardado em `result_context`),
+`input_context` (actor, alvo e cenário já são colunas), `duration_ms`,
+`started_at`, `finished_at` e `updated_at` (a execução é síncrona e
+imutável; `created_at` basta). Contadores agregados também não existem: saem
+de consultas sobre esta tabela.
+
 ## Onde o PostgreSQL participa da arquitetura
 
 | Recurso | Uso | Efeito |
 |---|---|---|
 | `citext` | `users.email` | Unicidade case-insensitive no banco (teste `email is case-insensitive (citext)`) |
 | ULID (`char(26)`) | PKs de domínio | IDs não sequenciais e ordenáveis por tempo |
-| `jsonb` | `audit_logs.meta` | Metadado variável por ação, consultável |
+| `jsonb` | `audit_logs.meta`, `security_test_runs.result_context` | Metadado variável por ação ou por teste, consultável |
+| `CHECK` | `security_test_runs` (conjuntos fechados e coerência entre status, resposta e veredito) | O banco recusa uma execução com falha que afirme proteção (testes de constraint) |
 | `inet` | `audit_logs.ip` | IP validado pelo tipo |
 | PKs compostas | pivots | Impedem vínculos duplicados |
-| `cascade` | pivots, `user_details`, `menus.parent_id` | Excluir perfil ou menu remove vínculos e permissões (testes de force delete) |
-| `set null` | `audit_logs.user_id`, `user_profiles.assigned_by` | Trilha e histórico sobrevivem à exclusão do ator (teste) |
+| `cascade` | pivots, `user_details`, `menus.parent_id`, `security_lab_resources.owner_user_id` | Excluir perfil ou menu remove vínculos e permissões (testes de force delete) |
+| `set null` | `audit_logs.user_id`, `user_profiles.assigned_by`, FKs de `security_test_runs` | Trilha e histórico sobrevivem à exclusão do ator (teste) |
 | `UNIQUE` | `email`, `profiles.name/slug`, `menus.key`, `menus.route_name`, `cpf_hash`, `token` | Última linha de defesa contra duplicidade (testes de validação) |
 | `SELECT … FOR UPDATE` | linha do perfil `admin` | Serializa as remoções de administrador; a invariante "≥ 1 admin ativo" não depende de check-then-act sem proteção (INV-08) |
 | Defaults booleanos | `menu_profiles.can_*` | Negação por padrão garantida no schema |

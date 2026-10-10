@@ -2,8 +2,9 @@
 
 [← Segurança](README.md) · [Findings](../findings/README.md) · [Security Lab](../modules/security.md)
 
-Escopo: **somente o que existe hoje**, a API REST v1 do IAM. Criado na Fase
-3.1 e atualizado na Fase 3.2 com as mitigações implementadas (seção
+Escopo: **somente o que existe hoje**: a API REST v1 do IAM, a área
+administrativa e, desde a Fase 5.1, o [Security Lab](#security-lab). Criado
+na Fase 3.1 e atualizado na Fase 3.2 com as mitigações implementadas (seção
 [Mitigações da Fase 3.2](#mitigações-da-fase-32)).
 
 **Status:** ✅ mitigado (há evidência no código e teste) · ⚠️ parcial · ❌ não mitigado.
@@ -132,3 +133,24 @@ Veja [phases](../phases/README.md).
 | Ameaça | Status | Mitigação existente | Teste | Risco residual | Fase |
 |---|---|---|---|---|---|
 | Reversão de CPF | ❌ | CPF guardado como SHA-256 | ❌ | SHA-256 sem salt em um espaço de ~10⁹ valores é reversível por força bruta ([FIND-008](../findings/README.md#find-008--hash-de-cpf-é-reversível-por-força-bruta)) | Hardening |
+
+## Security Lab
+
+O laboratório ([ADR-0010](../architecture/decisions/ADR-0010-controlled-security-lab.md))
+é o único lugar do NAPI com **código inseguro de propósito**. A ameaça que ele
+introduz é o próprio comportamento vulnerável sair da fronteira do
+laboratório.
+
+| Ameaça | Status | Mitigação existente | Teste | Risco residual | Fase |
+|---|---|---|---|---|---|
+| Comportamento vulnerável alcançável por URL | ✅ | Não existe rota que devolva um recurso por identificador; a leitura insegura só roda dentro de `RunIdorTest` | ✅ `has no route that serves a lab resource by its identifier`, `keeps the Security Lab out of the API and of public routes` | Uma rota nova com parâmetro sob `admin/security` quebra o teste, não a produção | — |
+| Laboratório ativo num ambiente onde não deveria | ✅ | `SECURITY_LAB_ENABLED` é `false` por padrão; desligado, rotas dão 404, o menu some, o caso de uso e o seeder recusam | ✅ `Security Lab feature flag` (inclusive para `admin`) | Ligar a flag em produção é decisão de quem opera; o código não impede | — |
+| Cenário vulnerável lê dados reais | ✅ | Alvo só pode ser `security_lab_resources`: validação do formulário e FK em `security_test_runs` | ✅ `rejects a record of a real table as the target`, `cannot store a run whose target is not a synthetic resource` | — | — |
+| Operator simula uma conta real e vê o que ela vê | ✅ | Actor precisa ser dono de um recurso sintético (persona); usuários reais não são listados nem aceitos | ✅ `rejects a real account as the actor`, `lists only lab personas as actors` | — | — |
+| Actor assume a sessão do operator | ✅ | `Gate::forUser()` avalia a Policy para o actor; nenhum `Auth::login()` | ✅ `keeps the session with the operator after the run` | — | — |
+| Persona usada como conta de acesso | ✅ | Inativa, sem perfil, senha aleatória desconhecida, e-mail `.invalid` | ✅ `creates personas that cannot sign in` | Um administrador pode ativá-la pela área de usuários; continuaria sem perfil e sem acesso ao admin | — |
+| Usuário sem permissão executa testes | ✅ | `security-lab.view` e `security-lab.create` pela matriz; 404 sem a permissão | ✅ `Security Lab access` | — | — |
+| Execução sem responsável | ✅ | `security_test_executed` em `audit_logs`, na mesma transação da execução, com o operator real | ✅ `audits the run once, under the operator` | — | — |
+| Falha técnica lida como "protegido" | ✅ | Erro vira `error` + `inconclusive`; CHECK constraints recusam outra combinação | ✅ `records a technical failure as inconclusive, never as protected`, `cannot store a failed run that claims a security result` | — | — |
+| Dado sensível no histórico | ✅ | A execução guarda só identificadores; o conteúdo exibido é sintético e não é copiado para o registro nem para a auditoria | ✅ `never repeats the disclosed content in the history` | Histórico sem política de retenção | Hardening |
+| XSS pelos nomes de recursos | ✅ | Blade escapa toda saída | ✅ `escapes the names it renders` | — | — |

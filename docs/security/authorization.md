@@ -93,6 +93,8 @@ $user->hasPermission('users.update'); // única resposta funcional do sistema
 | `PUT /profiles/{id}/menus` | `permissions.update` |
 | `menus.*` | `menus.{ação}` |
 | `GET /menus/tree`, `auth.*`, `tokens.*` | nenhuma (só camadas 1 e 2) |
+| `/admin/security`, `/admin/security/idor` (só admin, Fase 5.1) | `security-lab.view` |
+| `POST /admin/security/idor/run` (só admin, Fase 5.1) | `security-lab.create` |
 
 Perfis padrão:
 
@@ -119,6 +121,8 @@ apenas o que depende da instância ou do ator:
 | `ProfilePolicy::update/delete` | perfil `is_system` imutável; `delete` também sem usuários |
 | `ProfilePolicy::syncMenus` | perfil `is_system` imutável (inclusive para admin). Os demais não editam a matriz de um perfil que possuem e não concedem flags que não têm |
 | `MenuPolicy::delete` | menu `is_system` não é excluído; menu com filhos também não |
+| `SecurityTestRunPolicy::viewAny`/`create` | nenhuma: `security-lab.view` e `security-lab.create` (Fase 5.1) |
+| `SecurityLabResourcePolicy::view` | só o dono do recurso sintético, sem exceção para `admin`. É o controle que o [teste IDOR](idor.md) demonstra, avaliado para o actor com `Gate::forUser()` |
 
 ## Anti privilege escalation
 
@@ -157,6 +161,13 @@ aparece. Por isso o `admin` entra e o `dev` e o `viewer` não, e um perfil
 customizado com `users.view` entra. Permissões de áreas que ainda não têm
 tela (por exemplo, só `menus.*`) não dão entrada, porque não haveria nada a
 usar. Quando novas seções forem criadas, elas passam a contar automaticamente.
+
+**Security Lab (Fase 5.1).** A seção `Segurança` segue a mesma regra
+(`SecurityTestRunPolicy::viewAny` ↔ `security-lab.view`) e tem uma camada a
+mais, a feature flag: com `SECURITY_LAB_ENABLED=false` a seção não existe, as
+rotas respondem 404 (middleware `security.lab`) e a permissão do laboratório
+não conta como acesso ao admin. Executar um teste usa a ação `create` da
+matriz. Veja [security.md](../modules/security.md#fronteiras).
 
 **Esconder link não é autorizar.** A navegação e os botões usam `@can` com as
 mesmas abilities, mas cada rota mantém `permission:` e Policy próprios.

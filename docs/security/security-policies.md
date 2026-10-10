@@ -135,7 +135,7 @@ se a regra quebrasse.
 
 ### INV-13 — Mudanças de privilégio e de identidade geram exatamente uma entrada de auditoria
 
-- **Aplicação**: eventos `Auditable` → `RecordAuditLog` (um único registro, via discovery), disparados dentro da transação da operação.
+- **Aplicação**: eventos `Auditable` → `RecordAuditLog` (um único registro, via discovery), disparados dentro da transação da operação. Desde a Fase 5.1 inclui a execução de testes do Security Lab (`security_test_executed`).
 - **Teste**: `AuditIntegrityTest` (contagem `=== 1` por ação, ator, pivot `assigned_by`, contexto vindo do evento).
 - **Fase 3.2**: a duplicação ([FIND-002](../findings/README.md#find-002--listeners-de-auditoria-registrados-em-duplicidade)) foi corrigida, e a cobertura ganhou usuário e token ([FIND-012](../findings/README.md#find-012--lacunas-de-cobertura-da-auditoria)). CRUD de perfis e menus continua fora; veja [audit.md](audit.md#cobertura).
 
@@ -180,3 +180,21 @@ se a regra quebrasse.
 - **Aplicação**: API e admin chamam as mesmas Policies e Actions ([ADR-0009](../architecture/decisions/ADR-0009-web-session-and-bearer-adapters.md)); FormRequests web estendem os da API. O grupo `api` não inicia sessão (`statefulApi()` desligado), então um cookie de sessão não autentica a API, e o login web não emite token.
 - **Teste**: `UserManagementTest › Same rules through the API and the admin area`; `RouteCoverageTest` (API sem sessão, `permission:` em toda rota de recurso); `AdminShellTest › does not issue an API token on web login`.
 - **Risco mitigado**: regra aplicada num canal e esquecida no outro; uso cruzado de credenciais.
+
+### INV-21 — O Security Lab só existe onde foi ligado (Fase 5.1)
+
+- **Aplicação**: `config('security.lab.enabled')` (padrão `false`), conferida em quatro pontos: middleware `security.lab` em toda rota `admin/security*` (404), `AdminNavigation` (seção oculta e sem valor como acesso ao admin), `RunIdorTest` (recusa a execução) e `SecurityLabSeeder` (não cria personas).
+- **Teste**: `SecurityLabAccessTest › Security Lab feature flag`; `RouteCoverageTest › puts every Security Lab route behind the feature flag`.
+- **Risco mitigado**: código deliberadamente vulnerável ativo num ambiente que não o pediu.
+
+### INV-22 — O comportamento vulnerável não tem endereço e só toca dados sintéticos (Fase 5.1)
+
+- **Aplicação**: a leitura sem verificação de dono existe apenas dentro de `RunIdorTest`; nenhuma rota do laboratório recebe identificador de recurso. O alvo é sempre um `SecurityLabResource` (validação do formulário e FK `security_test_runs.target_resource_id`), e o actor é sempre uma persona (dona de um recurso sintético).
+- **Teste**: `RouteCoverageTest › has no route that serves a lab resource by its identifier`, `keeps the Security Lab out of the API and of public routes`; `IdorTestExecutionTest › Synthetic data only`.
+- **Risco mitigado**: o laboratório virar uma vulnerabilidade real ou um vazamento de dados do IAM ([ADR-0010](../architecture/decisions/ADR-0010-controlled-security-lab.md)).
+
+### INV-23 — Uma execução do laboratório tem operator real, não troca a sessão e não confunde falha com proteção (Fase 5.1)
+
+- **Aplicação**: `RunIdorTest` grava `initiated_by_user_id` (operator) separado de `acting_as_user_id` (actor) e avalia a Policy com `Gate::forUser($actor)`, sem `Auth::login()`. A execução e o `audit_logs` (`security_test_executed`, ator = operator) são gravados na mesma transação. Erro técnico vira `error` + `inconclusive`, e CHECK constraints recusam outra combinação.
+- **Teste**: `IdorTestExecutionTest › Operator, actor and session`, `Operational errors`.
+- **Risco mitigado**: execução sem responsável, sequestro de sessão pelo actor simulado e falso "protegido".

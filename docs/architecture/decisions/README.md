@@ -29,6 +29,7 @@ decisão registrada na Fase 3), ela é citada.
 | [ADR-0007](ADR-0007-dto-action-boundary.md) | DTO + Action apenas para casos de uso com regra de negócio | Accepted (complementado na Fase 4.2) |
 | [ADR-0008](ADR-0008-layered-authorization-model.md) | Autorização em camadas: autenticação, ability do token, permissão funcional (`menus.key`), Policy e invariante de domínio | Accepted (Fase 3.2) |
 | [ADR-0009](ADR-0009-web-session-and-bearer-adapters.md) | Sessão web (Blade) e Bearer (API) como adapters separados do mesmo domínio; sem SPA por cookie | Accepted (Fase 4.2) |
+| [ADR-0010](ADR-0010-controlled-security-lab.md) | Security Lab controlado: código vulnerável só dentro de um caso de uso, alvos e personas sintéticos, feature flag desligada por padrão | Accepted (Fase 5.1) |
 
 ## Template
 

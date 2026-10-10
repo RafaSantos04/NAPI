@@ -54,8 +54,11 @@ Nos demais casos, a evidência é a leitura do código citado.
 | [FIND-020](#find-020--respostas-de-autorização-e-de-tokens-inconsistentes) | Respostas de autorização e de tokens inconsistentes | Maintainability | Improvement | RESOLVED (parcial) | = |
 | [FIND-021](#find-021--lacunas-de-testes-de-segurança) | Lacunas de testes de segurança | Testing | Improvement | RESOLVED (parcial) | RESOLVED |
 | [FIND-022](#find-022--documentação-e-histórico-divergem-do-código) | Documentação e histórico divergem do código | Documentation | Improvement | RESOLVED (parcial) | RESOLVED |
+| [FIND-023](#find-023--análise-estática-ignorava-os-casts-dos-models) | Análise estática ignorava os casts dos models | Maintainability | Improvement | — | — (aberto e resolvido na Fase 5.1) |
 
-Contagem: 1 High · 9 Medium · 9 Low · 3 Improvement. Nenhum Critical.
+Contagem: 1 High · 9 Medium · 9 Low · 4 Improvement. Nenhum Critical.
+
+Após a Fase 5.1: **18 RESOLVED** (o FIND-023 foi aberto e resolvido na própria fase), 4 deles parcialmente, e **5 OPEN** (FIND-008, 014, 016, 018, 019). O Security Lab não abriu finding de segurança; os riscos que ele introduz estão no [threat model](../security/threat-model.md#security-lab).
 
 Após a Fase 4.2: **17 RESOLVED**, agora só 4 deles parcialmente (FIND-021 e FIND-022 passaram de parcial a completo), e **5 OPEN**. O FIND-008 continua aberto e adiado, sem aumento de superfície. Nenhum finding novo foi aberto. Na tabela, `=` indica sem mudança na fase.
 
@@ -942,7 +945,7 @@ Fase 5.
 
 **Resolution:** `tests/Feature/Security/RouteCoverageTest.php` percorre as rotas registradas e aplica uma regra por área, sem depender da ordem do `route:list`. Na API, toda rota exceto login tem `auth:sanctum` e `token.ability`, e tem `permission:` ou está numa lista explícita de autoatendimento; nenhuma inicia sessão. No admin, toda rota está no grupo `web`, exige `auth` e `admin.access` conforme o papel e, se for de recurso, `permission:`. Além disso, visitante e `dev` são barrados em todas as rotas internas por requisição real. O teste falha quando se remove `admin.access` das rotas de usuários (verificado por mutação).
 
-**Commit:** pending (Fase 4.2)
+**Commit:** `8784171`
 
 ---
 
@@ -980,4 +983,45 @@ README: feito na Fase 3.1. Restante: junto com FIND-007 e antes da Fase 4.
 
 **Resolution:** A decisão pendente foi registrada no [ADR-0009](../architecture/decisions/ADR-0009-web-session-and-bearer-adapters.md): a autenticação SPA por cookie não será usada. A área administrativa é Blade com sessão `web`, a API usa só Bearer e `statefulApi()` continua desligado. Um cookie de sessão real recebe 401 na API (verificado por HTTP), e `RouteCoverageTest` impede que uma rota da API passe a iniciar sessão.
 
-**Commit:** pending (Fase 4.2)
+**Commit:** `b9185b8` (ADR-0009) · teste em `8784171`
+
+---
+
+## FIND-023 — Análise estática ignorava os casts dos models
+
+**Categoria:** Maintainability · **Severidade:** Improvement
+
+### Evidence
+
+Encontrado na Fase 5.1, ao tipar `SecurityTestRun`. O Larastan só lê o array
+devolvido por `casts()` quando `parseModelCastsMethod` está ligado, e o
+padrão é desligado. **Confirmado em execução** com `\PHPStan\dumpType()`:
+`AuditLog::$meta` (cast `json`) era analisado como `string|null`, e os
+atributos com cast para enum, como `string`.
+
+### Current behavior
+
+Todos os models que usam o método `casts()` eram analisados com o tipo cru
+da coluna. `composer analyse` passava, mas sem enxergar os tipos reais.
+
+### Risk
+
+Sem risco de segurança. Erros de tipo em atributos com cast (tratar um enum
+ou um array como string) não seriam detectados, e código correto com enums
+era reportado como erro.
+
+### Recommendation
+
+Ligar `parseModelCastsMethod` no `phpstan.neon`.
+
+### Status (Fase 5.1)
+
+**Status:** RESOLVED
+
+**Root cause:** Opção do Larastan desligada por padrão; o projeto usa o método `casts()` (Laravel 11+) em vez da propriedade `$casts`.
+
+**Resolution:** `parseModelCastsMethod: true` em `phpstan.neon`. A análise do código existente continuou sem erros com os tipos reais.
+
+**Tests:** `composer analyse` (0 erros).
+
+**Commit:** pending (Fase 5.1)

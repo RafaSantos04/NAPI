@@ -82,7 +82,11 @@ Relações Eloquent reais:
 | `viewer` | `viewer@napi.dev` | nenhuma (negado por padrão) |
 
 Menus de sistema (`key`): `users`, `profiles` (filho: `permissions`),
-`menus` e `audit-logs`. O menu `audit-logs` não tem rota correspondente na
+`menus`, `audit-logs` e, desde a Fase 5.1, `security-lab` (área de permissão
+do [Security Lab](security.md): `view` abre, `create` executa). O
+`MenuSeeder` pode ser rodado de novo num banco existente
+(`php artisan db:seed --class=MenuSeeder`) para criar só o que falta. O menu
+`audit-logs` não tem rota correspondente na
 API.
 
 > Fase 3.2: o seed deixou de gravar linhas de matriz para `admin`

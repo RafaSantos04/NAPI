@@ -38,9 +38,16 @@ carregado pelo evento.
 | `permission_changed` | `PermissionChanged` | `SyncMenuPermissions` | `App\Models\Profile` | `permissions` (matriz final completa) |
 | `token_created` | `TokenCreated` | `TokenController::store` | `App\Models\User` (dono) | `token_id`, `name`, `abilities`, `expires_at` |
 | `token_revoked` | `TokenRevoked` | `TokenController::destroy` | `App\Models\User` (dono) | `token_id`, `name` |
+| `security_test_executed` | `SecurityTestExecuted` | `RunIdorTest` (Fase 5.1) | `App\Models\SecurityTestRun` | `test_key`, `scenario`, `acting_as_user_id`, `verdict` |
 
 O id do token vai em `meta` porque é inteiro e `subject_id` é ULID. O segredo
 do token nunca é gravado.
+
+`security_test_executed` registra que um operator executou um teste do
+[Security Lab](../modules/security.md#audit_logs--security_test_runs). O ator
+é o operator real, nunca o actor simulado, e o `subject` aponta para a linha
+de `security_test_runs`, que guarda o que o teste observou. O log de
+auditoria não repete esse contexto nem o conteúdo exibido.
 
 ## Cobertura
 
@@ -54,6 +61,7 @@ Classificação feita na Fase 3.2 ([FIND-012](../findings/README.md#find-012--la
 | Mudança de permissão | já auditado | mudança de privilégio |
 | Usuário criado / atualizado / excluído | **audit now** | mudança de identidade; o e-mail é credencial de login |
 | Usuário ativado / desativado | **audit now** (Fase 4.2) | concede ou retira a capacidade de autenticar |
+| Teste do Security Lab executado | **audit now** (Fase 5.1) | execução de código deliberadamente vulnerável precisa de um responsável |
 | Token criado / revogado | **audit now** | criação e destruição de credencial |
 | Login falho | **defer** (Fase 5) | exige decidir como guardar o e-mail tentado (dado pessoal, possivelmente de terceiros) e se relaciona com a revisão do rate limit ([FIND-016](../findings/README.md#find-016--rate-limiting-restrito-ao-login-e-por-emailip), [FIND-018](../findings/README.md#find-018--sinais-de-enumeração-no-login)) |
 | CRUD de perfil | **defer** (Fase 5, com o ADR do conjunto mínimo auditável) | criar ou excluir perfil não concede nada sozinho; o que concede é a matriz e a atribuição, que já são auditadas |

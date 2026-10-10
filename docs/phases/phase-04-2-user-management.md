@@ -2,7 +2,7 @@
 
 [← Fases](README.md) · [Autorização](../security/authorization.md#área-administrativa-blade) · [ADR-0009](../architecture/decisions/ADR-0009-web-session-and-bearer-adapters.md) · [Fase 4.1](phase-04-1-admin-shell.md)
 
-**Commit:** pending
+**Commits:** `c797865` (Boost), `b1dfd52` (domínio de usuários), `d522573` (admin), `8784171` (testes), `b9185b8` (documentação), `0c65c0d` (ignora `AGENTS.md`), `58422cb` e `439b18f` (exclusão pelo admin)
 
 ## Objetivo
 

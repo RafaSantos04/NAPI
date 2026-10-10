@@ -33,7 +33,7 @@ correção correspondente.
 | `PrivilegeEscalationTest` | 15 | FIND-004, 011, 021 | atribuir perfis sem `users.update`; atribuir a si; conceder `admin`; conceder perfil acima do próprio; rebaixar/editar/excluir administrador; alterar matriz sem permissão; editar a matriz do próprio perfil; conceder flag que não tem; perfil de sistema imutável; menu inexistente → 422; revogar tudo |
 | `AdminInvariantTest` | 7 | FIND-006 | último admin ativo → 409; admin inativo e admin excluído não contam; com dois admins ativos a mudança passa; exclusão via Action respeita a invariante; rejeição não gera auditoria |
 | `AuditIntegrityTest` | 8 | FIND-002, 012, 013, 017 | `count() === 1` para login, logout, atribuição, matriz, usuário (criar/alterar/excluir) e token (criar/revogar); ator correto; `assigned_by` no pivot; contexto vem do evento, não da sessão |
-| `RouteCoverageTest` (Fase 4.2) | 8 | FIND-021, 022 | toda rota `api/*` exceto login tem `auth:sanctum` e `token.ability`; toda rota autenticada da API tem `permission:` ou está na lista explícita de autoatendimento; nenhuma rota da API inicia sessão (`statefulApi` desligado); toda rota `admin*` está no grupo `web`, exige `auth` (exceto landing e login) e `admin.access` (exceto login e logout); toda rota `admin/*` de recurso tem `permission:`; visitante e `dev` são barrados em **todas** as rotas internas do admin |
+| `RouteCoverageTest` (Fases 4.2 e 5.1) | 11 | FIND-021, 022 | toda rota `api/*` exceto login tem `auth:sanctum` e `token.ability`; toda rota autenticada da API tem `permission:` ou está na lista explícita de autoatendimento; nenhuma rota da API inicia sessão (`statefulApi` desligado); toda rota `admin*` está no grupo `web`, exige `auth` (exceto landing e login) e `admin.access` (exceto login e logout); toda rota `admin/*` de recurso tem `permission:`; visitante e `dev` são barrados em **todas** as rotas internas do admin |
 | `MenuTreeTest` | 7 | FIND-010 | admin vê todos os ativos; inativos (raiz e filho) ocultos; filho sem `view` oculto; filho de pai oculto oculto; `dev` recebe 200 com árvore vazia; mais de um nível; aparecer na árvore não concede acesso |
 
 ## Área administrativa: `tests/Feature/Admin/` (Fase 4.2)
@@ -55,8 +55,24 @@ A sessão web não autentica a API. Isso foi verificado com HTTP real (cookie
 requisições e a reprodução daria um falso 200. A garantia permanente é
 estrutural, em `RouteCoverageTest`.
 
-## Invariante → teste
-| Invariante | Teste | Arquivo |
+## Security Lab: `tests/Feature/SecurityLab/` (Fase 5.1)
+
+52 testes, mais 3 em `RouteCoverageTest`. Rodam com o laboratório ligado por
+`config()`; os testes da feature flag o desligam explicitamente.
+
+| Arquivo | Testes | Garante |
+|---|---|---|
+| `SecurityLabAccessTest` | 22 | visitante → landing; usuário do admin sem a permissão → 404 nas três rotas; `dev` → sessão encerrada; `security-lab.view` vê o laboratório mas não executa (404, sem formulário); `admin` pela permissão implícita; perfil só com o laboratório entra no admin e vê só a seção dele; operator desativado perde a sessão. **Flag**: padrão desligado; desligado → 404 até para `admin`, menu oculto, permissão do laboratório não vale como acesso, `RunIdorTest` recusa sem gravar nada, seeder não cria personas; personas não conseguem autenticar |
+| `IdorTestExecutionTest` | 23 | vulnerável → `completed`/`allowed`/`exposed`; protegido, mesmo par → `completed`/`denied`/`protected`; dono lendo o próprio recurso nunca é exposição (nos dois cenários); a interface mostra o conteúdo só quando exposto; matriz da `SecurityLabResourcePolicy` (dono, não dono, `admin` sem exceção); operator ≠ actor gravados; sessão continua com o operator; 1 execução = 1 auditoria, com o operator; conta real como actor e registro de tabela real como alvo são recusados; a FK recusa alvo não sintético; só personas listadas; mensagens de validação; falha técnica → `error`/`inconclusive`; CHECK constraints recusam falha com resultado de segurança |
+| `SecurityLabHistoryTest` | 7 | lista veredito, cenário, actor, alvo e operator; mais recente primeiro; paginação de 10; relações carregadas antecipadamente; conteúdo exposto não se repete no histórico; execução legível depois de o alvo ser excluído; nomes escapados |
+| `RouteCoverageTest` (+3) | — | toda rota `admin/security*` tem `security.lab`; nenhuma recebe identificador de recurso; não há rota do laboratório na API nem pública |
+
+Verificação por mutação: os testes falham ao trocar a Policy do cenário
+protegido por `true`, ao fazer a Policy permitir todos, ao ignorar o dono no
+veredito, ao tirar a flag das rotas, da Action ou da navegação, e ao tratar
+erro como `protected`.
+
+## Invariante → teste| Invariante | Teste | Arquivo |
 |---|---|---|
 | INV-01 autenticação obrigatória | `returns 401 when accessing protected route without token`, `rejects an invalid bearer token` | `IAM/AuthenticationTest`, `Security/TokenAbilityTest` |
 | Rate limit de login | `rate limits login after 6 attempts in 30 minutes` | `IAM/AuthenticationTest` |
