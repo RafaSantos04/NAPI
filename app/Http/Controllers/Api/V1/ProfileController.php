@@ -2,9 +2,14 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Domain\IAM\Actions\CreateProfile;
+use App\Domain\IAM\Actions\DeleteProfile;
 use App\Domain\IAM\Actions\SyncMenuPermissions;
+use App\Domain\IAM\Actions\UpdateProfile;
 use App\Domain\IAM\AuditContext;
+use App\DTOs\CreateProfileDto;
 use App\DTOs\SyncMenuPermissionsDto;
+use App\DTOs\UpdateProfileDto;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ProfileStoreRequest;
 use App\Http\Requests\ProfileUpdateRequest;
@@ -46,7 +51,7 @@ class ProfileController extends Controller
 
     public function store(ProfileStoreRequest $request): JsonResponse
     {
-        $profile = Profile::create($request->validated());
+        $profile = CreateProfile::execute(CreateProfileDto::from($request), AuditContext::fromRequest($request));
 
         return response()->json(
             ProfileResource::make($profile),
@@ -56,16 +61,16 @@ class ProfileController extends Controller
 
     public function update(ProfileUpdateRequest $request, Profile $profile): ProfileResource
     {
-        $profile->update($request->validated());
+        UpdateProfile::execute($profile, UpdateProfileDto::from($request), AuditContext::fromRequest($request));
 
         return ProfileResource::make($profile);
     }
 
-    public function destroy(Profile $profile): JsonResponse
+    public function destroy(Request $request, Profile $profile): JsonResponse
     {
         $this->authorize('delete', $profile);
 
-        $profile->delete();
+        DeleteProfile::execute($profile, AuditContext::fromRequest($request));
 
         return response()->json(['message' => 'Profile deleted.']);
     }

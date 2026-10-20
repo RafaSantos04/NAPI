@@ -20,7 +20,7 @@ class ProfileUpdateRequest extends FormRequest
         return [
             'name' => ['sometimes', 'string', 'max:100', Rule::unique('profiles', 'name')->ignore($this->route('profile'))],
             'slug' => ['sometimes', 'string', 'max:100', 'alpha_dash', Rule::unique('profiles', 'slug')->ignore($this->route('profile'))],
-            'description' => ['sometimes', 'string', 'max:500'],
+            'description' => ['sometimes', 'nullable', 'string', 'max:500'],
         ];
     }
 }

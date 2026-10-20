@@ -22,11 +22,11 @@ class MenuStoreRequest extends FormRequest
             'key' => ['required', 'string', 'max:100', 'regex:/^[a-z0-9]+(-[a-z0-9]+)*$/', 'unique:menus,key'],
             'label' => ['required', 'string', 'max:100'],
             'route_name' => ['required', 'string', 'max:100', 'unique:menus'],
-            'icon' => ['sometimes', 'string', 'max:50'],
-            'parent_id' => ['sometimes', 'exists:menus,id'],
+            'icon' => ['sometimes', 'nullable', 'string', 'max:50'],
+            'parent_id' => ['sometimes', 'nullable', 'exists:menus,id'],
             'order' => ['sometimes', 'integer', 'min:0'],
             'is_active' => ['sometimes', 'boolean'],
-            'description' => ['sometimes', 'string', 'max:500'],
+            'description' => ['sometimes', 'nullable', 'string', 'max:500'],
         ];
     }
 }

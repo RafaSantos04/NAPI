@@ -2,6 +2,12 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Domain\IAM\Actions\CreateMenu;
+use App\Domain\IAM\Actions\DeleteMenu;
+use App\Domain\IAM\Actions\UpdateMenu;
+use App\Domain\IAM\AuditContext;
+use App\DTOs\CreateMenuDto;
+use App\DTOs\UpdateMenuDto;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\MenuStoreRequest;
 use App\Http\Requests\MenuUpdateRequest;
@@ -42,7 +48,7 @@ class MenuController extends Controller
 
     public function store(MenuStoreRequest $request): JsonResponse
     {
-        $menu = Menu::create($request->validated());
+        $menu = CreateMenu::execute(CreateMenuDto::from($request), AuditContext::fromRequest($request));
 
         return response()->json(
             MenuResource::make($menu),
@@ -52,16 +58,16 @@ class MenuController extends Controller
 
     public function update(MenuUpdateRequest $request, Menu $menu): MenuResource
     {
-        $menu->update($request->validated());
+        UpdateMenu::execute($menu, UpdateMenuDto::from($request), AuditContext::fromRequest($request));
 
         return MenuResource::make($menu);
     }
 
-    public function destroy(Menu $menu): JsonResponse
+    public function destroy(Request $request, Menu $menu): JsonResponse
     {
         $this->authorize('delete', $menu);
 
-        $menu->delete();
+        DeleteMenu::execute($menu, AuditContext::fromRequest($request));
 
         return response()->json(['message' => 'Menu deleted.']);
     }

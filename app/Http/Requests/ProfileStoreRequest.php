@@ -20,7 +20,7 @@ class ProfileStoreRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:100', 'unique:profiles'],
             'slug' => ['required', 'string', 'max:100', 'unique:profiles', 'alpha_dash'],
-            'description' => ['sometimes', 'string', 'max:500'],
+            'description' => ['sometimes', 'nullable', 'string', 'max:500'],
         ];
     }
 }

@@ -16,7 +16,12 @@ readonly class SyncMenuPermissionsDto
     public static function from(FormRequest $request): self
     {
         return new self(
-            permissions: $request->validated('permissions', []),
+            // Booleans whatever the channel sent: true/false from the API,
+            // "1"/"0" from the admin form. The audit meta records them as is.
+            permissions: array_map(
+                fn (array $flags) => array_map(fn (mixed $granted) => filter_var($granted, FILTER_VALIDATE_BOOLEAN), $flags),
+                $request->validated('permissions', []),
+            ),
         );
     }
 }
