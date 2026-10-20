@@ -2,6 +2,10 @@
 
 use App\Http\Controllers\Web\Admin\Auth\LoginController;
 use App\Http\Controllers\Web\Admin\HomeController;
+use App\Http\Controllers\Web\Admin\MenuController;
+use App\Http\Controllers\Web\Admin\MenuPermissionController;
+use App\Http\Controllers\Web\Admin\ProfileController;
+use App\Http\Controllers\Web\Admin\ProfilePermissionController;
 use App\Http\Controllers\Web\Admin\Security\IdorTestController;
 use App\Http\Controllers\Web\Admin\Security\MassAssignmentTestController;
 use App\Http\Controllers\Web\Admin\UserController;
@@ -13,7 +17,7 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-// Área administrativa (Fases 4.1, 4.2 e 5.1): Blade + guard `web` (sessão), sem
+// Área administrativa (Fases 4.1 a 4.4, 5.1 e 5.2): Blade + guard `web` (sessão), sem
 // consumir a API REST. Mesmas camadas da API, adaptadas à sessão (ADR-0008):
 // sessão válida e usuário ativo → acesso à área (`admin.access`) →
 // permissão funcional (`permission:{key}.{action}`, 404) → Policy (403) →
@@ -62,6 +66,67 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::put('/{user}/profiles', [UserProfileController::class, 'update'])
                 ->middleware('permission:users.update')
                 ->name('profiles.update');
+        });
+
+        // Perfis e matriz de permissões (Fase 4.3). A matriz usa a mesma
+        // permissão da API (`permissions.update`) e a mesma Policy
+        // (ProfilePolicy::syncMenus, com a regra anti-escalação).
+        Route::middleware('admin.access')->prefix('profiles')->name('profiles.')->group(function () {
+            Route::get('/', [ProfileController::class, 'index'])
+                ->middleware('permission:profiles.view')
+                ->name('index');
+            Route::get('/create', [ProfileController::class, 'create'])
+                ->middleware('permission:profiles.create')
+                ->name('create');
+            Route::post('/', [ProfileController::class, 'store'])
+                ->middleware('permission:profiles.create')
+                ->name('store');
+            Route::get('/{profile}', [ProfileController::class, 'show'])
+                ->middleware('permission:profiles.view')
+                ->name('show');
+            Route::get('/{profile}/edit', [ProfileController::class, 'edit'])
+                ->middleware('permission:profiles.update')
+                ->name('edit');
+            Route::put('/{profile}', [ProfileController::class, 'update'])
+                ->middleware('permission:profiles.update')
+                ->name('update');
+            Route::delete('/{profile}', [ProfileController::class, 'destroy'])
+                ->middleware('permission:profiles.delete')
+                ->name('destroy');
+            Route::put('/{profile}/permissions', [ProfilePermissionController::class, 'update'])
+                ->middleware('permission:permissions.update')
+                ->name('permissions.update');
+        });
+
+        // Menus (Fase 4.4). `key` é a identidade da permissão e não muda;
+        // o resto é navegação.
+        Route::middleware('admin.access')->prefix('menus')->name('menus.')->group(function () {
+            Route::get('/', [MenuController::class, 'index'])
+                ->middleware('permission:menus.view')
+                ->name('index');
+            Route::get('/create', [MenuController::class, 'create'])
+                ->middleware('permission:menus.create')
+                ->name('create');
+            Route::post('/', [MenuController::class, 'store'])
+                ->middleware('permission:menus.create')
+                ->name('store');
+            Route::get('/{menu}', [MenuController::class, 'show'])
+                ->middleware('permission:menus.view')
+                ->name('show');
+            Route::get('/{menu}/edit', [MenuController::class, 'edit'])
+                ->middleware('permission:menus.update')
+                ->name('edit');
+            Route::put('/{menu}', [MenuController::class, 'update'])
+                ->middleware('permission:menus.update')
+                ->name('update');
+            Route::delete('/{menu}', [MenuController::class, 'destroy'])
+                ->middleware('permission:menus.delete')
+                ->name('destroy');
+            // A matriz vista pelo menu: mesma permissão e mesma Policy da
+            // matriz no perfil.
+            Route::put('/{menu}/permissions', [MenuPermissionController::class, 'update'])
+                ->middleware('permission:permissions.update')
+                ->name('permissions.update');
         });
 
         // Security Lab (Fases 5.1 e 5.2, ADR-0010). Além das camadas do

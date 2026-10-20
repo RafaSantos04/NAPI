@@ -160,7 +160,7 @@ h2 { margin: 0 0 1rem; font-size: 1rem; font-weight: 600; }
 
 .field { margin-bottom: 1rem; }
 .field label { display: block; margin-bottom: .375rem; font-size: .8125rem; color: var(--muted); }
-.field input, .search input {
+.field input, .field select, .field textarea, .search input {
     width: 100%;
     padding: .5rem .625rem;
     font: inherit;
@@ -170,8 +170,12 @@ h2 { margin: 0 0 1rem; font-size: 1rem; font-weight: 600; }
     border: 1px solid var(--border);
     border-radius: var(--radius);
 }
-.field input:focus-visible, .search input:focus-visible { outline-offset: 0; }
-.field input[aria-invalid="true"] { border-color: var(--danger); }
+.field input:focus-visible, .field select:focus-visible, .field textarea:focus-visible, .search input:focus-visible { outline-offset: 0; }
+.field input[aria-invalid="true"], .field select[aria-invalid="true"], .field textarea[aria-invalid="true"] { border-color: var(--danger); }
+.field textarea { resize: vertical; }
+.field .check input { width: auto; }
+.field-label { display: block; margin-bottom: .375rem; font-size: .8125rem; color: var(--muted); }
+.field-static { margin: 0; }
 .field-error { margin: .375rem 0 0; font-size: .8125rem; color: var(--danger); }
 .field-hint { margin: .375rem 0 0; font-size: .8125rem; color: var(--muted); }
 
@@ -199,6 +203,23 @@ h2 { margin: 0 0 1rem; font-size: 1rem; font-weight: 600; }
 .badge { display: inline-block; padding: .05rem .5rem; font-size: .75rem; border: 1px solid var(--border); border-radius: 999px; white-space: nowrap; }
 .badge-active { color: var(--success); border-color: color-mix(in srgb, var(--success) 40%, transparent); }
 .badge-inactive { color: var(--muted); }
+.badge-system { color: var(--warning); border-color: color-mix(in srgb, var(--warning) 40%, transparent); }
+
+/* Profiles and menus (Phases 4.3 and 4.4) ------------------------------- */
+
+.notice { max-width: 46rem; margin: 1.25rem 0 0; padding: .625rem .875rem; font-size: .875rem; color: var(--muted); border: 1px solid var(--border); border-left-width: 3px; border-radius: var(--radius); }
+.tree-label { display: inline-block; padding-left: calc(var(--depth, 0) * 1.25rem); }
+
+.matrix .matrix-cell { width: 5rem; text-align: center; }
+.matrix tbody th { white-space: normal; }
+.matrix-key { display: table; margin-top: .25rem; font-weight: 400; }
+
+@media (max-width: 40rem) {
+    .matrix th, .matrix td { padding: .5rem .375rem; }
+    .matrix .matrix-cell { width: 2.75rem; font-size: .75rem; }
+}
+.matrix input[type="checkbox"] { width: 1rem; height: 1rem; margin: 0; accent-color: var(--text); }
+.matrix input:disabled { opacity: .35; cursor: not-allowed; }
 
 /* Description list ------------------------------------------------------- */
 

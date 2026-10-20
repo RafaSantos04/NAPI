@@ -2,6 +2,8 @@
 
 namespace App\Http\Admin;
 
+use App\Models\Menu;
+use App\Models\Profile;
 use App\Models\SecurityTestRun;
 use App\Models\User;
 
@@ -33,6 +35,20 @@ final class AdminNavigation
                 'active' => 'admin.users.*',
                 'ability' => 'viewAny',
                 'subject' => User::class,
+            ],
+            [
+                'label' => 'Perfis',
+                'route' => 'admin.profiles.index',
+                'active' => 'admin.profiles.*',
+                'ability' => 'viewAny',
+                'subject' => Profile::class,
+            ],
+            [
+                'label' => 'Menus',
+                'route' => 'admin.menus.index',
+                'active' => 'admin.menus.*',
+                'ability' => 'viewAny',
+                'subject' => Menu::class,
             ],
             [
                 'label' => 'Segurança',

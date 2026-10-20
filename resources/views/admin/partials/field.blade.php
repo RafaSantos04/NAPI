@@ -1,6 +1,6 @@
 {{-- Labelled input with its error message tied to it (aria-describedby).
-     Params: name, label, type?, value?, autocomplete?, hint?. Password
-     fields are never given a value. --}}
+     Params: name, label, type?, value?, autocomplete?, hint?, required?
+     (default true). Password fields are never given a value. --}}
 @php
     $type ??= 'text';
     $describedBy = collect([
@@ -17,7 +17,7 @@
         type="{{ $type }}"
         @if ($type !== 'password') value="{{ $value ?? '' }}" @endif
         autocomplete="{{ $autocomplete ?? 'off' }}"
-        required
+        @if ($required ?? true) required @endif
         @error($name) aria-invalid="true" @enderror
         @if ($describedBy !== '') aria-describedby="{{ $describedBy }}" @endif
     >
