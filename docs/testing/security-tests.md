@@ -55,6 +55,24 @@ A sessão web não autentica a API. Isso foi verificado com HTTP real (cookie
 requisições e a reprodução daria um falso 200. A garantia permanente é
 estrutural, em `RouteCoverageTest`.
 
+## Administração de perfis e menus (Fases 4.3 e 4.4)
+
+`ProfileManagementTest` (26) e `MenuManagementTest` (42), mais 3 testes em
+`AuditIntegrityTest` para o CRUD pela API.
+
+| Grupo | Garante |
+|---|---|
+| Lista de perfis | identificador, tipo, usuários e permissões concedidas (Administrador "todas (implícito)"); paginação de 15; o número de consultas não cresce com o número de perfis; 404 sem `profiles.view`; a seção aparece só para quem pode ver perfis |
+| Criação e edição de perfil | perfil nasce personalizado e sem permissões, mesmo com `is_system` no payload; auditoria única; mensagens em português (nome vazio, `slug` inválido ou em uso); só os campos alterados são auditados, e atualização sem mudança não registra nada; perfis de sistema imutáveis até para o Administrador (403) |
+| Exclusão de perfil | exclui personalizado sem usuários, com a matriz, e audita `slug`/`name`; recusa sistema e perfil com usuários (403); a Action recusa perfil com usuários mesmo sem a Policy; a exceção vira 409 na API e mensagem no admin |
+| Matriz | todas as áreas por chave e as quatro ações; o que é salvo vale na hora para quem tem o perfil, e o que é retirado também; auditoria com booleanos reais; só leitura sem `permissions.update` (PUT → 404); não-admin não concede o que não tem, pelo admin e pela API (403), mas concede o que tem; células que ele não pode conceder ficam desabilitadas; ninguém além do Administrador edita a matriz de um perfil que tem; matriz de perfil de sistema imutável; Administrador apresentado com permissões implícitas |
+| Lista de menus | hierarquia em ordem (submenu sob o pai, com profundidade); uma consulta só, qualquer que seja o número de menus; 404 sem `menus.view`; perfil só com menus entra no admin e vê só essa seção |
+| Criação e edição de menu | menu nasce personalizado, auditado uma vez; formato e unicidade da chave, rota única, rótulo e ordem validados em português; a área nova vale na hora para o Administrador e para mais ninguém; só os campos alterados são auditados; a chave não muda, pela request (admin e API) nem pela Action; a edição mostra a chave como texto; campo omitido é erro, opcional pode ser limpo |
+| Hierarquia | o próprio menu, um filho ou um neto como pai → recusado pelo admin e pela API; o banco recusa pai igual ao id; mover um ramo e voltar à raiz funciona; o seletor de pai não oferece o próprio ramo |
+| Exclusão de menu | exclui menu sem submenus com as permissões e audita a chave, avisando quantos perfis perdem acesso; recusa sistema e menu com submenus (403); a Action recusa menu com submenus mesmo sem a Policy; exige `menus.delete` |
+| Perfis de um menu | lista todos os perfis com as ações no menu (Administrador implícito, perfis de sistema sem campos); vincular não mexe nas outras linhas do perfil; desmarcar tudo desvincula; só os perfis alterados são gravados e auditados; só leitura sem `permissions.update` (PUT → 404); anti-escalação igual à da matriz do perfil, e um envio com uma linha proibida não grava nenhuma; perfil de sistema recusado até para o Administrador; perfil inexistente → 422 |
+| Navegação e identidade | menu desativado pelo admin some da árvore da API e volta quando reativado; submenu sem `view` não aparece para o perfil; trocar rótulo e rota do menu `users` não muda a permissão `users.view` |
+
 ## Security Lab: `tests/Feature/SecurityLab/` (Fases 5.1 e 5.2)
 
 103 testes (52 na Fase 5.1), mais 3 em `RouteCoverageTest`. Rodam com o
@@ -101,7 +119,7 @@ teste; payload aceitando qualquer chave; rota de execução pedindo só `view`.
 | INV-10 listagem = detalhe | `keeps list and detail consistent…`, `limits dev to self-service`, `prevents user from viewing other users`, `allows user to view themselves through /auth/me` | `Security/AuthorizationMatrixTest`, `IAM/AuthorizationTest` |
 | INV-11 entrada não define autorização | `has fillable protection`, `does not accept is_system from the client`, `does not allow changing a menu key`; demonstração em `Mass Assignment scenarios` | `UserTest`, `Security/AuthorizationMatrixTest`, `SecurityLab/MassAssignmentTestExecutionTest` |
 | INV-12 tokens do dono | `returns 404 when revoking a token that is not the caller's` | `Security/TokenAbilityTest` |
-| INV-13 uma entrada por evento | `AuditIntegrityTest` (8), `leaves no audit trail for a rejected change` | `Security/*` |
+| INV-13 uma entrada por evento | `AuditIntegrityTest` (11), `leaves no audit trail for a rejected change` | `Security/*` |
 | INV-14 trilha sobrevive | `force deleting a user nullifies its audit logs instead of deleting them` | `UserTest` |
 | INV-15 e-mail único | `email is unique`, `email is case-insensitive (citext)` | `UserTest` |
 | INV-16 inativo não autentica | `DisabledUserAuthenticationTest` (6) | `Security/DisabledUserAuthenticationTest` |
@@ -113,6 +131,8 @@ teste; payload aceitando qualquer chave; rota de execução pedindo só `view`.
 | INV-22 vulnerável sem endereço, só dado sintético | `Synthetic data only` (dos dois testes), `has no route that serves a lab resource by its identifier`, `does not unguard the models to make the vulnerable write work` | `SecurityLab/*`, `Security/RouteCoverageTest` |
 | INV-23 operator real, sessão intacta, falha ≠ proteção | `Operator, actor and session`, `Operational errors` (dos dois testes) | `SecurityLab/IdorTestExecutionTest`, `SecurityLab/MassAssignmentTestExecutionTest` |
 | INV-24 teste que escreve não deixa estado | `Repeatability`, `stores the run and restores the document when the database refuses the write` | `SecurityLab/MassAssignmentTestExecutionTest` |
+| INV-25 hierarquia de menus sem ciclos | `Hierarchy` | `Admin/MenuManagementTest` |
+| INV-05/06 reconferidas sob lock | `keeps a profile with users even when the Policy is bypassed`, `keeps a menu with submenus even when the Policy is bypassed` | `Admin/ProfileManagementTest`, `Admin/MenuManagementTest` |
 | Integridade de vínculos | testes de `force deleting … cascades` | `UserTest`, `ProfileTest`, `MenuTest` |
 
 ## Lacunas

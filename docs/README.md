@@ -65,6 +65,8 @@ PostgreSQL, Sanctum 4, Pest 4, Larastan (nível 6) e Pint (preset `laravel`).
 - [Fases](phases/README.md)
 - [Fase 3: IAM REST](phases/phase-03-iam-rest.md)
 - [Fase 3.2: IAM Security Hardening](phases/phase-03-2-iam-hardening.md)
+- [Fase 4.3: Perfis e matriz de permissões](phases/phase-04-3-profile-permissions.md)
+- [Fase 4.4: Administração de menus](phases/phase-04-4-menu-administration.md)
 - [Fase 5.1: Security Lab e IDOR/BOLA](phases/phase-05-1-security-lab-idor.md)
 - [Fase 5.2: Security Lab, Mass Assignment](phases/phase-05-2-security-lab-mass-assignment.md)
 - [Findings](findings/README.md): problemas e riscos encontrados no Reality

@@ -93,6 +93,9 @@ $user->hasPermission('users.update'); // única resposta funcional do sistema
 | `PUT /profiles/{id}/menus` | `permissions.update` |
 | `menus.*` | `menus.{ação}` |
 | `GET /menus/tree`, `auth.*`, `tokens.*` | nenhuma (só camadas 1 e 2) |
+| `/admin/profiles`, `/admin/profiles/{id}` (Fase 4.3); criar, editar e excluir | `profiles.{ação}` |
+| `PUT /admin/profiles/{id}/permissions` (Fase 4.3), `PUT /admin/menus/{id}/permissions` (Fase 4.4) | `permissions.update` |
+| `/admin/menus`, `/admin/menus/{id}` (Fase 4.4); criar, editar e excluir | `menus.{ação}` |
 | `/admin/security`, `/admin/security/idor`, `/admin/security/mass-assignment` (só admin, Fases 5.1 e 5.2) | `security-lab.view` |
 | `POST /admin/security/idor/run`, `POST /admin/security/mass-assignment/run` (só admin, Fases 5.1 e 5.2) | `security-lab.create` |
 
@@ -159,8 +162,23 @@ navegação aparece quando a Policy dela permite (`Usuários` ↔
 `UserPolicy::viewAny` ↔ `users.view`), e o usuário entra quando ao menos uma
 aparece. Por isso o `admin` entra e o `dev` e o `viewer` não, e um perfil
 customizado com `users.view` entra. Permissões de áreas que ainda não têm
-tela (por exemplo, só `menus.*`) não dão entrada, porque não haveria nada a
-usar. Quando novas seções forem criadas, elas passam a contar automaticamente.
+tela (por exemplo, só `audit-logs.*`) não dão entrada, porque não haveria
+nada a usar. Quando novas seções são criadas, elas passam a contar
+automaticamente: desde as Fases 4.3 e 4.4, `Perfis` (`profiles.view`) e
+`Menus` (`menus.view`) também dão entrada.
+
+**Perfis, matriz e menus (Fases 4.3 e 4.4).** As telas usam as mesmas
+requests, Policies e Actions da API. A matriz é salva com
+`permissions.update` e `ProfilePolicy::syncMenus`, que continua aplicando a
+anti-escalação: perfil de sistema imutável, ninguém além do Administrador
+edita a matriz de um perfil que tem, e ninguém concede flag que não tem. A
+página pergunta à mesma Policy se a matriz atual poderia ser salva pelo ator
+e, se não, mostra só leitura. Desabilitar as células que o ator não tem é
+aviso, não controle. O painel de perfis no editar menu é a mesma matriz
+vista pelo menu: cada perfil alterado passa por `ProfilePolicy::syncMenus`
+com a matriz que teria, numa transação só. A exclusão de perfil com usuários e de menu com
+submenus é recusada pela Policy (403) e reconferida na Action com a linha
+travada (409 na API, mensagem no admin).
 
 **Security Lab (Fase 5.1).** A seção `Segurança` segue a mesma regra
 (`SecurityTestRunPolicy::viewAny` ↔ `security-lab.view`) e tem uma camada a

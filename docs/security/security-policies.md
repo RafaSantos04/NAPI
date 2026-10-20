@@ -83,14 +83,14 @@ se a regra quebrasse.
 
 ### INV-05 — Perfil com usuários não pode ser excluído
 
-- **Aplicação**: `ProfilePolicy::delete` (`$profile->users()->exists()`).
-- **Teste**: `blocks deletion of profile with users` (HTTP 403) e `prevents deleting a profile that still has users` (Policy direta).
+- **Aplicação**: `ProfilePolicy::delete` (`$profile->users()->exists()`). Desde a Fase 4.3, `DeleteProfile` confere de novo dentro da transação, com a linha do perfil travada (`ResourceInUseException`, 409 / mensagem no admin): uma atribuição feita entre a Policy e a exclusão não é mais apagada pela cascata.
+- **Teste**: `blocks deletion of profile with users` (HTTP 403), `prevents deleting a profile that still has users` (Policy direta), `ProfileManagementTest › keeps a profile with users even when the Policy is bypassed`.
 - **Risco mitigado**: revogação silenciosa em massa, já que a FK tem `cascade` em `user_profiles`.
 
 ### INV-06 — Menu com filhos, ou de sistema, não pode ser excluído
 
-- **Aplicação**: `MenuPolicy::delete` (`is_system` ou `children()->exists()`).
-- **Teste**: `blocks deletion of menu with children` (403), `does not allow deleting a system menu` (403).
+- **Aplicação**: `MenuPolicy::delete` (`is_system` ou `children()->exists()`). Desde a Fase 4.4, `DeleteMenu` reconfere os submenus com a linha travada.
+- **Teste**: `blocks deletion of menu with children` (403), `does not allow deleting a system menu` (403), `MenuManagementTest › keeps a menu with submenus even when the Policy is bypassed`.
 - **Risco mitigado**: exclusão em cascata de subárvores, das permissões associadas e das chaves usadas pelas rotas.
 - **Fase 3.2**: a proteção de menus de sistema é nova ([FIND-005](../findings/README.md#find-005--menus-são-chaves-de-autorização-sem-proteção-de-sistema)).
 
@@ -125,6 +125,7 @@ se a regra quebrasse.
 
 - **Aplicação**: controllers persistem só `$request->validated()` (usuários, desde a Fase 4.2, por `CreateUserDto`/`UpdateUserDto`, que só carregam nome, e-mail e senha); nenhum FormRequest aceita `is_system` ou `is_active`; `key` de menu é `prohibited` na atualização; `#[Fillable]` + `Model::shouldBeStrict()`.
 - **Teste**: `UserTest › has fillable protection`, `does not accept is_system from the client`, `does not allow changing a menu key`; `UserManagementTest › ignores privileged fields in the payload`, `does not let the edit form change status, password or profiles`, `creates users through the API with the shared Action`.
+- **Fases 4.3 e 4.4**: perfis e menus passaram a ser gravados por Actions com DTO. Os DTOs de atualização filtram no construtor (`UpdateProfileDto` sem `is_system`, `UpdateMenuDto` sem `key`), então o contrato vale para qualquer chamador, não só para a request.
 - **Risco mitigado**: mass assignment. O [Security Lab](mass-assignment.md) demonstra a falha e este controle sobre dados sintéticos (Fase 5.2).
 
 ### INV-12 — Tokens só são geridos pelo dono
@@ -204,3 +205,9 @@ se a regra quebrasse.
 - **Aplicação**: a escrita do cenário roda numa transação que `RunMassAssignmentTest` sempre desfaz (`DB::rollBack()` em `finally`), depois de ler do banco o estado que ela deixou. Só `security_test_runs` e `audit_logs` são gravados, numa segunda transação. O veredito sai do estado observado, guardado em `result_context`.
 - **Teste**: `MassAssignmentTestExecutionTest › Repeatability`, `stores the run and restores the document when the database refuses the write`.
 - **Risco mitigado**: execução contaminada pela anterior (um documento já aprovado faria o cenário vulnerável parecer protegido) e dado sintético alterado de forma permanente por código inseguro.
+
+### INV-25 — A hierarquia de menus não tem ciclos (Fase 4.4)
+
+- **Aplicação**: `MenuUpdateRequest` (API e admin) recusa como pai o próprio menu ou qualquer descendente (`Menu::isSelfOrAncestorOf`, consulta recursiva). No banco, `menus_parent_not_self_check` recusa `parent_id = id`. A árvore de navegação continua montada a partir das raízes, então um ciclo antigo não a faz entrar em loop.
+- **Teste**: `MenuManagementTest › Hierarchy`.
+- **Risco mitigado**: navegação inconsistente e menus inalcançáveis ([FIND-019](../findings/README.md#find-019--menu-pode-ser-pai-de-si-mesmo)).

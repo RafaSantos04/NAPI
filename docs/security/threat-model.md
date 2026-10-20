@@ -104,7 +104,7 @@ Veja [phases](../phases/README.md).
 |---|---|---|---|---|---|
 | Campos inesperados | ✅ | Só `validated()` é persistido; `key` `prohibited` na atualização de menu | ✅ parcial | — | — |
 | SQL injection | ✅ | Eloquent com bindings; a coluna `can_{ação}` é lida pelo model a partir de uma lista fechada (`MenuProfile::ACTIONS`) | ❌ | — | — |
-| Referências inválidas | ⚠️ | `exists:` em `profile_ids.*` e `parent_id`; chaves de `permissions` validadas contra `menus` | ✅ `rejects unknown menu ids…` | Menu pode ser pai de si mesmo ([FIND-019](../findings/README.md#find-019--menu-pode-ser-pai-de-si-mesmo)); a árvore ignora ciclos | Fase 4 |
+| Referências inválidas | ✅ | `exists:` em `profile_ids.*` e `parent_id`; chaves de `permissions` validadas contra `menus`; pai de menu não pode ser o próprio menu nem descendente, e CHECK no banco para o caso direto (Fase 4.4) | ✅ `rejects unknown menu ids…`, `MenuManagementTest › Hierarchy` | Ciclos longos dependem da validação; um CHECK não vê outras linhas ([FIND-019](../findings/README.md#find-019--menu-pode-ser-pai-de-si-mesmo)) | — |
 | Dados excessivos | ⚠️ | `max:` em strings; paginação padrão (15); `permissions` até 200 itens | ❌ | `profile_ids` sem limite de tamanho | Hardening |
 
 ## API

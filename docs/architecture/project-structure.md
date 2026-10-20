@@ -13,8 +13,13 @@ app/
 │   │   ├── CreateUser.php, UpdateUser.php                (Fase 4.2)
 │   │   ├── ActivateUser.php, DeactivateUser.php          (Fase 4.2)
 │   │   ├── DeleteUser.php
+│   │   ├── CreateProfile.php, UpdateProfile.php, DeleteProfile.php   (Fase 4.3)
+│   │   ├── CreateMenu.php, UpdateMenu.php, DeleteMenu.php            (Fase 4.4)
+│   │   ├── SyncMenuProfiles.php       matriz vista pelo menu (Fase 4.4)
 │   │   └── SyncMenuPermissions.php
-│   ├── Exceptions/LastActiveAdministratorException.php   409 na API, flash no admin
+│   ├── Exceptions/            409 na API, flash no admin
+│   │   ├── LastActiveAdministratorException.php
+│   │   └── ResourceInUseException.php                    perfil com usuários, menu com submenus (Fase 4.3)
 │   ├── AuditContext.php       Ator, IP e User-Agent carregados pelos eventos
 │   └── EnsureActiveAdministratorRemains.php              Invariante INV-08
 ├── Domain/Security/           Security Lab (Fases 5.1 e 5.2, ADR-0010)
@@ -26,6 +31,9 @@ app/
 ├── DTOs/                      Dados validados HTTP → Action
 │   ├── AssignProfilesToUserDto.php
 │   ├── CreateUserDto.php, UpdateUserDto.php              (Fase 4.2)
+│   ├── CreateProfileDto.php, UpdateProfileDto.php        (Fase 4.3)
+│   ├── CreateMenuDto.php, UpdateMenuDto.php              (Fase 4.4)
+│   ├── SyncMenuProfilesDto.php                           (Fase 4.4)
 │   ├── RunIdorTestDto.php                                (Fase 5.1)
 │   ├── RunMassAssignmentTestDto.php                      (Fase 5.2)
 │   └── SyncMenuPermissionsDto.php
@@ -35,6 +43,8 @@ app/
 │   ├── UserLoggedIn.php, UserLoggedOut.php
 │   ├── UserCreated.php, UserUpdated.php, UserDeleted.php
 │   ├── UserActivated.php, UserDeactivated.php            (Fase 4.2)
+│   ├── Profile{Created,Updated,Deleted}.php              (Fase 4.3)
+│   ├── Menu{Created,Updated,Deleted}.php                 (Fase 4.4)
 │   ├── SecurityTestExecuted.php                          (Fase 5.1)
 │   └── TokenCreated.php, TokenRevoked.php
 ├── Listeners/                 Reações; hoje, apenas auditoria
@@ -48,10 +58,12 @@ app/
 │   │   ├── UserController.php
 │   │   ├── UserProfileController.php
 │   │   └── UserStatusController.php   activate/deactivate (Fase 4.2)
-│   ├── Controllers/Web/Admin/ Área administrativa Blade (Fases 4.1 e 4.2)
+│   ├── Controllers/Web/Admin/ Área administrativa Blade (Fases 4.1 a 4.4)
 │   │   ├── Auth/LoginController.php
 │   │   ├── HomeController.php
 │   │   ├── User{,Profile,Status}Controller.php
+│   │   ├── Profile{,Permission}Controller.php            (Fase 4.3)
+│   │   ├── Menu{,Permission}Controller.php               (Fase 4.4)
 │   │   └── Security/{Idor,MassAssignment}TestController.php   Security Lab (Fases 5.1 e 5.2)
 │   ├── Middleware/
 │   │   ├── CheckPermission.php            Permissão funcional por rota (404 JSON ou página)
@@ -60,7 +72,8 @@ app/
 │   │   ├── EnsureUserCanAccessAdmin.php   `admin.access`: entrada na área administrativa
 │   │   └── EnsureSecurityLabEnabled.php   `security.lab`: feature flag do laboratório (404)
 │   ├── Requests/              FormRequests (namespace plano, Auth/ separado: Login, TokenStore)
-│   │   └── Web/Admin/         Login web e requests de usuários, que estendem os da API
+│   │   └── Web/Admin/         Login web e requests de usuários, perfis e menus, que estendem os da API;
+│   │                          Concerns/ com mensagens em português e SendsEveryField
 │   └── Resources/             UserResource, ProfileResource, MenuResource
 ├── Models/                    User, UserDetails, Profile, Menu, AuditLog,
 │                              SecurityLabResource, SecurityTestRun
@@ -82,7 +95,7 @@ public/css/admin.css           CSS da área administrativa, sem build
 tests/
 ├── Feature/IAM/               Testes HTTP (seed automático via tests/Pest.php)
 ├── Feature/Security/          Regressão de segurança com tokens Bearer reais (Fase 3.2) e cobertura de rotas
-├── Feature/Admin/             Área administrativa por sessão web (Fases 4.1 e 4.2)
+├── Feature/Admin/             Área administrativa por sessão web (Fases 4.1 a 4.4)
 ├── Feature/SecurityLab/       Security Lab: acesso, flag, testes IDOR e Mass Assignment, histórico (Fases 5.1 e 5.2)
 └── Feature/{User,Profile,Menu}Test.php   Testes de model/constraints
 ```

@@ -70,8 +70,8 @@ A PK composta impede atribuir o mesmo perfil duas vezes.
 | Coluna | Tipo | Constraint |
 |---|---|---|
 | `id` | ULID | PK |
-| `parent_id` | ULID | nullable; FK auto-referente `menus` cascade; indexado |
-| `key` | varchar(100) | NOT NULL, UNIQUE; **identificador de permissão** (`{key}.{ação}`), imutável pela API (Fase 3.2) |
+| `parent_id` | ULID | nullable; FK auto-referente `menus` cascade; indexado; CHECK `parent_id <> id` (Fase 4.4) |
+| `key` | varchar(100) | NOT NULL, UNIQUE; **identificador de permissão** (`{key}.{ação}`), imutável pela API (Fase 3.2) e pelo admin (Fase 4.4) |
 | `label` | varchar(100) | |
 | `route_name` | varchar(100) | UNIQUE; só navegação desde a Fase 3.2 |
 | `icon` | varchar(50) | nullable |
@@ -86,6 +86,13 @@ nova. Como o projeto ainda não tem banco de produção, não havia dados a
 migrar, e um backfill seria código sem uso. Consequência: bancos criados
 antes da Fase 3.2 precisam de `php artisan migrate:fresh --seed`. Quando
 houver produção, mudanças de schema voltam a ser migrations aditivas.
+
+`menus_parent_not_self_check` (Fase 4.4, migration
+`2026_10_20_013946_add_parent_not_self_check_to_menus_table`) recusa um menu
+como pai de si mesmo. Ciclos mais longos envolvem outras linhas, que um CHECK
+não enxerga; são recusados pela validação (`MenuUpdateRequest`), com uma
+consulta recursiva (`WITH RECURSIVE … UNION`). Ver
+[FIND-019](../findings/README.md#find-019--menu-pode-ser-pai-de-si-mesmo).
 
 A FK de `parent_id` é criada em um segundo `Schema::table`. O comentário na
 migration explica que, no PostgreSQL, a PK do ULID é adicionada por um

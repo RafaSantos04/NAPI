@@ -44,22 +44,25 @@ Nos demais casos, a evidência é a leitura do código citado.
 | [FIND-009](#find-009--perfil-dev-lista-todos-os-usuários-mas-não-pode-ver-nenhum) | Perfil `dev` lista todos os usuários mas não pode ver nenhum | Security | Medium | RESOLVED | = |
 | [FIND-010](#find-010--árvore-de-menus-não-filtra-filhos-nem-inativos) | Árvore de menus não filtra filhos nem inativos | Architecture | Low | RESOLVED | = |
 | [FIND-011](#find-011--validação-incompleta-na-sincronização-de-permissões) | Validação incompleta na sincronização de permissões | Maintainability | Low | RESOLVED | = |
-| [FIND-012](#find-012--lacunas-de-cobertura-da-auditoria) | Lacunas de cobertura da auditoria | Security | Medium | RESOLVED (parcial) | = |
+| [FIND-012](#find-012--lacunas-de-cobertura-da-auditoria) | Lacunas de cobertura da auditoria | Security | Medium | RESOLVED (parcial) | = · CRUD de perfil e menu auditado nas Fases 4.3/4.4 |
 | [FIND-013](#find-013--contexto-de-auditoria-acoplado-ao-processo-http-e-sem-atomicidade) | Contexto de auditoria acoplado ao processo HTTP e sem atomicidade | Architecture | Low | RESOLVED (parcial) | = |
 | [FIND-014](#find-014--audit_logs-é-mutável) | `audit_logs` é mutável | Security | Low | OPEN | = |
 | [FIND-015](#find-015--expiração-de-token-aceita-valores-que-nunca-terão-efeito) | Expiração de token aceita valores que nunca terão efeito | Security | Low | RESOLVED (parcial) | = |
 | [FIND-016](#find-016--rate-limiting-restrito-ao-login-e-por-emailip) | Rate limiting restrito ao login e por email+IP | Security | Low | OPEN | = |
 | [FIND-017](#find-017--assigned_by-não-é-preenchido-pela-api) | `assigned_by` não é preenchido pela API | Maintainability | Low | RESOLVED | = |
 | [FIND-018](#find-018--sinais-de-enumeração-no-login) | Sinais de enumeração no login | Security | Low | OPEN | = |
-| [FIND-019](#find-019--menu-pode-ser-pai-de-si-mesmo) | Menu pode ser pai de si mesmo | Maintainability | Low | OPEN | = |
+| [FIND-019](#find-019--menu-pode-ser-pai-de-si-mesmo) | Menu pode ser pai de si mesmo | Maintainability | Low | OPEN | = · RESOLVED na Fase 4.4 |
 | [FIND-020](#find-020--respostas-de-autorização-e-de-tokens-inconsistentes) | Respostas de autorização e de tokens inconsistentes | Maintainability | Improvement | RESOLVED (parcial) | = |
 | [FIND-021](#find-021--lacunas-de-testes-de-segurança) | Lacunas de testes de segurança | Testing | Improvement | RESOLVED (parcial) | RESOLVED |
 | [FIND-022](#find-022--documentação-e-histórico-divergem-do-código) | Documentação e histórico divergem do código | Documentation | Improvement | RESOLVED (parcial) | RESOLVED |
 | [FIND-023](#find-023--análise-estática-ignorava-os-casts-dos-models) | Análise estática ignorava os casts dos models | Maintainability | Improvement | — | — (aberto e resolvido na Fase 5.1) |
 | [FIND-024](#find-024--personas-do-security-lab-são-contas-administráveis) | Personas do Security Lab são contas administráveis | Security | Low | — | — (aberto na Fase 5.2, OPEN deferred) |
 | [FIND-025](#find-025--resultado-da-última-execução-não-era-filtrado-por-teste) | Resultado da última execução não era filtrado por teste | Maintainability | Low | — | — (aberto e resolvido na Fase 5.2) |
+| [FIND-026](#find-026--bytes-inválidos-em-utf-8-num-formulário-viram-erro-500) | Bytes inválidos em UTF-8 num formulário viram erro 500 | Maintainability | Low | — | — (aberto na Fase 4.4, OPEN) |
 
-Contagem: 1 High · 9 Medium · 11 Low · 4 Improvement. Nenhum Critical.
+Contagem: 1 High · 9 Medium · 12 Low · 4 Improvement. Nenhum Critical.
+
+Após as Fases 4.3 e 4.4: **20 RESOLVED** (o FIND-019 passou a resolvido; o FIND-012 continua parcial, agora só com o login falho em aberto), 4 deles parcialmente, e **6 OPEN** (FIND-008, 014, 016, 018, 024 e o novo FIND-026).
 
 Após a Fase 5.2: **19 RESOLVED** (o FIND-025 foi aberto e resolvido na própria fase), 4 deles parcialmente, e **6 OPEN** (FIND-008, 014, 016, 018, 019 e o novo FIND-024, que registra uma dívida já descrita no ADR-0010). O teste de Mass Assignment não abriu finding de segurança; os riscos que ele introduz estão no [threat model](../security/threat-model.md#security-lab).
 
@@ -616,6 +619,16 @@ Hardening / Fase 5.
 
 **Commit:** `6ba00f0` · testes em `e6e11c8`
 
+### Status (Fases 4.3 e 4.4)
+
+**Status:** RESOLVED (parcial) · restante DEFERRED
+
+**Resolution:** CRUD de perfil e de menu passou a ser auditado (`profile_created`, `profile_updated`, `profile_deleted`, `menu_created`, `menu_updated`, `menu_deleted`), pelas Actions que a API e o admin compartilham. Atualizações registram só os nomes dos campos; exclusões guardam a identidade (`slug`/`name`, `key`), porque a linha deixa de existir. Continua adiado o login falho.
+
+**Tests:** `AuditIntegrityTest › records profile creation, update and deletion exactly once each`, `records menu creation, update and deletion exactly once each`, `records nothing for a rejected profile or menu change`; `ProfileManagementTest` e `MenuManagementTest`.
+
+**Commit:** pending (Fases 4.3 e 4.4)
+
 ---
 
 ## FIND-013 — Contexto de auditoria acoplado ao processo HTTP e sem atomicidade
@@ -864,6 +877,18 @@ Fase 4.
 ### Status (Fase 4.2)
 
 **Status:** OPEN. Fora do escopo: a Fase 4.2 não criou tela de menus.
+
+### Status (Fase 4.4)
+
+**Status:** RESOLVED
+
+**Root cause:** `parent_id` era validado só por existência; nada olhava a posição do novo pai na árvore.
+
+**Resolution:** `MenuUpdateRequest` (API e admin) recusa como pai o próprio menu e qualquer descendente, em qualquer profundidade, com uma consulta recursiva (`Menu::isSelfOrAncestorOf`, CTE com `UNION`, que termina mesmo sobre um ciclo já gravado). No banco, o CHECK `menus_parent_not_self_check` recusa `parent_id = id`. Ciclos mais longos dependem de outras linhas, que um CHECK não vê; ficam na validação, e a árvore continua montada a partir das raízes. `null` passou a ser aceito para mover um menu para a raiz.
+
+**Tests:** `tests/Feature/Admin/MenuManagementTest.php` (`Hierarchy`), pelos dois canais.
+
+**Commit:** pending (Fase 4.4)
 
 ---
 
@@ -1120,4 +1145,45 @@ Consultar histórico e resultado pelo `test_key` da página.
 
 **Tests:** `MassAssignmentTestExecutionTest › keeps each test with its own history and its own result` (falha ao remover o filtro: mutação M7 da fase).
 
-**Commit:** pending (Fase 5.2)
+**Commit:** `588390a`
+
+---
+
+## FIND-026 — Bytes inválidos em UTF-8 num formulário viram erro 500
+
+**Categoria:** Maintainability · **Severidade:** Low
+
+### Evidence
+
+Encontrado no checkpoint visual da Fase 4.4. **Confirmado em execução**: um
+POST de formulário (`application/x-www-form-urlencoded`) com o texto em
+Latin-1 em vez de UTF-8 chegou ao PostgreSQL, que recusou os bytes
+(`SQLSTATE[22021]`, "sequência de bytes é inválida para codificação UTF8"),
+e a resposta foi 500. Aconteceu ao criar perfil e menu, mas nada nas regras
+de validação é específico dessas telas.
+
+### Current behavior
+
+Nem a validação nem um middleware conferem se a entrada é UTF-8 válido.
+Corpos JSON não chegam a esse ponto: um JSON com bytes inválidos não é
+decodificado e cai na validação como entrada vazia (422).
+
+### Risk
+
+Baixo. Navegadores enviam UTF-8; o caso exige um cliente que monte o corpo à
+mão, e as rotas do admin estão atrás de sessão, permissão e CSRF. O efeito é
+um erro de servidor no lugar de uma resposta de validação, e uma linha de
+erro no log por requisição.
+
+### Recommendation
+
+Recusar entrada que não seja UTF-8 válido antes da validação (por exemplo,
+um middleware no grupo `web` e no `api` que responda 400 ou 422), em vez de
+uma regra por campo.
+
+### Status (Fase 4.4)
+
+**Status:** OPEN
+
+Fora do escopo da fase, que não deveria mudar o tratamento de entrada de
+todas as rotas. Registrado para hardening.

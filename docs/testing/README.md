@@ -18,7 +18,7 @@
 - Qualidade complementar: `composer lint` (Pint) e `composer analyse`
   (Larastan nível 6 em `app/`).
 
-## Inventário (315 testes, Fase 5.2)
+## Inventário (386 testes, Fases 4.3 e 4.4)
 
 | Categoria | Arquivo | Testes | Nível |
 |---|---|---|---|
@@ -34,7 +34,7 @@
 | Security: permissões funcionais | `Feature/Security/AuthorizationMatrixTest.php` | 23 | model + HTTP, Bearer real |
 | Security: escalação | `Feature/Security/PrivilegeEscalationTest.php` | 15 | HTTP, Bearer real |
 | Security: último admin | `Feature/Security/AdminInvariantTest.php` | 7 | HTTP + Action |
-| Security: auditoria | `Feature/Security/AuditIntegrityTest.php` | 8 | HTTP + banco + evento |
+| Security: auditoria | `Feature/Security/AuditIntegrityTest.php` | 11 | HTTP + banco + evento |
 | Security: árvore de menus | `Feature/Security/MenuTreeTest.php` | 7 | HTTP, Bearer real |
 | Security: cobertura de rotas | `Feature/Security/RouteCoverageTest.php` | 11 | rotas registradas + HTTP |
 | Security Lab: acesso e feature flag | `Feature/SecurityLab/SecurityLabAccessTest.php` | 31 | HTTP, sessão `web` + Actions + seeder |
@@ -43,6 +43,8 @@
 | Security Lab: histórico do IDOR | `Feature/SecurityLab/SecurityLabHistoryTest.php` | 13 | HTTP |
 | Admin: shell e sessão | `Feature/Admin/AdminShellTest.php` | 19 | HTTP, sessão `web` |
 | Admin: usuários | `Feature/Admin/UserManagementTest.php` | 49 | HTTP (sessão e Bearer) + Action |
+| Admin: perfis e matriz | `Feature/Admin/ProfileManagementTest.php` | 26 | HTTP (sessão e Bearer) + Action + exceção |
+| Admin: menus | `Feature/Admin/MenuManagementTest.php` | 42 | HTTP (sessão e Bearer) + Action + constraint |
 | Model/DB: Users | `Feature/UserTest.php` | 10 | Eloquent + constraints |
 | Model/DB: Profiles | `Feature/ProfileTest.php` | 5 | Eloquent + constraints |
 | Model/DB: Menus | `Feature/MenuTest.php` | 5 | Eloquent + constraints |

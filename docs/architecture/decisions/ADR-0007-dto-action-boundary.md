@@ -4,8 +4,9 @@
 
 ## Status
 
-Accepted (Fase 3). Complementado pela Fase 4.2; veja
-[Evolução na Fase 4.2](#evolução-na-fase-42).
+Accepted (Fase 3). Complementado pelas Fases 4.2, 4.3 e 4.4; veja
+[Evolução na Fase 4.2](#evolução-na-fase-42) e
+[Evolução nas Fases 4.3 e 4.4](#evolução-nas-fases-43-e-44).
 
 ## Context
 
@@ -89,6 +90,19 @@ perfis e menus continua chamando o model no controller. As consequências
 negativas sobre `request()->ip()`, transações e `\Exception` genérica foram
 resolvidas na Fase 3.2 (`AuditContext`, `DB::transaction`,
 `LastActiveAdministratorException`).
+
+## Evolução nas Fases 4.3 e 4.4
+
+Mesmo critério. Com perfis e menus no admin, o CRUD deles deixou de ser só
+persistência: os dois adapters precisavam gravar e auditar na mesma
+transação, e a exclusão ganhou uma reconferência sob lock.
+
+| Caso de uso | Por que |
+|---|---|
+| `CreateProfileDto` → `CreateProfile`, `UpdateProfileDto` → `UpdateProfile` | auditoria compartilhada; os DTOs fixam os campos (`is_system` está no `#[Fillable]` do model e não pode depender dele) |
+| `DeleteProfile` | perfil com usuários reconferido com a linha travada (`user_profiles` tem `cascade`) |
+| `CreateMenuDto` → `CreateMenu`, `UpdateMenuDto` → `UpdateMenu` | auditoria compartilhada; `UpdateMenuDto` não carrega `key` e filtra no construtor |
+| `DeleteMenu` | submenus reconferidos com a linha travada (`parent_id` tem `cascade`) |
 
 ## References
 

@@ -104,9 +104,10 @@ existir fora de ambiente local.
 | Desativar usuário | — → `DeactivateUser` | `users.update` + `UserPolicy::deactivate` | ninguém desativa a si mesmo; só admin desativa administrador; último admin ativo (409); revoga tokens e remove sessões web | `user_deactivated` |
 | Reativar usuário | — → `ActivateUser` | `users.update` + `UserPolicy::activate` | só admin reativa administrador; não devolve tokens nem sessões | `user_activated` |
 | Atribuir perfis | `AssignProfileRequest` → DTO → `AssignProfilesToUser` | `users.update` + `assignProfiles` (anti-escalação) | último admin ativo (409), em transação com lock | `profile_assigned` |
-| CRUD de perfil | `ProfileStore/UpdateRequest` | `profiles.{ação}` + `ProfilePolicy` | perfil de sistema imutável; não excluir com usuários | não (adiado) |
+| CRUD de perfil | `ProfileStore/UpdateRequest` → `CreateProfileDto`/`UpdateProfileDto` → `CreateProfile`/`UpdateProfile`/`DeleteProfile` | `profiles.{ação}` + `ProfilePolicy` | perfil de sistema imutável; `is_system` fora dos DTOs; não excluir com usuários (reconferido sob lock, 409) | `profile_created`, `profile_updated`, `profile_deleted` (Fase 4.3) |
 | Sincronizar permissões | `SyncMenusRequest` → DTO → `SyncMenuPermissions` | `permissions.update` + `syncMenus` (anti-escalação) | perfil de sistema imutável; delegado não edita o próprio perfil nem concede o que não tem | `permission_changed` |
-| CRUD de menu | `MenuStore/UpdateRequest` | `menus.{ação}` + `MenuPolicy` | `key` imutável; menu de sistema ou com filhos não é excluído | não (adiado) |
+| CRUD de menu | `MenuStore/UpdateRequest` → `CreateMenuDto`/`UpdateMenuDto` → `CreateMenu`/`UpdateMenu`/`DeleteMenu` | `menus.{ação}` + `MenuPolicy` | `key` imutável (request e DTO); pai não pode ser o próprio menu nem descendente; menu de sistema ou com filhos não é excluído (filhos reconferidos sob lock, 409) | `menu_created`, `menu_updated`, `menu_deleted` (Fase 4.4) |
+| Perfis de um menu (Fase 4.4) | `SyncProfilesRequest` → `SyncMenuProfilesDto` → `SyncMenuProfiles` → `SyncMenuPermissions` por perfil alterado | `permissions.update` + `syncMenus` para cada perfil que muda | mesma matriz vista pelo menu; tudo ou nada; perfil sem mudança não é gravado | `permission_changed` por perfil |
 | Árvore de menus | — | autenticado + `read` | menus ativos com `{key}.view`, filhos só sob pai visível | não |
 | Tokens pessoais | `TokenStoreRequest` | autenticado; escopo no próprio usuário | abilities ⊆ as do token atual; expiração ≤ 7 dias | `token_created`, `token_revoked` |
 
@@ -117,12 +118,15 @@ Estão catalogadas, com local de aplicação e teste, em
 
 ## Limitações conhecidas
 
-- CRUD de perfis e menus não é auditado (adiado, veja [audit.md](../security/audit.md#cobertura)).
-- Um menu pode ser pai de si mesmo ([FIND-019](../findings/README.md#find-019--menu-pode-ser-pai-de-si-mesmo)). A árvore ignora ciclos, mas o dado inválido é aceito.
+- Ciclos longos na hierarquia de menus são recusados pela validação; o banco só garante o caso direto (`parent_id <> id`). Veja [FIND-019](../findings/README.md#find-019--menu-pode-ser-pai-de-si-mesmo).
+- A barra lateral do admin lista seções definidas no código, não a tabela `menus`: rótulo, ordem e `is_active` de um menu mudam a árvore da API, não o admin ([Fase 4.4](../phases/phase-04-4-menu-administration.md#navegação)).
 
 Desde a [Fase 4.2](../phases/phase-04-2-user-management.md) os casos de uso
 de usuário servem dois adapters, a API (`Api\V1`) e a área administrativa
-(`Web\Admin`), com as mesmas Policies, Actions e eventos.
+(`Web\Admin`), com as mesmas Policies, Actions e eventos. Desde as Fases
+[4.3](../phases/phase-04-3-profile-permissions.md) e
+[4.4](../phases/phase-04-4-menu-administration.md), os de perfis, matriz e
+menus também.
 
 As limitações estruturais registradas na Fase 3.1 (FIND-004, FIND-005,
 FIND-007, FIND-010) foram resolvidas na Fase 3.2; veja

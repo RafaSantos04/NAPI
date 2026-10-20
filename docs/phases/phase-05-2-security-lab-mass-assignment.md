@@ -2,7 +2,7 @@
 
 [← Fases](README.md) · [Módulo Security Lab](../modules/security.md) · [Mass Assignment](../security/mass-assignment.md) · [ADR-0010](../architecture/decisions/ADR-0010-controlled-security-lab.md#adendo-fase-52) · [Fase 5.1](phase-05-1-security-lab-idor.md)
 
-**Commit:** pending
+**Commits:** `6a1d23a` e `588390a` (domínio e controllers), `27754b5` (admin), `cf5cfb3` (testes), `e28e6be` (documentação)
 
 ## Objetivo
 

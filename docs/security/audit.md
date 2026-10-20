@@ -35,9 +35,15 @@ carregado pelo evento.
 | `user_activated` | `UserActivated` | `ActivateUser` (API e admin) | `App\Models\User` | — |
 | `user_deleted` | `UserDeleted` | `DeleteUser` | `App\Models\User` | — |
 | `profile_assigned` | `ProfileAssigned` | `AssignProfilesToUser` | `App\Models\User` | `profile_ids` (conjunto final) |
-| `permission_changed` | `PermissionChanged` | `SyncMenuPermissions` | `App\Models\Profile` | `permissions` (matriz final completa) |
+| `permission_changed` | `PermissionChanged` | `SyncMenuPermissions` (também pelo painel de perfis do menu, `SyncMenuProfiles`, um registro por perfil alterado, Fase 4.4) | `App\Models\Profile` | `permissions` (matriz final completa) |
 | `token_created` | `TokenCreated` | `TokenController::store` | `App\Models\User` (dono) | `token_id`, `name`, `abilities`, `expires_at` |
 | `token_revoked` | `TokenRevoked` | `TokenController::destroy` | `App\Models\User` (dono) | `token_id`, `name` |
+| `profile_created` | `ProfileCreated` | `CreateProfile` (Fase 4.3) | `App\Models\Profile` | — |
+| `profile_updated` | `ProfileUpdated` | `UpdateProfile` (Fase 4.3) | `App\Models\Profile` | `fields` (nomes, sem valores) |
+| `profile_deleted` | `ProfileDeleted` | `DeleteProfile` (Fase 4.3) | `App\Models\Profile` | `slug`, `name` (a linha deixa de existir) |
+| `menu_created` | `MenuCreated` | `CreateMenu` (Fase 4.4) | `App\Models\Menu` | — |
+| `menu_updated` | `MenuUpdated` | `UpdateMenu` (Fase 4.4) | `App\Models\Menu` | `fields` (nomes) |
+| `menu_deleted` | `MenuDeleted` | `DeleteMenu` (Fase 4.4) | `App\Models\Menu` | `key` (a linha deixa de existir) |
 | `security_test_executed` | `SecurityTestExecuted` | `RunIdorTest` (Fase 5.1), `RunMassAssignmentTest` (Fase 5.2) | `App\Models\SecurityTestRun` | `test_key`, `scenario`, `acting_as_user_id`, `verdict` |
 
 O id do token vai em `meta` porque é inteiro e `subject_id` é ULID. O segredo
@@ -69,8 +75,8 @@ Classificação feita na Fase 3.2 ([FIND-012](../findings/README.md#find-012--la
 | Teste do Security Lab executado | **audit now** (Fase 5.1) | execução de código deliberadamente vulnerável precisa de um responsável |
 | Token criado / revogado | **audit now** | criação e destruição de credencial |
 | Login falho | **defer** (Fase 5) | exige decidir como guardar o e-mail tentado (dado pessoal, possivelmente de terceiros) e se relaciona com a revisão do rate limit ([FIND-016](../findings/README.md#find-016--rate-limiting-restrito-ao-login-e-por-emailip), [FIND-018](../findings/README.md#find-018--sinais-de-enumeração-no-login)) |
-| CRUD de perfil | **defer** (Fase 5, com o ADR do conjunto mínimo auditável) | criar ou excluir perfil não concede nada sozinho; o que concede é a matriz e a atribuição, que já são auditadas |
-| CRUD de menu | **defer** (Fase 5) | desde a Fase 3.2 o menu é navegação: `key` é imutável e menus de sistema não são excluídos, então editar menu não altera autorização |
+| CRUD de perfil | **audit now** (Fase 4.3; adiado na 3.2) | com a tela no admin, criar, renomear e excluir perfis virou operação de rotina; excluir um perfil remove a matriz dele |
+| CRUD de menu | **audit now** (Fase 4.4; adiado na 3.2) | editar menu não altera autorização, mas criar uma chave cria uma área de permissão e excluir um menu remove as permissões da área de todos os perfis |
 | Acessos negados (401/403/404) | **not needed** na aplicação | volume alto e baixo valor por linha; é papel de logs de acesso e observabilidade |
 
 ## Desenho: domínio → evento → listener → log
