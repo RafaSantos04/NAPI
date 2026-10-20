@@ -90,6 +90,60 @@ describe('Audit integrity', function () {
             ->subject_id->toBe($id);
     });
 
+    // Phases 4.3 and 4.4: profile and menu CRUD go through the same Actions
+    // as the admin area, so the API records the same entries.
+    it('records profile creation, update and deletion exactly once each', function () {
+        $admin = seededUser('admin');
+
+        $id = asToken($admin, 'POST', '/api/v1/profiles', ['name' => 'Suporte', 'slug' => 'suporte'])
+            ->assertCreated()->json('id');
+
+        asToken($admin, 'PUT', "/api/v1/profiles/{$id}", ['description' => 'Atendimento'])->assertOk();
+        asToken($admin, 'DELETE', "/api/v1/profiles/{$id}")->assertOk();
+
+        expect(auditRows('profile_created'))->toBe(1)
+            ->and(auditRows('profile_updated'))->toBe(1)
+            ->and(auditRows('profile_deleted'))->toBe(1);
+
+        expect(AuditLog::where('action', 'profile_updated')->first()->meta)->toBe(['fields' => ['description']]);
+        expect(AuditLog::where('action', 'profile_deleted')->first())
+            ->user_id->toBe($admin->id)
+            ->subject_type->toBe(Profile::class)
+            ->subject_id->toBe($id)
+            ->meta->toEqual(['slug' => 'suporte', 'name' => 'Suporte']);
+    });
+
+    it('records menu creation, update and deletion exactly once each', function () {
+        $admin = seededUser('admin');
+
+        $id = asToken($admin, 'POST', '/api/v1/menus', ['key' => 'relatorios', 'label' => 'Relatórios', 'route_name' => 'reports.index'])
+            ->assertCreated()->json('id');
+
+        asToken($admin, 'PUT', "/api/v1/menus/{$id}", ['route_name' => 'reports.list'])->assertOk();
+        asToken($admin, 'DELETE', "/api/v1/menus/{$id}")->assertOk();
+
+        expect(auditRows('menu_created'))->toBe(1)
+            ->and(auditRows('menu_updated'))->toBe(1)
+            ->and(auditRows('menu_deleted'))->toBe(1);
+
+        expect(AuditLog::where('action', 'menu_updated')->first()->meta)->toBe(['fields' => ['route_name']]);
+        expect(AuditLog::where('action', 'menu_deleted')->first())
+            ->user_id->toBe($admin->id)
+            ->subject_type->toBe(Menu::class)
+            ->subject_id->toBe($id)
+            ->meta->toEqual(['key' => 'relatorios']);
+    });
+
+    it('records nothing for a rejected profile or menu change', function () {
+        $admin = seededUser('admin');
+        $viewer = Profile::where('slug', 'viewer')->sole();
+
+        asToken($admin, 'PUT', "/api/v1/profiles/{$viewer->id}", ['name' => 'Outro'])->assertForbidden();
+        asToken($admin, 'DELETE', '/api/v1/menus/'.Menu::where('key', 'users')->value('id'))->assertForbidden();
+
+        expect(AuditLog::whereIn('action', ['profile_updated', 'menu_deleted'])->exists())->toBeFalse();
+    });
+
     it('records token creation and revocation exactly once each', function () {
         $admin = seededUser('admin');
 

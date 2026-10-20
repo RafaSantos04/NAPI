@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Menu;
+use App\Models\Profile;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Route;
@@ -100,6 +102,13 @@ describe('Admin route coverage', function () {
 
     it('keeps guests and users without admin access out of every internal admin route', function () {
         $subject = seededUser('viewer');
+        // Real records for every route parameter, so the request reaches the
+        // access layers instead of failing on model binding.
+        $parameters = [
+            '{user}' => $subject->id,
+            '{profile}' => Profile::where('slug', 'viewer')->value('id'),
+            '{menu}' => Menu::where('key', 'users')->value('id'),
+        ];
 
         foreach (routesUnder('admin/*') as $route) {
             if (in_array($route->getName(), ['admin.login', 'admin.logout'], true)) {
@@ -107,7 +116,7 @@ describe('Admin route coverage', function () {
             }
 
             $method = collect($route->methods())->reject(fn (string $m) => $m === 'HEAD')->first();
-            $uri = '/'.str_replace('{user}', $subject->id, $route->uri());
+            $uri = '/'.strtr($route->uri(), $parameters);
 
             app('auth')->forgetGuards();
             $this->call($method, $uri)->assertRedirect(route('admin.home'));

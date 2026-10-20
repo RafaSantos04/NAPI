@@ -58,7 +58,8 @@ describe('Admin area access', function () {
     });
 
     it('does not count permissions the admin area has no section for', function () {
-        $user = userWithPermissions(['menus' => ['view', 'update']]);
+        // audit-logs has a key in the matrix but no admin section (yet).
+        $user = userWithPermissions(['audit-logs' => ['view', 'update']]);
 
         adminLogin($user)->assertSessionHasErrors('email');
 
