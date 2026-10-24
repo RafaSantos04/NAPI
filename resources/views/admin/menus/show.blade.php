@@ -14,7 +14,7 @@
         <div class="page-actions">
             @can('delete', $menu)
                 <form method="POST" action="{{ route('admin.menus.destroy', $menu) }}"
-                      data-confirm="Excluir o menu {{ $menu->label }}? @if ($grantingProfiles > 0){{ $grantingProfiles }} {{ $grantingProfiles === 1 ? 'perfil perde' : 'perfis perdem' }} as permissões desta área.@endif">
+                      data-confirm="Excluir o menu {{ $menu->label }}? @if ($grantingProfiles > 0){{ $grantingProfiles }} {{ $grantingProfiles === 1 ? 'perfil perde' : 'perfis perdem' }} as permissões desta área. @endif @if ($menu->is_system)É um menu de sistema: até ele ser recriado, a área {{ $menu->key }} fica só para o Administrador.@endif">
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="btn btn-danger">Excluir<span class="sr-only"> {{ $menu->label }}</span></button>
@@ -79,10 +79,14 @@
 
     @if ($menu->is_system)
         <p class="notice">
-            Menu de sistema: as rotas da aplicação usam a chave dele, então não pode ser excluído. Rótulo, rota, posição e
-            status podem ser alterados.
+            Menu de sistema: as rotas da aplicação usam a chave <code>{{ $menu->key }}</code>. Só o Administrador pode
+            excluí-lo e, enquanto ele não for recriado (<code>php artisan db:seed --class=MenuSeeder</code>), a área fica
+            só para o Administrador; as permissões dos perfis nela não voltam sozinhas. Rótulo, rota, posição e status
+            podem ser alterados.
         </p>
-    @elseif ($menu->children->isNotEmpty())
+    @endif
+
+    @if ($menu->children->isNotEmpty())
         <p class="notice">Tem submenus: só pode ser excluído depois que eles forem movidos ou excluídos.</p>
     @endif
 @endsection

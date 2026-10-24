@@ -30,6 +30,8 @@ trait AdminValidationMessages
             'profile_ids.*.exists' => 'Perfil inválido.',
             'key.regex' => 'Use letras minúsculas, números e hífens, como em relatorios-financeiros.',
             'key.prohibited' => 'A chave de um menu não pode ser alterada.',
+            'slug.prohibited' => 'O identificador do perfil Administrador não pode ser alterado.',
+            'is_system.prohibited' => 'Só o Administrador marca um perfil como de sistema.',
             'order.min' => 'A ordem não pode ser negativa.',
             'permissions.present' => 'Envie a matriz de permissões.',
             'permissions.array' => 'Matriz de permissões inválida.',

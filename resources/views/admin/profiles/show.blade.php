@@ -50,9 +50,13 @@
         <dd>{{ $profile->users_count }}</dd>
     </dl>
 
-    @if ($profile->is_system)
-        <p class="notice">Perfil de sistema: não pode ser editado nem excluído, e a matriz dele não muda.</p>
-    @elseif ($profile->users_count > 0)
+    @if ($profile->isAdministrator())
+        <p class="notice">Perfil Administrador: o identificador é fixo e o perfil não pode ser excluído. Nome e descrição podem ser editados pelo Administrador.</p>
+    @elseif ($profile->is_system)
+        <p class="notice">Perfil de sistema: só o Administrador pode editá-lo, excluí-lo ou alterar a matriz dele.</p>
+    @endif
+
+    @if ($profile->users_count > 0 && ! $profile->isAdministrator())
         <p class="notice">Atribuído a {{ $profile->users_count }} {{ $profile->users_count === 1 ? 'usuário' : 'usuários' }}: só pode ser excluído depois de retirado de todos.</p>
     @endif
 
