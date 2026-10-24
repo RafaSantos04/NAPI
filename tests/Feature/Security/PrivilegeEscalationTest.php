@@ -145,10 +145,21 @@ describe('Permission matrix escalation', function () {
         ])->assertOk();
     });
 
-    it('keeps system profiles immutable, including for admin', function () {
+    it('keeps the administrator profile out of the matrix, including for admin', function () {
         asToken(seededUser('admin'), 'PUT', '/api/v1/profiles/'.adminProfile()->id.'/menus', [
             'permissions' => matrixRow('users'),
         ])->assertForbidden();
+    });
+
+    it('keeps system profiles out of reach of delegates', function () {
+        $delegate = userWithPermissions(['permissions' => ['update'], 'users' => ['view']]);
+        $viewer = Profile::where('slug', 'viewer')->firstOrFail();
+
+        asToken($delegate, 'PUT', "/api/v1/profiles/{$viewer->id}/menus", [
+            'permissions' => matrixRow('users', view: true),
+        ])->assertForbidden();
+
+        expect($viewer->menus()->count())->toBe(0);
     });
 
     it('rejects unknown menu ids with 422 instead of 500', function () {

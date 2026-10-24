@@ -105,10 +105,12 @@ describe('Stable permission keys', function () {
         expect($menu->fresh()->key)->toBe('users');
     });
 
-    it('does not allow deleting a system menu', function () {
+    it('does not let anyone but the administrator delete a system menu', function () {
+        // Since the Phase 4.4 revision the administrator may delete one; the
+        // seeder brings it back (MenuManagementTest).
         $menu = Menu::where('key', 'audit-logs')->firstOrFail();
 
-        asToken(seededUser('admin'), 'DELETE', "/api/v1/menus/{$menu->id}")
+        asToken(userWithPermissions(['menus' => ['view', 'delete']]), 'DELETE', "/api/v1/menus/{$menu->id}")
             ->assertForbidden();
 
         expect($menu->fresh())->not->toBeNull();

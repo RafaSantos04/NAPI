@@ -110,7 +110,7 @@ describe('Audit integrity', function () {
             ->user_id->toBe($admin->id)
             ->subject_type->toBe(Profile::class)
             ->subject_id->toBe($id)
-            ->meta->toEqual(['slug' => 'suporte', 'name' => 'Suporte']);
+            ->meta->toEqual(['slug' => 'suporte', 'name' => 'Suporte', 'is_system' => false]);
     });
 
     it('records menu creation, update and deletion exactly once each', function () {
@@ -131,15 +131,16 @@ describe('Audit integrity', function () {
             ->user_id->toBe($admin->id)
             ->subject_type->toBe(Menu::class)
             ->subject_id->toBe($id)
-            ->meta->toEqual(['key' => 'relatorios']);
+            ->meta->toEqual(['key' => 'relatorios', 'is_system' => false]);
     });
 
     it('records nothing for a rejected profile or menu change', function () {
-        $admin = seededUser('admin');
+        // System profiles and menus are the administrator's alone.
+        $delegate = userWithPermissions(['profiles' => ['update'], 'menus' => ['delete']]);
         $viewer = Profile::where('slug', 'viewer')->sole();
 
-        asToken($admin, 'PUT', "/api/v1/profiles/{$viewer->id}", ['name' => 'Outro'])->assertForbidden();
-        asToken($admin, 'DELETE', '/api/v1/menus/'.Menu::where('key', 'users')->value('id'))->assertForbidden();
+        asToken($delegate, 'PUT', "/api/v1/profiles/{$viewer->id}", ['name' => 'Outro'])->assertForbidden();
+        asToken($delegate, 'DELETE', '/api/v1/menus/'.Menu::where('key', 'audit-logs')->value('id'))->assertForbidden();
 
         expect(AuditLog::whereIn('action', ['profile_updated', 'menu_deleted'])->exists())->toBeFalse();
     });

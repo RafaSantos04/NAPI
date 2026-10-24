@@ -9,6 +9,7 @@ use App\Models\AuditLog;
 use App\Models\Menu;
 use App\Models\Profile;
 use App\Models\User;
+use Database\Seeders\MenuSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
@@ -324,11 +325,11 @@ describe('Delete menu', function () {
 
         expect(Menu::whereKey($menu->id)->exists())->toBeFalse()
             ->and($profile->menus()->count())->toBe(0)
-            ->and(AuditLog::where('action', 'menu_deleted')->sole()->meta)->toEqual(['key' => 'relatorios']);
+            ->and(AuditLog::where('action', 'menu_deleted')->sole()->meta)->toEqual(['key' => 'relatorios', 'is_system' => false]);
     });
 
-    it('refuses a system menu and a menu with submenus, including for the administrator', function (Closure $menu) {
-        $target = $menu();
+    it('refuses a menu with submenus, including for the administrator', function () {
+        $target = tap(Menu::factory()->create(), fn (Menu $parent) => Menu::factory()->withParent($parent)->create());
 
         $this->actingAs(seededUser('admin'))
             ->delete("/admin/menus/{$target->id}")
@@ -336,10 +337,30 @@ describe('Delete menu', function () {
 
         expect(Menu::whereKey($target->id)->exists())->toBeTrue()
             ->and(AuditLog::where('action', 'menu_deleted')->exists())->toBeFalse();
-    })->with([
-        'system menu' => [fn () => Menu::where('key', 'audit-logs')->sole()],
-        'menu with submenus' => [fn () => tap(Menu::factory()->create(), fn (Menu $parent) => Menu::factory()->withParent($parent)->create())],
-    ]);
+    });
+
+    it('lets only the administrator delete a system menu, until the seeder brings it back', function () {
+        $menu = Menu::where('key', 'audit-logs')->sole();
+        $reader = userWithPermissions(['audit-logs' => ['view'], 'menus' => ['view', 'delete']]);
+
+        $this->actingAs($reader)->delete("/admin/menus/{$menu->id}")->assertForbidden();
+
+        $this->actingAs(seededUser('admin'))
+            ->get("/admin/menus/{$menu->id}")
+            ->assertSee('fica só para o Administrador');
+
+        $this->delete("/admin/menus/{$menu->id}")->assertRedirect(route('admin.menus.index'));
+
+        // The area is the administrator's alone: the grants went with the menu.
+        expect(Menu::where('key', 'audit-logs')->exists())->toBeFalse()
+            ->and(User::find($reader->id)->hasPermission('audit-logs.view'))->toBeFalse()
+            ->and(seededUser('admin')->hasPermission('audit-logs.view'))->toBeTrue()
+            ->and(AuditLog::where('action', 'menu_deleted')->sole()->meta)->toEqual(['key' => 'audit-logs', 'is_system' => true]);
+
+        $this->seed(MenuSeeder::class);
+
+        expect(Menu::where('key', 'audit-logs')->sole()->is_system)->toBeTrue();
+    });
 
     it('keeps a menu with submenus even when the Policy is bypassed', function () {
         // The Action checks again with the row locked: a submenu created
@@ -422,8 +443,10 @@ describe('Profiles of a menu', function () {
 
         expect($content)
             ->toMatch('/name="profiles\['.$support->id.'\]\[can_view\]" value="1" checked/')
-            // System profiles are read-only: no field for them.
-            ->not->toContain('profiles['.Profile::where('slug', 'viewer')->value('id').']');
+            // The administrator manages system profiles too, but the
+            // administrator profile holds everything implicitly: no field.
+            ->toContain('profiles['.Profile::where('slug', 'viewer')->value('id').'][can_view]')
+            ->not->toContain('profiles['.Profile::where('slug', Profile::ADMIN)->value('id').']');
     });
 
     it('links a profile to the menu without touching its other rows', function () {
@@ -498,14 +521,23 @@ describe('Profiles of a menu', function () {
         expect($support->fresh()->permissionKeys()->all())->toBe(['users.view']);
     });
 
-    it('keeps system profiles out of reach, including for the administrator', function () {
+    it('lets only the administrator link a system profile, and nobody the administrator profile', function () {
         $viewer = Profile::where('slug', 'viewer')->sole();
+        $operator = userWithPermissions(['menus' => ['view', 'update'], 'permissions' => ['update'], 'users' => ['view']]);
 
-        $this->actingAs(seededUser('admin'))
+        $this->actingAs($operator)
             ->put($this->save, menuProfilesForm([$viewer->id => ['view']]))
             ->assertForbidden();
 
+        $this->actingAs(seededUser('admin'))
+            ->put($this->save, menuProfilesForm([Profile::where('slug', Profile::ADMIN)->value('id') => ['view']]))
+            ->assertForbidden();
+
         expect($viewer->menus()->count())->toBe(0);
+
+        $this->put($this->save, menuProfilesForm([$viewer->id => ['view']]))->assertRedirect();
+
+        expect($viewer->fresh()->permissionKeys()->all())->toBe(['users.view']);
     });
 
     it('rejects a profile that does not exist', function () {

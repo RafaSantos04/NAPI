@@ -1,8 +1,10 @@
 <?php
 
 use App\Domain\IAM\Actions\DeleteProfile;
+use App\Domain\IAM\Actions\UpdateProfile;
 use App\Domain\IAM\AuditContext;
 use App\Domain\IAM\Exceptions\ResourceInUseException;
+use App\DTOs\UpdateProfileDto;
 use App\Models\AuditLog;
 use App\Models\Menu;
 use App\Models\Profile;
@@ -88,13 +90,7 @@ describe('Profile list', function () {
 describe('Create profile', function () {
     it('creates a custom profile without permissions and audits it once', function () {
         $this->actingAs(seededUser('admin'))
-            ->post('/admin/profiles', [
-                'name' => 'Auditoria',
-                'slug' => 'auditoria',
-                'description' => 'Consulta a trilha',
-                // Not a field of the operation: ignored.
-                'is_system' => '1',
-            ])
+            ->post('/admin/profiles', ['name' => 'Auditoria', 'slug' => 'auditoria', 'description' => 'Consulta a trilha'])
             ->assertRedirect();
 
         $profile = Profile::where('slug', 'auditoria')->sole();
@@ -102,6 +98,35 @@ describe('Create profile', function () {
         expect($profile->is_system)->toBeFalse()
             ->and($profile->menus()->count())->toBe(0)
             ->and(AuditLog::where('action', 'profile_created')->where('subject_id', $profile->id)->count())->toBe(1);
+    });
+
+    it('lets the administrator create a system profile', function () {
+        $this->actingAs(seededUser('admin'))
+            ->get('/admin/profiles/create')
+            ->assertSee('name="is_system"', false);
+
+        $this->post('/admin/profiles', ['name' => 'Auditoria', 'slug' => 'auditoria', 'description' => '', 'is_system' => '1'])
+            ->assertRedirect();
+
+        expect(Profile::where('slug', 'auditoria')->sole()->is_system)->toBeTrue();
+    });
+
+    it('does not let anyone else mark a profile as system, in either channel', function () {
+        $creator = userWithPermissions(['profiles' => ['view', 'create']]);
+
+        $this->actingAs($creator)
+            ->get('/admin/profiles/create')
+            ->assertOk()
+            ->assertDontSee('name="is_system"', false);
+
+        $this->post('/admin/profiles', ['name' => 'Auditoria', 'slug' => 'auditoria', 'description' => '', 'is_system' => '1'])
+            ->assertSessionHasErrors(['is_system' => 'Só o Administrador marca um perfil como de sistema.']);
+
+        asToken($creator, 'POST', '/api/v1/profiles', ['name' => 'Auditoria', 'slug' => 'auditoria', 'is_system' => true])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('is_system');
+
+        expect(Profile::where('slug', 'auditoria')->exists())->toBeFalse();
     });
 
     it('rejects invalid data with messages in Portuguese', function (array $input, array $errors) {
@@ -155,19 +180,78 @@ describe('Update profile', function () {
             ->assertSessionHasErrors(['name' => 'Informe o nome.']);
     });
 
-    it('keeps system profiles immutable, including for the administrator', function () {
+    it('lets the administrator edit a system profile, and unmark it', function () {
         $viewer = Profile::where('slug', 'viewer')->sole();
 
         $this->actingAs(seededUser('admin'));
 
+        $this->get("/admin/profiles/{$viewer->id}/edit")->assertOk()->assertSee('name="is_system"', false);
+        $this->put("/admin/profiles/{$viewer->id}", ['name' => 'Leitor', 'slug' => 'viewer', 'description' => '', 'is_system' => '1'])
+            ->assertRedirect(route('admin.profiles.show', $viewer));
+
+        expect($viewer->fresh())->name->toBe('Leitor')->is_system->toBeTrue();
+
+        $this->put("/admin/profiles/{$viewer->id}", ['name' => 'Leitor', 'slug' => 'viewer', 'description' => '', 'is_system' => '0']);
+
+        expect($viewer->fresh()->is_system)->toBeFalse()
+            ->and(AuditLog::where('action', 'profile_updated')->latest('id')->first()->meta)->toEqual(['fields' => ['is_system']]);
+    });
+
+    it('keeps system profiles out of reach of everyone but the administrator', function () {
+        $viewer = Profile::where('slug', 'viewer')->sole();
+        $editor = userWithPermissions(['profiles' => ['view', 'update', 'delete']]);
+
+        $this->actingAs($editor);
+
         $this->get("/admin/profiles/{$viewer->id}/edit")->assertForbidden();
         $this->put("/admin/profiles/{$viewer->id}", ['name' => 'Renomeado', 'slug' => 'viewer', 'description' => ''])->assertForbidden();
-        $this->get("/admin/profiles/{$viewer->id}")
+        asToken($editor, 'PUT', "/api/v1/profiles/{$viewer->id}", ['name' => 'Renomeado'])->assertForbidden();
+
+        $this->actingAs($editor)
+            ->get("/admin/profiles/{$viewer->id}")
             ->assertOk()
-            ->assertSee('Perfil de sistema')
+            ->assertSee('só o Administrador pode editá-lo')
             ->assertDontSee(route('admin.profiles.edit', $viewer));
 
         expect($viewer->fresh()->name)->toBe('Viewer');
+    });
+
+    it('keeps the identifier of the administrator profile, and keeps it a system profile', function () {
+        $admin = Profile::where('slug', Profile::ADMIN)->sole();
+
+        $this->actingAs(seededUser('admin'));
+
+        $this->get("/admin/profiles/{$admin->id}/edit")
+            ->assertOk()
+            ->assertDontSee('name="slug"', false)
+            ->assertDontSee('name="is_system"', false);
+
+        $this->put("/admin/profiles/{$admin->id}", ['name' => 'Administradores', 'description' => 'Tudo', 'slug' => 'root'])
+            ->assertSessionHasErrors(['slug' => 'O identificador do perfil Administrador não pode ser alterado.']);
+
+        asToken(seededUser('admin'), 'PUT', "/api/v1/profiles/{$admin->id}", ['is_system' => false])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('is_system');
+
+        // Name and description are the administrator's to change.
+        $this->actingAs(seededUser('admin'))
+            ->put("/admin/profiles/{$admin->id}", ['name' => 'Administradores', 'description' => 'Tudo'])
+            ->assertRedirect();
+
+        expect($admin->fresh())
+            ->slug->toBe(Profile::ADMIN)
+            ->is_system->toBeTrue()
+            ->name->toBe('Administradores')
+            ->and(seededUser('admin')->hasPermission('users.delete'))->toBeTrue();
+    });
+
+    it('refuses to change the administrator profile identifier in the use case too', function () {
+        $admin = Profile::where('slug', Profile::ADMIN)->sole();
+
+        expect(fn () => UpdateProfile::execute($admin, new UpdateProfileDto(['slug' => 'root']), AuditContext::system()))
+            ->toThrow(LogicException::class);
+
+        expect($admin->fresh()->slug)->toBe(Profile::ADMIN);
     });
 });
 
@@ -182,10 +266,10 @@ describe('Delete profile', function () {
         expect(Profile::whereKey($profile->id)->exists())->toBeFalse()
             ->and(DB::table('menu_profiles')->where('profile_id', $profile->id)->exists())->toBeFalse()
             ->and(AuditLog::where('action', 'profile_deleted')->sole()->meta)
-            ->toEqual(['slug' => $profile->slug, 'name' => $profile->name]);
+            ->toEqual(['slug' => $profile->slug, 'name' => $profile->name, 'is_system' => false]);
     });
 
-    it('refuses a system profile and a profile held by users', function (Closure $profile) {
+    it('refuses the administrator profile and a profile held by users, even for the administrator', function (Closure $profile) {
         $target = $profile();
 
         $this->actingAs(seededUser('admin'))
@@ -195,9 +279,24 @@ describe('Delete profile', function () {
         expect(Profile::whereKey($target->id)->exists())->toBeTrue()
             ->and(AuditLog::where('action', 'profile_deleted')->exists())->toBeFalse();
     })->with([
-        'system profile' => [fn () => Profile::where('slug', 'dev')->sole()],
+        'administrator profile' => [fn () => Profile::where('slug', Profile::ADMIN)->sole()],
         'profile with users' => [fn () => tap(Profile::factory()->create(), fn (Profile $p) => $p->users()->attach(User::factory()->create()))],
     ]);
+
+    it('lets only the administrator delete a system profile nobody holds', function () {
+        $system = Profile::factory()->create(['is_system' => true]);
+
+        $this->actingAs(userWithPermissions(['profiles' => ['view', 'delete']]))
+            ->delete("/admin/profiles/{$system->id}")
+            ->assertForbidden();
+
+        $this->actingAs(seededUser('admin'))
+            ->delete("/admin/profiles/{$system->id}")
+            ->assertRedirect(route('admin.profiles.index'));
+
+        expect(Profile::whereKey($system->id)->exists())->toBeFalse()
+            ->and(AuditLog::where('action', 'profile_deleted')->sole()->meta['is_system'])->toBeTrue();
+    });
 
     it('keeps a profile with users even when the Policy is bypassed', function () {
         // The Action checks again with the row locked: an assignment made
@@ -332,14 +431,22 @@ describe('Permission matrix', function () {
             ->assertForbidden();
     });
 
-    it('keeps the matrix of system profiles immutable, including for the administrator', function () {
+    it('lets only the administrator change the matrix of a system profile', function () {
         $viewer = Profile::where('slug', 'viewer')->sole();
+        $delegate = userWithPermissions(['profiles' => ['view'], 'permissions' => ['update'], 'users' => ['view']]);
 
-        $this->actingAs(seededUser('admin'))
+        $this->actingAs($delegate)
             ->put("/admin/profiles/{$viewer->id}/permissions", matrixForm(['users.view']))
             ->assertForbidden();
 
         expect($viewer->menus()->count())->toBe(0);
+
+        $this->actingAs(seededUser('admin'))
+            ->put("/admin/profiles/{$viewer->id}/permissions", matrixForm(['users.view']))
+            ->assertRedirect();
+
+        expect($viewer->fresh()->permissionKeys()->all())->toBe(['users.view'])
+            ->and(seededUser('viewer')->hasPermission('users.view'))->toBeTrue();
     });
 
     it('presents the administrator profile as holding every permission implicitly', function () {
