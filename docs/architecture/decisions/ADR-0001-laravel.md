@@ -14,7 +14,8 @@ ORM, eventos e testes, mantida por uma pessoa, como peça de portfólio.
 ## Decision
 
 A aplicação usa **Laravel 13** (`laravel/framework ^13.17`, instalado 13.32)
-sobre PHP `^8.3`. A configuração segue o formato moderno do framework:
+sobre PHP `^8.4.27` (com `config.platform.php` fixado em `8.4.27`, para o
+Composer resolver dependências como se rodasse nessa versão). A configuração segue o formato moderno do framework:
 `bootstrap/app.php` com `Application::configure()`, sem `app/Http/Kernel.php`
 e sem `EventServiceProvider` próprio. O único provider da aplicação é
 `AppServiceProvider`.

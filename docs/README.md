@@ -18,7 +18,7 @@ organizado em duas áreas conceituais:
   sintéticos. Dois testes: IDOR/BOLA e Mass Assignment. Desligado por
   padrão; veja [modules/security.md](modules/security.md).
 
-Stack confirmada no repositório: Laravel 13.32, PHP 8.4 (constraint `^8.3`),
+Stack confirmada no repositório: Laravel 13.32, PHP 8.4.27 (constraint `^8.4.27`, plataforma do Composer fixada em `8.4.27`),
 PostgreSQL, Sanctum 4, Pest 4, Larastan (nível 6) e Pint (preset `laravel`).
 
 ## Arquitetura
