@@ -30,8 +30,10 @@ class MenuPolicy
     public function delete(User $actor, Menu $menu): bool
     {
         // System menus carry the permission keys referenced by the routes;
-        // deleting one would cascade away its matrix rows (FIND-005).
-        return ! $menu->is_system
+        // deleting one cascades away its matrix rows, leaving the area to
+        // the administrator until the menu is seeded again (FIND-005). Only
+        // the administrator may do that (Phase 4.4 revision).
+        return (! $menu->is_system || $actor->isAdministrator())
             && ! $menu->children()->exists()
             && $actor->hasPermission('menus.delete');
     }

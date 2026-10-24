@@ -6,6 +6,17 @@ use App\Models\Menu;
 use App\Models\Profile;
 use App\Models\User;
 
+/**
+ * A system profile is managed by the administrator only: it can be edited,
+ * deleted and have its matrix changed by them, and by nobody else, whatever
+ * permissions they hold (Phase 4.4 revision; before it, system profiles were
+ * immutable for everyone).
+ *
+ * The administrator profile itself stays fixed for everyone: it cannot be
+ * deleted (see delete()), and its matrix does not apply, since it holds every
+ * permission implicitly. Its identifier is guarded by ProfileUpdateRequest
+ * and UpdateProfile.
+ */
 class ProfilePolicy
 {
     public function viewAny(User $actor): bool
@@ -25,27 +36,32 @@ class ProfilePolicy
 
     public function update(User $actor, Profile $profile): bool
     {
-        return ! $profile->is_system
+        return $this->reachable($actor, $profile)
             && $actor->hasPermission('profiles.update');
     }
 
+    /**
+     * The administrator profile is never deletable without a rule of its
+     * own: at least one active user always holds it (INV-08), and a profile
+     * with users is not deleted.
+     */
     public function delete(User $actor, Profile $profile): bool
     {
-        return ! $profile->is_system
+        return $this->reachable($actor, $profile)
             && ! $profile->users()->exists()
             && $actor->hasPermission('profiles.delete');
     }
 
     /**
-     * System profiles are immutable, for everyone. Besides that, anyone other
-     * than an administrator may not edit the matrix of a profile they hold,
-     * nor grant a flag they do not hold themselves.
+     * Besides the system rule, anyone other than an administrator may not
+     * edit the matrix of a profile they hold, nor grant a flag they do not
+     * hold themselves.
      *
      * @param  array<mixed, mixed>  $permissions  Requested matrix, not yet validated.
      */
     public function syncMenus(User $actor, Profile $profile, array $permissions = []): bool
     {
-        if ($profile->is_system || ! $actor->hasPermission('permissions.update')) {
+        if ($profile->isAdministrator() || ! $actor->hasPermission('permissions.update')) {
             return false;
         }
 
@@ -53,7 +69,7 @@ class ProfilePolicy
             return true;
         }
 
-        if ($actor->profiles->contains($profile)) {
+        if ($profile->is_system || $actor->profiles->contains($profile)) {
             return false;
         }
 
@@ -72,5 +88,13 @@ class ProfilePolicy
         }
 
         return true;
+    }
+
+    /**
+     * Only an administrator reaches a system profile.
+     */
+    private function reachable(User $actor, Profile $profile): bool
+    {
+        return ! $profile->is_system || $actor->isAdministrator();
     }
 }

@@ -29,7 +29,7 @@ class MenuDeleted implements Auditable
             'subject_type' => Menu::class,
             'subject_id' => $this->menu->id,
             // The row is gone, so the entry says which menu it was.
-            'meta' => ['key' => $this->menu->key],
+            'meta' => ['key' => $this->menu->key, 'is_system' => $this->menu->is_system],
         ];
     }
 }

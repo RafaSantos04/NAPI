@@ -29,7 +29,7 @@ class ProfileDeleted implements Auditable
             'subject_type' => Profile::class,
             'subject_id' => $this->profile->id,
             // The row is gone, so the entry says which profile it was.
-            'meta' => ['slug' => $this->profile->slug, 'name' => $this->profile->name],
+            'meta' => ['slug' => $this->profile->slug, 'name' => $this->profile->name, 'is_system' => $this->profile->is_system],
         ];
     }
 }

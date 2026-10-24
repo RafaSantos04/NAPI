@@ -9,9 +9,10 @@ use App\Models\Profile;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Shared by the API and the admin area (Phase 4.3). A new profile is never
- * a system profile and starts with an empty matrix: it grants nothing until
- * permissions are set through SyncMenuPermissions.
+ * Shared by the API and the admin area (Phase 4.3). A new profile starts
+ * with an empty matrix: it grants nothing until permissions are set through
+ * SyncMenuPermissions. It is a system profile only when the administrator
+ * asked for it.
  */
 class CreateProfile
 {
@@ -22,6 +23,7 @@ class CreateProfile
                 'name' => $dto->name,
                 'slug' => $dto->slug,
                 'description' => $dto->description,
+                'is_system' => $dto->isSystem,
             ]);
 
             event(new ProfileCreated($profile, $context));

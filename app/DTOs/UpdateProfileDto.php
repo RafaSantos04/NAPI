@@ -7,13 +7,14 @@ use Illuminate\Support\Arr;
 
 /**
  * Editable attributes of a profile, only the ones present in the request.
- * The constructor keeps FIELDS and drops anything else (`is_system`
- * included), whoever builds the DTO. A description sent empty arrives as
- * null and clears the field.
+ * The constructor keeps FIELDS and drops anything else, whoever builds the
+ * DTO. `is_system` is one of them, but only the administrator gets it past
+ * ProfileUpdateRequest. A description sent empty arrives as null and clears
+ * the field.
  */
 readonly class UpdateProfileDto
 {
-    public const FIELDS = ['name', 'slug', 'description'];
+    public const FIELDS = ['name', 'slug', 'description', 'is_system'];
 
     /**
      * @var array<string, mixed>
