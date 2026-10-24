@@ -140,6 +140,32 @@ concorrência; acesso de contas desativadas; divergência entre listagem e
 detalhe. Veja a seção [Mitigações da Fase 3.2](../../security/threat-model.md#mitigações-da-fase-32)
 do threat model.
 
+## Adendo (Fase 4.4, revisão)
+
+Pedido do responsável pelo projeto: o Administrador precisa gerenciar perfis
+e menus de sistema, para testes e atribuições. As decisões 2 e 3 mudam assim:
+
+- **Perfil de sistema passa a significar "só o Administrador gerencia".**
+  O Administrador edita, exclui (sem usuários) e altera a matriz de perfis
+  de sistema, e marca ou desmarca `is_system` ao criar ou editar. Para
+  qualquer outro ator, mesmo com `profiles.*` ou `permissions.update`, o
+  perfil de sistema continua fora de alcance, e `is_system` é recusado na
+  entrada (`prohibited_if`, 422), na API e no admin.
+- **O perfil Administrador continua fixo para todos.** O identificador
+  `admin` não muda (é por ele que `User::isAdministrator()` reconhece o
+  superusuário): a request o recusa e `UpdateProfile` lança `LogicException`
+  se algo passar. Ele continua sendo de sistema, a matriz não se aplica a ele
+  e ele não é excluído, porque sempre tem um usuário ativo (INV-08).
+- **Menu de sistema pode ser excluído pelo Administrador.** Só por ele. Até o
+  menu voltar (`php artisan db:seed --class=MenuSeeder` o recria), a área
+  fica só para o Administrador, e as linhas de matriz dos perfis nela não
+  voltam sozinhas. A chave continua imutável para todos.
+- `profile_deleted` e `menu_deleted` passam a registrar `is_system`.
+
+O que não muda: o Administrador continua sem atalho nas camadas 2, 4 e 5
+fora desses casos, e a decisão vale pelo método `isAdministrator()` do
+domínio IAM, não por checagem de slug fora dele.
+
 ## References
 
 - `app/Models/User.php` (`hasPermission`, `permissionKeys`, `holdsPermissionsOf`), `app/Models/Menu.php` (`permissionFor`), `app/Models/MenuProfile.php` (`ACTIONS`)

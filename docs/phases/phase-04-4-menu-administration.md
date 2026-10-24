@@ -180,3 +180,25 @@ navegador interativo.
 
 Reordenação por arrastar; ícones visuais; barra lateral do admin gerada a
 partir de `menus`; menus de área sem tela (`audit-logs`).
+
+## Revisão: menus de sistema geridos pelo Administrador
+
+Junto com a revisão dos perfis ([Fase 4.3](phase-04-3-profile-permissions.md#revisão-perfis-de-sistema-geridos-pelo-administrador)).
+Rótulo, rota, pai, ordem e status de menus de sistema já eram editáveis; a
+mudança é a exclusão.
+
+- `MenuPolicy::delete`: menu de sistema só pelo Administrador. Menu com
+  submenus continua recusado para todos.
+- A chave continua imutável para todos.
+- Excluído, o menu leva as linhas de matriz da área. As rotas continuam
+  exigindo `{chave}.{ação}`, então a área fica só para o Administrador
+  (permissões implícitas) até o menu voltar com
+  `php artisan db:seed --class=MenuSeeder`. As permissões dos perfis não
+  voltam sozinhas. A página do menu e a confirmação avisam.
+- `MenuDeleted` registra `meta.is_system`.
+- No painel "perfis do menu", o Administrador passa a ver os perfis de
+  sistema como editáveis; o perfil `admin` continua sem campos.
+
+Teste: `MenuManagementTest › lets only the administrator delete a system
+menu, until the seeder brings it back`; `AuthorizationMatrixTest › does not
+let anyone but the administrator delete a system menu`.

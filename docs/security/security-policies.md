@@ -74,10 +74,11 @@ se a regra quebrasse.
 - **Risco mitigado**: auto-concessão de acesso via matriz.
 - **Fase 3.2**: a negação para não-admins passou a ter teste. A delegação a perfis customizados é nova e vem limitada pelo que o delegado tem.
 
-### INV-04 — Perfis de sistema são imutáveis pela API
+### INV-04 — Perfis de sistema só são geridos pelo Administrador; o perfil Administrador é fixo
 
 - **Motivação**: `admin`, `dev` e `viewer` são a base do modelo de acesso.
-- **Aplicação**: `ProfilePolicy::update/delete/syncMenus` retornam `false` se `is_system`. `is_system` não é aceito em nenhum FormRequest.
+- **Aplicação**: até a revisão da Fase 4.4, `ProfilePolicy::update/delete/syncMenus` recusavam todo perfil `is_system`. Desde ela, recusam para quem não é Administrador; o Administrador edita, exclui (sem usuários) e altera a matriz. `is_system` só é aceito na entrada do Administrador (`prohibited_if` em `ProfileStore/UpdateRequest`). O perfil `admin` é fixo para todos: identificador `prohibited` na request e guardado em `UpdateProfile`, sempre de sistema, matriz recusada em `syncMenus`, e nunca excluído porque sempre tem usuário ativo (INV-08). Veja o [adendo do ADR-0008](../architecture/decisions/ADR-0008-layered-authorization-model.md#adendo-fase-44-revisão).
+- **Teste (revisão da 4.4)**: `ProfileManagementTest › keeps system profiles out of reach of everyone but the administrator`, `lets the administrator edit a system profile, and unmark it`, `keeps the identifier of the administrator profile, and keeps it a system profile`, `does not let anyone else mark a profile as system, in either channel`; `PrivilegeEscalationTest › keeps system profiles out of reach of delegates`.
 - **Teste**: `blocks deletion of system profile` (403), `keeps system profiles immutable, including for admin` (sync, 403).
 - **Fase 3.2**: o efeito colateral registrado na Fase 3.1 (o perfil admin não recebe permissões em menus novos) deixou de existir, porque o admin detém todas as permissões funcionais implicitamente.
 
@@ -87,9 +88,9 @@ se a regra quebrasse.
 - **Teste**: `blocks deletion of profile with users` (HTTP 403), `prevents deleting a profile that still has users` (Policy direta), `ProfileManagementTest › keeps a profile with users even when the Policy is bypassed`.
 - **Risco mitigado**: revogação silenciosa em massa, já que a FK tem `cascade` em `user_profiles`.
 
-### INV-06 — Menu com filhos, ou de sistema, não pode ser excluído
+### INV-06 — Menu com filhos não é excluído; menu de sistema, só pelo Administrador
 
-- **Aplicação**: `MenuPolicy::delete` (`is_system` ou `children()->exists()`). Desde a Fase 4.4, `DeleteMenu` reconfere os submenus com a linha travada.
+- **Aplicação**: `MenuPolicy::delete` (`children()->exists()`; `is_system` só para o Administrador, desde a revisão da Fase 4.4). Desde a Fase 4.4, `DeleteMenu` reconfere os submenus com a linha travada. Um menu de sistema excluído deixa a área só para o Administrador até o `MenuSeeder` recriá-lo.
 - **Teste**: `blocks deletion of menu with children` (403), `does not allow deleting a system menu` (403), `MenuManagementTest › keeps a menu with submenus even when the Policy is bypassed`.
 - **Risco mitigado**: exclusão em cascata de subárvores, das permissões associadas e das chaves usadas pelas rotas.
 - **Fase 3.2**: a proteção de menus de sistema é nova ([FIND-005](../findings/README.md#find-005--menus-são-chaves-de-autorização-sem-proteção-de-sistema)).
@@ -125,7 +126,7 @@ se a regra quebrasse.
 
 - **Aplicação**: controllers persistem só `$request->validated()` (usuários, desde a Fase 4.2, por `CreateUserDto`/`UpdateUserDto`, que só carregam nome, e-mail e senha); nenhum FormRequest aceita `is_system` ou `is_active`; `key` de menu é `prohibited` na atualização; `#[Fillable]` + `Model::shouldBeStrict()`.
 - **Teste**: `UserTest › has fillable protection`, `does not accept is_system from the client`, `does not allow changing a menu key`; `UserManagementTest › ignores privileged fields in the payload`, `does not let the edit form change status, password or profiles`, `creates users through the API with the shared Action`.
-- **Fases 4.3 e 4.4**: perfis e menus passaram a ser gravados por Actions com DTO. Os DTOs de atualização filtram no construtor (`UpdateProfileDto` sem `is_system`, `UpdateMenuDto` sem `key`), então o contrato vale para qualquer chamador, não só para a request.
+- **Fases 4.3 e 4.4**: perfis e menus passaram a ser gravados por Actions com DTO. Os DTOs de atualização filtram no construtor (`UpdateMenuDto` sem `key`), então o contrato vale para qualquer chamador, não só para a request. Desde a revisão da 4.4, `is_system` de perfil é aceito, mas só do Administrador; o de menu continua fora.
 - **Risco mitigado**: mass assignment. O [Security Lab](mass-assignment.md) demonstra a falha e este controle sobre dados sintéticos (Fase 5.2).
 
 ### INV-12 — Tokens só são geridos pelo dono
@@ -166,7 +167,7 @@ se a regra quebrasse.
 
 ### INV-18 — A identidade de uma permissão é estável (Fase 3.2)
 
-- **Aplicação**: `menus.key` único e imutável (`prohibited` na atualização), separado do `route_name` de navegação; menus-chave `is_system` não são excluídos.
+- **Aplicação**: `menus.key` único e imutável (`prohibited` na atualização), separado do `route_name` de navegação; menus-chave `is_system` só são excluídos pelo Administrador (revisão da Fase 4.4), e a chave continua imutável.
 - **Teste**: `keeps authorization when a menu route_name or label is renamed`, `does not allow changing a menu key`, `does not allow deleting a system menu`.
 - **Risco mitigado**: lockout administrativo por edição de dados de navegação ([FIND-005](../findings/README.md#find-005--menus-são-chaves-de-autorização-sem-proteção-de-sistema)).
 

@@ -121,9 +121,9 @@ apenas o que depende da instância ou do ator:
 | `UserPolicy::deactivate` | nunca a si mesmo; só admin desativa administrador (Fase 4.2) |
 | `UserPolicy::activate` | só admin reativa administrador (Fase 4.2) |
 | `UserPolicy::assignProfiles` | admin: livre (a invariante protege o último). Os demais não alteram os próprios perfis, não mexem em administrador e não adicionam nem removem perfil com permissão que não têm |
-| `ProfilePolicy::update/delete` | perfil `is_system` imutável; `delete` também sem usuários |
-| `ProfilePolicy::syncMenus` | perfil `is_system` imutável (inclusive para admin). Os demais não editam a matriz de um perfil que possuem e não concedem flags que não têm |
-| `MenuPolicy::delete` | menu `is_system` não é excluído; menu com filhos também não |
+| `ProfilePolicy::update/delete` | perfil `is_system` só para o Administrador (revisão da Fase 4.4); `delete` também sem usuários, o que mantém o perfil `admin` |
+| `ProfilePolicy::syncMenus` | perfil `admin` nunca (permissões implícitas); perfil `is_system` só para o Administrador. Os demais não editam a matriz de um perfil que possuem e não concedem flags que não têm |
+| `MenuPolicy::delete` | menu com filhos não é excluído; menu `is_system`, só pelo Administrador (revisão da Fase 4.4) |
 | `SecurityTestRunPolicy::viewAny`/`create` | nenhuma: `security-lab.view` e `security-lab.create` (Fase 5.1). Vale para todos os testes do laboratório |
 | `SecurityLabResourcePolicy::view` | só o dono do recurso sintético, sem exceção para `admin`. É o controle que o [teste IDOR](idor.md) demonstra, avaliado para o actor com `Gate::forUser()` |
 
@@ -170,7 +170,7 @@ automaticamente: desde as Fases 4.3 e 4.4, `Perfis` (`profiles.view`) e
 **Perfis, matriz e menus (Fases 4.3 e 4.4).** As telas usam as mesmas
 requests, Policies e Actions da API. A matriz é salva com
 `permissions.update` e `ProfilePolicy::syncMenus`, que continua aplicando a
-anti-escalação: perfil de sistema imutável, ninguém além do Administrador
+anti-escalação: perfil de sistema só para o Administrador, ninguém além dele
 edita a matriz de um perfil que tem, e ninguém concede flag que não tem. A
 página pergunta à mesma Policy se a matriz atual poderia ser salva pelo ator
 e, se não, mostra só leitura. Desabilitar as células que o ator não tem é
@@ -212,7 +212,7 @@ não concede acesso (`MenuTreeTest`).
 ## Dados do cliente nunca são autorização
 
 - O ator vem sempre do token, nunca do corpo.
-- `is_system` não é aceito em perfis nem em menus, e `Menu` não o tem em `#[Fillable]`.
+- `is_system` não é aceito em menus, e `Menu` não o tem em `#[Fillable]`. Em perfis, desde a revisão da Fase 4.4, só o Administrador o envia (`prohibited_if`); para os demais é 422.
 - `key` de menu é `prohibited` na atualização.
 - `is_active` não é aceito por `UserStoreRequest`/`UserUpdateRequest`.
 - Controllers persistem apenas `$request->validated()`.

@@ -158,3 +158,30 @@ O que cada um garante está em [security-tests.md](../testing/security-tests.md#
 
 Atribuição de perfis a usuários (já existe no detalhe do usuário, Fase 4.2);
 cópia de perfis; matriz por usuário; viewer de `audit_logs`.
+
+## Revisão: perfis de sistema geridos pelo Administrador
+
+Pedido depois da entrega, para testes e atribuições. Decisão registrada no
+[adendo do ADR-0008](../architecture/decisions/ADR-0008-layered-authorization-model.md#adendo-fase-44-revisão).
+
+| Antes | Depois |
+|---|---|
+| Perfil de sistema imutável para todos, inclusive o Administrador | Só o Administrador edita, exclui (sem usuários) e altera a matriz |
+| `is_system` nunca aceito na entrada | Aceito só do Administrador, na criação e na edição; 422 para os demais, na API e no admin |
+| Perfil `admin` imutável | Nome e descrição editáveis pelo Administrador; identificador fixo, sempre de sistema, sem matriz, nunca excluído |
+
+| Componente | Decisão |
+|---|---|
+| `ProfilePolicy` | `reachable()`: perfil de sistema só para o Administrador; `syncMenus` recusa o perfil `admin` para todos |
+| `ProfileStore/UpdateRequest` | `is_system` com `prohibited_if` (não-Administrador, ou perfil `admin`); `slug` `prohibited` no perfil `admin` |
+| `CreateProfileDto`, `UpdateProfileDto`, `CreateProfile` | carregam `is_system` |
+| `UpdateProfile` | `LogicException` se algo tentar mudar o identificador do perfil `admin` ou desmarcá-lo como sistema |
+| Formulário | caixa "Perfil de sistema" só para o Administrador; identificador do perfil `admin` como texto |
+| `ProfileDeleted` | `meta.is_system` |
+| Regra própria para não excluir o perfil `admin` | **Não criada**: ele sempre tem usuário ativo (INV-08), e perfil com usuários não é excluído. Uma checagem a mais seria código que nunca decide |
+
+Testes: `ProfileManagementTest` passou a cobrir o Administrador editando,
+desmarcando e excluindo perfis de sistema, a recusa para quem não é
+Administrador nos dois canais, o identificador fixo do perfil `admin` (request
+e caso de uso) e a matriz de perfis de sistema; `PrivilegeEscalationTest`
+ganhou `keeps system profiles out of reach of delegates`.

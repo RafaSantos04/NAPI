@@ -27,7 +27,7 @@ decisão registrada na Fase 3), ela é citada.
 | [ADR-0005](ADR-0005-event-driven-audit.md) | Auditoria de operações IAM como reação síncrona a eventos de domínio | Accepted (evoluído na Fase 3.2) |
 | [ADR-0006](ADR-0006-route-permission-matrix.md) | Matriz perfil × menu como autorização por rota, negando com 404 | Superseded by ADR-0008 |
 | [ADR-0007](ADR-0007-dto-action-boundary.md) | DTO + Action apenas para casos de uso com regra de negócio | Accepted (complementado nas Fases 4.2, 4.3 e 4.4) |
-| [ADR-0008](ADR-0008-layered-authorization-model.md) | Autorização em camadas: autenticação, ability do token, permissão funcional (`menus.key`), Policy e invariante de domínio | Accepted (Fase 3.2) |
+| [ADR-0008](ADR-0008-layered-authorization-model.md) | Autorização em camadas: autenticação, ability do token, permissão funcional (`menus.key`), Policy e invariante de domínio | Accepted (Fase 3.2; adendo na revisão da Fase 4.4) |
 | [ADR-0009](ADR-0009-web-session-and-bearer-adapters.md) | Sessão web (Blade) e Bearer (API) como adapters separados do mesmo domínio; sem SPA por cookie | Accepted (Fase 4.2) |
 | [ADR-0010](ADR-0010-controlled-security-lab.md) | Security Lab controlado: código vulnerável só dentro de um caso de uso, alvos e personas sintéticos, feature flag desligada por padrão | Accepted (Fase 5.1, complementado na Fase 5.2) |
 

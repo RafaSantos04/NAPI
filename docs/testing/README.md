@@ -18,7 +18,7 @@
 - Qualidade complementar: `composer lint` (Pint) e `composer analyse`
   (Larastan nível 6 em `app/`).
 
-## Inventário (386 testes, Fases 4.3 e 4.4)
+## Inventário (393 testes, Fases 4.3 e 4.4 com a revisão)
 
 | Categoria | Arquivo | Testes | Nível |
 |---|---|---|---|
@@ -43,7 +43,7 @@
 | Security Lab: histórico do IDOR | `Feature/SecurityLab/SecurityLabHistoryTest.php` | 13 | HTTP |
 | Admin: shell e sessão | `Feature/Admin/AdminShellTest.php` | 19 | HTTP, sessão `web` |
 | Admin: usuários | `Feature/Admin/UserManagementTest.php` | 49 | HTTP (sessão e Bearer) + Action |
-| Admin: perfis e matriz | `Feature/Admin/ProfileManagementTest.php` | 26 | HTTP (sessão e Bearer) + Action + exceção |
+| Admin: perfis e matriz | `Feature/Admin/ProfileManagementTest.php` | 32 | HTTP (sessão e Bearer) + Action + exceção |
 | Admin: menus | `Feature/Admin/MenuManagementTest.php` | 42 | HTTP (sessão e Bearer) + Action + constraint |
 | Model/DB: Users | `Feature/UserTest.php` | 10 | Eloquent + constraints |
 | Model/DB: Profiles | `Feature/ProfileTest.php` | 5 | Eloquent + constraints |

@@ -77,7 +77,7 @@ A PK composta impede atribuir o mesmo perfil duas vezes.
 | `icon` | varchar(50) | nullable |
 | `order` | integer | default 0; indexado |
 | `is_active` | boolean | default `true`; só navegação, não afeta autorização |
-| `is_system` | boolean | default `false`; menus-chave não excluíveis pela API (Fase 3.2) |
+| `is_system` | boolean | default `false`; menus-chave, só o Administrador exclui (Fase 3.2; revisão da Fase 4.4) |
 | `description` | text | nullable |
 
 `key` e `is_system` foram adicionadas na Fase 3.2 diretamente na migration
