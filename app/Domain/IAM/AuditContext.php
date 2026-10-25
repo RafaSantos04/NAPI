@@ -15,6 +15,7 @@ final readonly class AuditContext
         public ?string $actorId,
         public ?string $ip = null,
         public ?string $userAgent = null,
+        public ?string $organizationId = null,
     ) {}
 
     public static function fromRequest(Request $request): self
@@ -23,15 +24,21 @@ final readonly class AuditContext
     }
 
     /**
-     * @return array{user_id: ?string, ip: ?string, user_agent: ?string}
+     * @return array{user_id: ?string, organization_id: ?string, ip: ?string, user_agent: ?string}
      */
     public function toAuditAttributes(): array
     {
         return [
             'user_id' => $this->actorId,
+            'organization_id' => $this->organizationId,
             'ip' => $this->ip,
             'user_agent' => $this->userAgent,
         ];
+    }
+
+    public function forOrganization(string $organizationId): self
+    {
+        return new self($this->actorId, $this->ip, $this->userAgent, $organizationId);
     }
 
     /**

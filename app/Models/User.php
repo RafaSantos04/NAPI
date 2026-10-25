@@ -93,6 +93,14 @@ class User extends Authenticatable
         return $this->hasMany(AuditLog::class);
     }
 
+    /**
+     * @return HasMany<OrganizationMembership, $this>
+     */
+    public function organizationMemberships(): HasMany
+    {
+        return $this->hasMany(OrganizationMembership::class);
+    }
+
     public function hasProfile(string $slug): bool
     {
         // Accessing the relation as a property (not calling profiles()) lets
@@ -115,8 +123,19 @@ class User extends Authenticatable
      * added after it was seeded. Contextual Policy rules and domain
      * invariants still apply to it.
      */
-    public function hasPermission(string $permission): bool
+    public function hasPermission(string $permission, ?Organization $organization = null): bool
     {
+        if ($organization !== null) {
+            if (! $this->is_active || $this->trashed()) {
+                return false;
+            }
+
+            return $this->organizationMemberships()
+                ->whereBelongsTo($organization)
+                ->first()
+                ?->grants($permission) ?? false;
+        }
+
         $parts = explode('.', $permission);
 
         if (count($parts) !== 2 || ! in_array($parts[1], MenuProfile::ACTIONS, true)) {
