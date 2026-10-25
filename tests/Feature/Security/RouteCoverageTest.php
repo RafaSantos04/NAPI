@@ -29,7 +29,10 @@ function hasPermissionMiddleware(RoutingRoute $route): bool
 
 describe('API route coverage', function () {
     // Self-service routes: their scope is the caller's own account.
-    $selfService = ['auth.logout', 'auth.me', 'tokens.index', 'tokens.store', 'tokens.destroy', 'menus.tree'];
+    $selfService = [
+        'auth.logout', 'auth.me', 'tokens.index', 'tokens.store', 'tokens.destroy',
+        'menus.tree', 'organizations.index', 'organizations.store',
+    ];
 
     it('authenticates every API route except login and checks the token ability', function () {
         foreach (routesUnder('api/*') as $route) {
@@ -59,6 +62,14 @@ describe('API route coverage', function () {
             expect($middleware)
                 ->not->toContain(StartSession::class)
                 ->not->toContain(EnsureFrontendRequestsAreStateful::class);
+        }
+    });
+
+    it('resolves organization context before every tenant permission', function () {
+        foreach (routesUnder('api/v1/organizations/{organization}*') as $route) {
+            expect($route->gatherMiddleware())
+                ->toContain('organization.context');
+            expect(hasPermissionMiddleware($route))->toBeTrue("{$route->uri()} has no tenant permission");
         }
     });
 });

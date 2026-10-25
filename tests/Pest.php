@@ -1,6 +1,10 @@
 <?php
 
+use App\Domain\Tenancy\Enums\OrganizationMembershipStatus;
+use App\Domain\Tenancy\Enums\OrganizationRole;
 use App\Models\Menu;
+use App\Models\Organization;
+use App\Models\OrganizationMembership;
 use App\Models\Profile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -151,4 +155,18 @@ function adminLogin(User $user, string $password = 'password'): TestResponse
     app('auth')->forgetGuards();
 
     return $response;
+}
+
+function organizationFor(
+    User $user,
+    OrganizationRole $role = OrganizationRole::Owner,
+    OrganizationMembershipStatus $status = OrganizationMembershipStatus::Active,
+): Organization {
+    $organization = Organization::factory()->create();
+    OrganizationMembership::factory()->for($organization)->for($user)->create([
+        'role' => $role,
+        'status' => $status,
+    ]);
+
+    return $organization;
 }
