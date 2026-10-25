@@ -11,6 +11,8 @@
 - Prefixo e versão: `/api/v1`, definido em `routes/api.php`.
 - Autenticação: `Authorization: Bearer <token>`, exceto no login.
 - Identificadores: ULID nos recursos de IAM; inteiro nos tokens.
+- Tenancy: a Organization corrente vem de `/organizations/{organization}`;
+  não há seleção por header ou sessão.
 - Erros: sempre JSON em `api/*` (`bootstrap/app.php`).
 - Negação de acesso: 404 por padrão; veja
   [authorization.md](../security/authorization.md).

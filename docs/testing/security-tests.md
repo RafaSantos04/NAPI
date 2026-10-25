@@ -132,6 +132,10 @@ teste; payload aceitando qualquer chave; rota de execução pedindo só `view`.
 | INV-23 operator real, sessão intacta, falha ≠ proteção | `Operator, actor and session`, `Operational errors` (dos dois testes) | `SecurityLab/IdorTestExecutionTest`, `SecurityLab/MassAssignmentTestExecutionTest` |
 | INV-24 teste que escreve não deixa estado | `Repeatability`, `stores the run and restores the document when the database refuses the write` | `SecurityLab/MassAssignmentTestExecutionTest` |
 | INV-25 hierarquia de menus sem ciclos | `Hierarchy` | `Admin/MenuManagementTest` |
+| INV-26 isolamento entre Organizations | `TenantIsolationTest` (5), inclusive id e membership trocados | `Tenancy/TenantIsolationTest` |
+| INV-27 ao menos um owner válido por Organization | `OrganizationOwnerInvariantTest` (7), inclusive desativação/exclusão global | `Tenancy/OrganizationOwnerInvariantTest` |
+| INV-28 auditoria é append-only e tem tenant | `Append-only audit trail` (3), eventos de Organization/Membership | `Tenancy/OrganizationTest`, `Tenancy/OrganizationMembershipTest` |
+| INV-29 membership tem lifecycle e conjuntos fechados | duplicidade, usuário inativo, role/status inválidos, disable/reativação | `Tenancy/OrganizationMembershipTest` |
 | INV-05/06 reconferidas sob lock | `keeps a profile with users even when the Policy is bypassed`, `keeps a menu with submenus even when the Policy is bypassed` | `Admin/ProfileManagementTest`, `Admin/MenuManagementTest` |
 | Integridade de vínculos | testes de `force deleting … cascades` | `UserTest`, `ProfileTest`, `MenuTest` |
 
@@ -140,6 +144,7 @@ teste; payload aceitando qualquer chave; rota de execução pedindo só `view`.
 | Lacuna | Motivo / relacionado |
 |---|---|
 | Corrida concorrente na invariante de administrador | `RefreshDatabase` usa uma única transação por teste, então duas conexões simultâneas não enxergam os dados. O lock foi verificado manualmente no PostgreSQL (INV-08) |
+| Corrida concorrente na invariante de owner | A suíte cobre o protocolo e as falhas; o lock comum na linha da Organization serializa mudanças em memberships diferentes, mas o mesmo limite de `RefreshDatabase` impede um teste paralelo real |
 | 401 em cada rota individual de Profiles, Menus e Tokens | INV-01; o grupo é único, e o 401 é testado em `/auth/me` e com token inválido |
 | Login falho auditado | adiado (FIND-012) |
 | Enumeração no login por tempo | FIND-018, Fase 5 |

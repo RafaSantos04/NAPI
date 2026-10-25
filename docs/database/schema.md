@@ -22,6 +22,9 @@ erDiagram
     users |o--o{ security_test_runs : "initiated_by_user_id, set null"
     users |o--o{ security_test_runs : "acting_as_user_id, set null"
     security_lab_resources |o--o{ security_test_runs : "target_resource_id, set null"
+    users ||--o{ organization_memberships : "user_id, restrict"
+    organizations ||--o{ organization_memberships : "organization_id, restrict"
+    organizations |o--o{ audit_logs : "organization_id, set null"
 ```
 
 ## Tabelas
@@ -111,11 +114,40 @@ Sem timestamps: não há histórico de quando uma permissão mudou fora de
 
 ### `audit_logs`
 
-`id` ULID PK · `user_id` ULID FK **set null** · `action` varchar(50) ·
+`id` ULID PK · `user_id` ULID FK **set null** · `organization_id` ULID
+nullable FK **set null** (P1) · `action` varchar(50) ·
 `subject_type` varchar(100) · `subject_id` ULID · `ip` **inet** · `user_agent`
 text · `meta` **jsonb** · `created_at` default `CURRENT_TIMESTAMP`. Índices
 `(user_id, created_at)` e `(subject_type, subject_id)`. Sem `updated_at`.
 Veja [audit.md](../security/audit.md).
+
+Desde P1, o trigger `audit_logs_append_only` recusa `UPDATE` e `DELETE`; o
+model também recusa as duas operações. Inserts do listener continuam
+permitidos. O índice `(organization_id, created_at)` sustenta a trilha por
+tenant.
+
+### `organizations` (P1)
+
+`id` ULID PK · `name` varchar(100) · `slug` varchar(100) UNIQUE · timestamps.
+
+Organization é o boundary do tenant. P1 não adiciona status, billing,
+deleção nem soft delete.
+
+### `organization_memberships` (P1)
+
+| Coluna | Tipo | Constraint |
+|---|---|---|
+| `id` | ULID | PK |
+| `organization_id` | ULID | FK `organizations` **restrict** |
+| `user_id` | ULID | FK `users` **restrict** |
+| `role` | varchar(20) | CHECK `owner` \| `member` |
+| `status` | varchar(20) | CHECK `active` \| `disabled`; default `active` |
+| `created_at`, `updated_at` | timestamp | |
+
+UNIQUE `(organization_id, user_id)` impede memberships duplicadas. Índices
+`(user_id, status)` e `(organization_id, status, role)` atendem listagem do
+usuário, permissão contextual e invariante do owner. Remoção lógica do
+vínculo usa `status = disabled`; não há soft delete.
 
 ### `personal_access_tokens` (Sanctum)
 
@@ -204,9 +236,13 @@ de consultas sobre esta tabela.
 | `UNIQUE` | `email`, `profiles.name/slug`, `menus.key`, `menus.route_name`, `cpf_hash`, `token` | Última linha de defesa contra duplicidade (testes de validação) |
 | `SELECT … FOR UPDATE` | linha do perfil `admin` | Serializa as remoções de administrador; a invariante "≥ 1 admin ativo" não depende de check-then-act sem proteção (INV-08) |
 | Defaults booleanos | `menu_profiles.can_*` | Negação por padrão garantida no schema |
+| CHECKs de membership | role e status | recusam estados fora do lifecycle de P1 |
+| UNIQUE composto | `organization_memberships` | um vínculo por User e Organization |
+| `SELECT … FOR UPDATE` | linha da Organization | serializa remoção/demote/disable de owners diferentes |
+| Trigger | `audit_logs` | trilha append-only mesmo sem Eloquent |
 
-Não há uso de `restrict`: a proteção contra excluir perfis com usuários e
-menus com filhos ou de sistema é feita na **Policy**, não no banco. É uma
-escolha: o banco protege integridade, e a aplicação decide autorização. Como a exclusão é
-física (perfis e menus não têm soft delete), se a Policy falhar o `cascade`
-apaga os vínculos.
+P1 usa `restrict` nas duas FKs de `organization_memberships`, porque um
+vínculo histórico não pode desaparecer pela exclusão do User ou da
+Organization. Nos pivots legados de perfis e menus permanece `cascade`: a
+Policy e as Actions decidem a exclusão e o banco remove somente os vínculos
+dependentes depois que ela foi autorizada.

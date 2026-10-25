@@ -46,7 +46,7 @@ Nos demais casos, a evidência é a leitura do código citado.
 | [FIND-011](#find-011--validação-incompleta-na-sincronização-de-permissões) | Validação incompleta na sincronização de permissões | Maintainability | Low | RESOLVED | = |
 | [FIND-012](#find-012--lacunas-de-cobertura-da-auditoria) | Lacunas de cobertura da auditoria | Security | Medium | RESOLVED (parcial) | = · CRUD de perfil e menu auditado nas Fases 4.3/4.4 |
 | [FIND-013](#find-013--contexto-de-auditoria-acoplado-ao-processo-http-e-sem-atomicidade) | Contexto de auditoria acoplado ao processo HTTP e sem atomicidade | Architecture | Low | RESOLVED (parcial) | = |
-| [FIND-014](#find-014--audit_logs-é-mutável) | `audit_logs` é mutável | Security | Low | OPEN | = |
+| [FIND-014](#find-014--audit_logs-é-mutável) | `audit_logs` é mutável | Security | Low | OPEN | RESOLVED em P1 |
 | [FIND-015](#find-015--expiração-de-token-aceita-valores-que-nunca-terão-efeito) | Expiração de token aceita valores que nunca terão efeito | Security | Low | RESOLVED (parcial) | = |
 | [FIND-016](#find-016--rate-limiting-restrito-ao-login-e-por-emailip) | Rate limiting restrito ao login e por email+IP | Security | Low | OPEN | = |
 | [FIND-017](#find-017--assigned_by-não-é-preenchido-pela-api) | `assigned_by` não é preenchido pela API | Maintainability | Low | RESOLVED | = |
@@ -61,6 +61,10 @@ Nos demais casos, a evidência é a leitura do código citado.
 | [FIND-026](#find-026--bytes-inválidos-em-utf-8-num-formulário-viram-erro-500) | Bytes inválidos em UTF-8 num formulário viram erro 500 | Maintainability | Low | — | — (aberto na Fase 4.4, OPEN) |
 
 Contagem: 1 High · 9 Medium · 12 Low · 4 Improvement. Nenhum Critical.
+
+Após P1: **21 RESOLVED**, 4 deles parcialmente, e **5 OPEN** (FIND-008,
+016, 018, 024 e 026). O FIND-014 foi resolvido com proteção no model e
+trigger append-only no PostgreSQL.
 
 Após as Fases 4.3 e 4.4: **20 RESOLVED** (o FIND-019 passou a resolvido; o FIND-012 continua parcial, agora só com o login falho em aberto), 4 deles parcialmente, e **6 OPEN** (FIND-008, 014, 016, 018, 024 e o novo FIND-026).
 
@@ -703,6 +707,16 @@ Fase 5.
 **Status:** OPEN
 
 **Nota:** Fora do escopo da Fase 3.2 (Fase 5).
+
+### Status (P1)
+
+**Status:** RESOLVED
+
+`AuditLog` recusa `update` e `delete`, e o trigger PostgreSQL
+`audit_logs_append_only` bloqueia as mesmas operações quando Eloquent é
+ignorado. Inserts do listener permanecem permitidos. **Tests:**
+`OrganizationTest › Append-only audit trail` (model, query update e query
+delete).
 
 ---
 

@@ -18,7 +18,7 @@
 - Qualidade complementar: `composer lint` (Pint) e `composer analyse`
   (Larastan nível 6 em `app/`).
 
-## Inventário (393 testes, Fases 4.3 e 4.4 com a revisão)
+## Inventário (424 testes, P1)
 
 | Categoria | Arquivo | Testes | Nível |
 |---|---|---|---|
@@ -36,7 +36,11 @@
 | Security: último admin | `Feature/Security/AdminInvariantTest.php` | 7 | HTTP + Action |
 | Security: auditoria | `Feature/Security/AuditIntegrityTest.php` | 11 | HTTP + banco + evento |
 | Security: árvore de menus | `Feature/Security/MenuTreeTest.php` | 7 | HTTP, Bearer real |
-| Security: cobertura de rotas | `Feature/Security/RouteCoverageTest.php` | 11 | rotas registradas + HTTP |
+| Security: cobertura de rotas | `Feature/Security/RouteCoverageTest.php` | 12 | rotas registradas + HTTP |
+| Tenancy: Organizations | `Feature/Tenancy/OrganizationTest.php` | 9 | HTTP + model + trigger |
+| Tenancy: memberships | `Feature/Tenancy/OrganizationMembershipTest.php` | 9 | HTTP + constraints |
+| Tenancy: isolamento | `Feature/Tenancy/TenantIsolationTest.php` | 5 | HTTP, Bearer real |
+| Tenancy: último owner | `Feature/Tenancy/OrganizationOwnerInvariantTest.php` | 7 | HTTP + Actions |
 | Security Lab: acesso e feature flag | `Feature/SecurityLab/SecurityLabAccessTest.php` | 31 | HTTP, sessão `web` + Actions + seeder |
 | Security Lab: teste IDOR | `Feature/SecurityLab/IdorTestExecutionTest.php` | 23 | HTTP + Action + Policy + constraints |
 | Security Lab: teste Mass Assignment | `Feature/SecurityLab/MassAssignmentTestExecutionTest.php` | 36 | HTTP + Action + estado do banco + histórico |

@@ -5,8 +5,8 @@
 ## O que o sistema é hoje
 
 O NAPI é hoje uma **API REST stateless autenticada por token**, construída em
-Laravel 13 sobre PostgreSQL, que implementa um módulo de IAM. Não há frontend,
-filas em uso nem integrações externas. Desde as Fases 4 e 5 há também uma
+Laravel 13 sobre PostgreSQL, com IAM global e uma fundação multi-tenant por
+Organization. Não há frontend comercial, filas em uso nem integrações externas. Desde as Fases 4 e 5 há também uma
 área administrativa Blade (sessão `web`) e, nela, o módulo
 [Security Lab](../modules/security.md); o diagrama abaixo cobre só a API.
 
@@ -15,7 +15,8 @@ flowchart LR
     Client[Cliente HTTP] -->|Bearer token| API["/api/v1"]
     API --> Auth[auth:sanctum<br/>token válido + dono ativo]
     Auth --> Ability[token.ability<br/>read/write/delete]
-    Ability --> Matrix[CheckPermission<br/>User::hasPermission]
+    Ability --> Context[OrganizationContext<br/>quando a rota tem tenant]
+    Context --> Matrix[CheckPermission<br/>User::hasPermission]
     Matrix --> Req[FormRequest<br/>Policy + validação]
     Req --> Ctrl[Controller]
     Ctrl -->|operações simples| Model[Eloquent Model]
@@ -35,16 +36,17 @@ A tabela descreve a arquitetura **encontrada** no código, atualizada na Fase
 |---|---|---|---|
 | Rotas | `routes/api.php` | Uma rota explícita por verbo; grupo `auth:sanctum` + `token.ability`; `permission:{key}.{ação}` por rota | `tokens` usa `apiResource`; é a única exceção |
 | Middleware de ability | `app/Http/Middleware/EnsureTokenAbility.php` | Exige a ability do token correspondente ao método HTTP | 403 |
-| Middleware de permissão | `app/Http/Middleware/CheckPermission.php` | Permissão funcional por rota, delegando a `User::hasPermission()` | Nega com **404**, não 403 |
+| Contexto de tenant | `OrganizationContext` + `ResolveOrganizationContext` | Resolve a Organization da rota e limpa o contexto ao final | Identifica; não autoriza |
+| Middleware de permissão | `app/Http/Middleware/CheckPermission.php` | Permissão funcional global ou contextual, delegando a `User::hasPermission()` | Nega com **404**, não 403 |
 | FormRequest | `app/Http/Requests/*` | `authorize()` delega à Policy (com o conjunto pedido, quando relevante); `rules()` valida entrada | `TokenStoreRequest::authorize` limita as abilities às do token atual |
 | Policy | `app/Policies/*` | Permissão funcional via `hasPermission()` + regras de instância e anti-escalação | Desde a Fase 3.2 não decide por slug ([ADR-0008](decisions/ADR-0008-layered-authorization-model.md)) |
 | Controller | `app/Http/Controllers/Api/V1/*` | Coordena, chama o model ou a Action, dispara eventos de auditoria, devolve o Resource | CRUD simples fala direto com Eloquent (em transação com o evento); atribuição de perfis, sincronização de permissões e exclusão de usuário passam por Action |
-| DTO | `app/DTOs/*` | Transporta dados já validados do FormRequest para a Action | Apenas 2 DTOs, por decisão da Fase 3 |
-| Action | `app/Domain/IAM/Actions/*` | Regra de negócio, persistência e disparo de evento, em transação | Recebe um `AuditContext` explícito; não depende de HTTP |
-| Invariante | `app/Domain/IAM/EnsureActiveAdministratorRemains.php` | "≥ 1 administrador ativo", com lock no perfil admin | Lança `LastActiveAdministratorException` (409) |
+| DTO | `app/DTOs/*` | Transporta dados já validados do FormRequest para a Action | Usado nas fronteiras com payload e regra |
+| Action | `app/Domain/{IAM,Tenancy}/Actions/*` | Regra de negócio, persistência e evento, em transação | Recebe `AuditContext`; não depende de HTTP |
+| Invariante | `EnsureActiveAdministratorRemains` e `EnsureActiveOrganizationOwnerRemains` | Mantém administrador global e owner válido por Organization | Violações respondem 409 |
 | Event | `app/Events/*` | Fato de domínio; os auditáveis implementam `Contracts\Auditable` e carregam `AuditContext` | Síncrono (nenhum `ShouldQueue`) |
 | Listener | `app/Listeners/RecordAuditLog.php` | Grava uma linha em `audit_logs` por evento `Auditable` | Registrado só pela discovery |
-| Resource | `app/Http/Resources/*` | Contrato público do JSON | `UserResource`, `ProfileResource`, `MenuResource`; tokens são serializados inline |
+| Resource | `app/Http/Resources/*` | Contrato público do JSON | Inclui Organization e Membership; tokens são serializados inline |
 | Model | `app/Models/*` | Persistência, relações, casts, scopes | Atributos PHP 8 `#[Fillable]`/`#[Hidden]`, ULIDs |
 
 ## Propriedades arquiteturais que o desenho proporciona
@@ -61,6 +63,10 @@ A tabela descreve a arquitetura **encontrada** no código, atualizada na Fase
   `viewAny`/`view` respondem 404, o mesmo status de um recurso inexistente.
 - **Fronteira HTTP → domínio.** Os casos de uso com regra de negócio recebem
   DTO e `AuditContext`, nunca o `Request`.
+- **Tenant explícito e sem privilégio implícito.** A Organization vem da rota;
+  membership ativa, permission contextual, Policy e Action ainda precisam
+  autorizar. Nem o administrador global ignora essa cadeia
+  ([ADR-0011](decisions/ADR-0011-multi-tenant-organization-context.md)).
 - **Efeitos colaterais desacoplados e atômicos.** Toda auditoria é reação a
   eventos, disparados dentro da transação da operação; estado e trilha fazem
   commit ou rollback juntos.
@@ -76,9 +82,9 @@ A tabela descreve a arquitetura **encontrada** no código, atualizada na Fase
 As limitações estão registradas como findings, não escondidas aqui. As mais
 relevantes para entender a arquitetura:
 
-- a permissão funcional é declarada por rota; uma rota nova sem `permission:`
-  e sem Policy ficaria acessível a qualquer autenticado (não há teste que
-  varra as rotas);
+- a permissão funcional é declarada por rota; `RouteCoverageTest` protege as
+  rotas atuais, mas uma allowlist explícita ainda é necessária para
+  autoatendimento;
 - as respostas ainda não seguem um contrato único (envelope, negação manual
   em `index`/`show`) ([FIND-020](../findings/README.md#find-020--respostas-de-autorização-e-de-tokens-inconsistentes));
 - o rate limit cobre só o login ([FIND-016](../findings/README.md#find-016--rate-limiting-restrito-ao-login-e-por-emailip)).
@@ -88,6 +94,6 @@ de autorização, menus como chaves mutáveis) foram resolvidos na Fase 3.2.
 
 ## Referências
 
-- `bootstrap/app.php`: roteamento, aliases `permission` e `token.ability`, renderização JSON de exceções em `api/*`
+- `bootstrap/app.php`: roteamento, aliases `permission`, `token.ability` e `organization.context`, renderização JSON de exceções em `api/*`
 - `app/Providers/AppServiceProvider.php`: Policies, callback de autenticação (usuário ativo), rate limiter `login`, strict mode
 - ADRs: [decisions/README.md](decisions/README.md)

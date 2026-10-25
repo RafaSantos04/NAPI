@@ -8,6 +8,7 @@
 |---|---|---|
 | `id` | ULID PK | — |
 | `user_id` | ULID, FK `users` `set null` | **ator** da ação (`null` para operações de sistema) |
+| `organization_id` | ULID nullable, FK `organizations` `set null` | tenant do fato; `null` para eventos globais e Security Lab |
 | `action` | `varchar(50)` | identificador da ação |
 | `subject_type` / `subject_id` | `varchar(100)` / ULID | entidade afetada (FQCN; índice composto) |
 | `ip` | `inet` (`ipAddress`) | IP de origem |
@@ -15,7 +16,8 @@
 | `meta` | `jsonb` | dados específicos da ação |
 | `created_at` | `timestamp`, `useCurrent()` | preenchido pelo **banco**; não há `updated_at` (`$timestamps = false`) |
 
-Índices: `(user_id, created_at)` para a trilha de um ator e
+Índices: `(user_id, created_at)` para a trilha de um ator,
+`(organization_id, created_at)` para a trilha de um tenant e
 `(subject_type, subject_id)` para o histórico de uma entidade.
 
 ## Ações auditadas
@@ -45,6 +47,8 @@ carregado pelo evento.
 | `menu_updated` | `MenuUpdated` | `UpdateMenu` (Fase 4.4) | `App\Models\Menu` | `fields` (nomes) |
 | `menu_deleted` | `MenuDeleted` | `DeleteMenu` (Fase 4.4) | `App\Models\Menu` | `key` (a linha deixa de existir) |
 | `security_test_executed` | `SecurityTestExecuted` | `RunIdorTest` (Fase 5.1), `RunMassAssignmentTest` (Fase 5.2) | `App\Models\SecurityTestRun` | `test_key`, `scenario`, `acting_as_user_id`, `verdict` |
+| `organization_created` / `organization_updated` | `OrganizationCreated` / `OrganizationUpdated` | Actions de P1 | `App\Models\Organization` | campos alterados no update |
+| `membership_created` / `membership_updated` / `membership_removed` | eventos `OrganizationMembership*` | Actions de P1 | `App\Models\OrganizationMembership` | user, role/status ou mudanças relevantes |
 
 O id do token vai em `meta` porque é inteiro e `subject_id` é ULID. O segredo
 do token nunca é gravado.
@@ -103,7 +107,7 @@ deixa a regra de negócio intocada quando o formato da auditoria muda.
 | Decisão | Efeito |
 |---|---|
 | Um único registro de listener (discovery), sem `Event::listen()` manual | 1 evento = 1 linha ([FIND-002](../findings/README.md#find-002--listeners-de-auditoria-registrados-em-duplicidade)) |
-| Evento carrega `AuditContext` (ator, IP, UA) | listeners não usam `auth()` nem `request()`; funcionam fora de HTTP ([FIND-013](../findings/README.md#find-013--contexto-de-auditoria-acoplado-ao-processo-http-e-sem-atomicidade)) |
+| Evento carrega `AuditContext` (ator, Organization opcional, IP, UA) | listeners não usam `auth()` nem `request()`; funcionam fora de HTTP ([FIND-013](../findings/README.md#find-013--contexto-de-auditoria-acoplado-ao-processo-http-e-sem-atomicidade)) |
 | Evento disparado dentro da transação, listener síncrono | estado e trilha são atômicos: uma operação rejeitada (ex.: 409 do último admin) não deixa linha, e uma falha ao gravar a trilha desfaz a operação |
 | Contrato `Auditable` com `auditEntry()` | cada evento descreve o próprio registro; `subject_type` padronizado em FQCN |
 
@@ -120,9 +124,11 @@ deixa a regra de negócio intocada quando o formato da auditoria muda.
 - Não há endpoint que leia, altere ou apague `audit_logs`. O menu
   `audit-logs` existe no seeder sem rota correspondente.
 - A exclusão do ator não apaga logs (INV-14).
-- **Não há proteção contra alteração**: o model permite `update()`/`delete()`,
-  e o banco não tem trigger nem restrição de privilégio
-  ([FIND-014](../findings/README.md#find-014--audit_logs-é-mutável), adiado para a Fase 5).
+- Desde P1, o model lança `LogicException` em update/delete e o PostgreSQL
+  tem trigger `audit_logs_append_only` que recusa as duas operações mesmo
+  quando Eloquent é ignorado. FIND-014 está resolvido.
+- O controle não protege contra um superusuário do banco capaz de remover o
+  trigger e não implementa encadeamento criptográfico.
 
 ## Dados sensíveis
 
@@ -145,3 +151,6 @@ senha não aparece na trilha.
 não da sessão. `AdminInvariantTest › leaves no audit trail for a rejected change`
 prova a atomicidade. Os testes antigos de `AuditEventTest` (`exists()`) foram
 mantidos.
+
+`tests/Feature/Tenancy/OrganizationTest.php` verifica o tenant nos eventos e
+prova que update/delete falham tanto pelo model quanto por query direta.

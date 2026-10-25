@@ -2,8 +2,8 @@
 
 [← Segurança](README.md) · [Findings](../findings/README.md) · [Security Lab](../modules/security.md)
 
-Escopo: **somente o que existe hoje**: a API REST v1 do IAM, a área
-administrativa e, desde a Fase 5.1, o [Security Lab](#security-lab) (dois testes desde a Fase 5.2). Criado
+Escopo: **somente o que existe hoje**: a API REST v1 do IAM, tenancy de P1,
+a área administrativa e, desde a Fase 5.1, o [Security Lab](#security-lab) (dois testes desde a Fase 5.2). Criado
 na Fase 3.1 e atualizado na Fase 3.2 com as mitigações implementadas (seção
 [Mitigações da Fase 3.2](#mitigações-da-fase-32)).
 
@@ -18,8 +18,8 @@ Veja [phases](../phases/README.md).
 
 ## Ativos e atores
 
-- **Ativos**: tokens, matriz de permissões, atribuições de perfil, dados de
-  usuários, trilha de auditoria.
+- **Ativos**: tokens, matriz de permissões, memberships, Organizations, dados
+  de usuários e trilha de auditoria.
 - **Atores**: anônimo; usuário autenticado sem perfil; `viewer`; `dev`;
   perfil customizado com permissões delegadas; `admin`; portador de um token
   vazado.
@@ -98,6 +98,22 @@ Veja [phases](../phases/README.md).
 | Lockout administrativo via menus | ✅ | `key` imutável; menu de sistema só excluído pelo Administrador, que mantém as permissões implícitas; `MenuSeeder` recria o menu | ✅ `lets only the administrator delete a system menu, until the seeder brings it back` | Enquanto o menu não volta, perfis personalizados perdem a área, e as linhas de matriz não voltam com ele | — |
 | Escopo excessivo de token | ✅ | `EnsureTokenAbility` + emissão só de subconjuntos | ✅ | — | — |
 
+## Tenancy (P1)
+
+| Ameaça | Status | Mitigação | Risco residual |
+|---|---|---|---|
+| Cross-tenant IDOR por troca de ULID | ✅ | contexto da rota + membership + permission + Policy; testes com token válido | — |
+| Tenant context tampering | ✅ | id só identifica; nunca autoriza | — |
+| Membership privilege escalation | ✅ | `members.manage`, papel encapsulado e CHECK no banco | roles fixas até surgir demanda real |
+| Organization sem owner | ✅ | lock da Organization + recontagem transacional, inclusive no lifecycle global do User | concorrência coberta pelo protocolo de lock, sem teste paralelo |
+| Stale context | ✅ | middleware limpa `OrganizationContext` em `finally` | — |
+| Tenant leakage em jobs | ⚠️ | ADR-0011 exige organization id explícito e contexto novo | P1 ainda não tem job tenant-aware |
+| Tenant leakage em auditoria | ✅ | `audit_logs.organization_id`, índice e eventos com contexto | retenção ainda não definida |
+
+O administrador global não recebe bypass de tenant. Scoped binding reduz a
+superfície de recurso aninhado, mas a Policy reconfirma Organization e
+membership.
+
 ## Entrada
 
 | Ameaça | Status | Mitigação existente | Teste | Risco residual | Fase |
@@ -126,7 +142,7 @@ Veja [phases](../phases/README.md).
 | Registros duplicados | ✅ | Um único registro de listener (discovery) | ✅ `count() === 1` | — | — |
 | Trilha sem a operação, ou operação sem trilha | ✅ | Evento síncrono dentro da transação | ✅ `leaves no audit trail for a rejected change` | — | — |
 | Informação sensível no log | ✅ | Sem senhas ou tokens em `meta`; `user_updated` só com nomes de campos | ✅ | IP/UA sem política de retenção (LGPD) | Hardening |
-| Alteração dos próprios logs | ❌ | Nenhum endpoint de escrita | ❌ | Mutável no model e no banco ([FIND-014](../findings/README.md#find-014--audit_logs-é-mutável)) | Fase 5 |
+| Alteração dos próprios logs | ✅ | Model recusa update/delete; trigger PostgreSQL bloqueia bypass | ✅ `OrganizationTest` | Superusuário do banco pode remover o trigger; sem hash chaining | — |
 
 ## Dados pessoais
 

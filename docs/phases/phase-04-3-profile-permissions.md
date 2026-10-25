@@ -2,7 +2,8 @@
 
 [← Fases](README.md) · [Autorização](../security/authorization.md#área-administrativa-blade) · [Módulo IAM](../modules/iam.md) · [Fase 4.4](phase-04-4-menu-administration.md)
 
-**Commit:** pending
+**Commits:** `833e0dd`…`051b2c0` (implementação, testes, documentação e
+revisão conjunta das Fases 4.3 e 4.4)
 
 Executada depois da [Fase 5.2](phase-05-2-security-lab-mass-assignment.md),
 junto com a [4.4](phase-04-4-menu-administration.md). A numeração segue a

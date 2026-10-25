@@ -2,7 +2,8 @@
 
 [← Fases](README.md) · [Autorização](../security/authorization.md#área-administrativa-blade) · [Módulo IAM](../modules/iam.md) · [Fase 4.3](phase-04-3-profile-permissions.md)
 
-**Commit:** pending
+**Commits:** `833e0dd`…`051b2c0` (implementação, testes, documentação e
+revisão conjunta das Fases 4.3 e 4.4)
 
 Executada junto com a [4.3](phase-04-3-profile-permissions.md), depois da
 Fase 5.2.

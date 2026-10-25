@@ -30,6 +30,7 @@ decisão registrada na Fase 3), ela é citada.
 | [ADR-0008](ADR-0008-layered-authorization-model.md) | Autorização em camadas: autenticação, ability do token, permissão funcional (`menus.key`), Policy e invariante de domínio | Accepted (Fase 3.2; adendo na revisão da Fase 4.4) |
 | [ADR-0009](ADR-0009-web-session-and-bearer-adapters.md) | Sessão web (Blade) e Bearer (API) como adapters separados do mesmo domínio; sem SPA por cookie | Accepted (Fase 4.2) |
 | [ADR-0010](ADR-0010-controlled-security-lab.md) | Security Lab controlado: código vulnerável só dentro de um caso de uso, alvos e personas sintéticos, feature flag desligada por padrão | Accepted (Fase 5.1, complementado na Fase 5.2) |
+| [ADR-0011](ADR-0011-multi-tenant-organization-context.md) | Organization como tenant, Membership contextual, organização corrente explícita e invariante do último owner | Accepted (P1) |
 
 ## Template
 

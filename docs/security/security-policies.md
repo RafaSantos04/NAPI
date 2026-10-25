@@ -212,3 +212,27 @@ se a regra quebrasse.
 - **Aplicação**: `MenuUpdateRequest` (API e admin) recusa como pai o próprio menu ou qualquer descendente (`Menu::isSelfOrAncestorOf`, consulta recursiva). No banco, `menus_parent_not_self_check` recusa `parent_id = id`. A árvore de navegação continua montada a partir das raízes, então um ciclo antigo não a faz entrar em loop.
 - **Teste**: `MenuManagementTest › Hierarchy`.
 - **Risco mitigado**: navegação inconsistente e menus inalcançáveis ([FIND-019](../findings/README.md#find-019--menu-pode-ser-pai-de-si-mesmo)).
+
+### INV-26 — Um tenant não concede acesso a outro (P1)
+
+- **Aplicação**: Organization explícita na rota, `OrganizationContext`, membership ativa em `User::hasPermission()`, scoped binding e Policies que reconfirmam o parent.
+- **Teste**: `TenantIsolationTest` (id de Organization e membership trocados, token/payload válidos, administrador global e membership disabled).
+- **Risco mitigado**: IDOR e vazamento cross-tenant.
+
+### INV-27 — Existe sempre ao menos um owner válido por Organization (P1)
+
+- **Definição**: membership owner ativa cujo User está ativo e não excluído.
+- **Aplicação**: `EnsureActiveOrganizationOwnerRemains`, chamado pelas Actions de membership e também por `DeactivateUser`/`DeleteUser`. A linha da Organization é o lock comum.
+- **Teste**: `OrganizationOwnerInvariantTest` (remove, demote, disable, segundo owner e alterações globais do User).
+
+### INV-28 — Auditoria é append-only e preserva o tenant (P1)
+
+- **Aplicação**: eventos recebem `AuditContext` com `organization_id`; `AuditLog` e o trigger `audit_logs_append_only` recusam update/delete.
+- **Teste**: `OrganizationTest › Append-only audit trail` e asserts dos eventos de Organization/Membership.
+- **Risco mitigado**: adulteração da trilha e perda de atribuição ao tenant.
+
+### INV-29 — Membership só assume estados válidos (P1)
+
+- **Aplicação**: enums, FormRequests, UNIQUE `(organization_id, user_id)`, FKs e CHECKs de role/status.
+- **Teste**: `OrganizationMembershipTest` cobre duplicidade, usuário inativo/inexistente, conjuntos fechados e active ⇄ disabled.
+- **Risco mitigado**: vínculos ambíguos, duplicados ou privilégios fora do catálogo.

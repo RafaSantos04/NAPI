@@ -73,6 +73,17 @@ obrigatória na criação, **proibida** na atualização e distinta do
 $user->hasPermission('users.update'); // única resposta funcional do sistema
 ```
 
+Desde P1 a mesma entrada aceita contexto organizacional explícito:
+
+```php
+$user->hasPermission('members.manage', $organization);
+```
+
+Sem Organization, a decisão continua na matriz global. Com Organization,
+uma membership ativa concede o catálogo pequeno de capacidades do papel
+`owner|member`. Não existe fallback: administrador global sem membership é
+negado no tenant.
+
 - **Admin**: o perfil de sistema `admin` detém todas as permissões
   funcionais, inclusive de chaves criadas depois do seed. A matriz dele não
   é editável (perfil `is_system`), então não há como o admin perder acesso
@@ -98,6 +109,10 @@ $user->hasPermission('users.update'); // única resposta funcional do sistema
 | `/admin/menus`, `/admin/menus/{id}` (Fase 4.4); criar, editar e excluir | `menus.{ação}` |
 | `/admin/security`, `/admin/security/idor`, `/admin/security/mass-assignment` (só admin, Fases 5.1 e 5.2) | `security-lab.view` |
 | `POST /admin/security/idor/run`, `POST /admin/security/mass-assignment/run` (só admin, Fases 5.1 e 5.2) | `security-lab.create` |
+| `GET /organizations/{organization}` | `organizations.view` contextual |
+| `PATCH /organizations/{organization}` | `organizations.update` contextual |
+| `GET /organizations/{organization}/members` | `members.view` contextual |
+| mutações em `/organizations/{organization}/members` | `members.manage` contextual |
 
 Perfis padrão:
 
@@ -126,6 +141,19 @@ apenas o que depende da instância ou do ator:
 | `MenuPolicy::delete` | menu com filhos não é excluído; menu `is_system`, só pelo Administrador (revisão da Fase 4.4) |
 | `SecurityTestRunPolicy::viewAny`/`create` | nenhuma: `security-lab.view` e `security-lab.create` (Fase 5.1). Vale para todos os testes do laboratório |
 | `SecurityLabResourcePolicy::view` | só o dono do recurso sintético, sem exceção para `admin`. É o controle que o [teste IDOR](idor.md) demonstra, avaliado para o actor com `Gate::forUser()` |
+| `OrganizationPolicy` | membership ativa no tenant; owner altera, member só lê |
+| `OrganizationMembershipPolicy` | parent Organization explícita e `members.view|manage`; scoped binding não substitui a Policy |
+
+## Contexto organizacional (P1)
+
+`{organization}` na rota identifica o tenant pedido. Depois do binding,
+`ResolveOrganizationContext` estabelece um `OrganizationContext` scoped e o
+limpa em `finally`. `CheckPermission` passa esse contexto a
+`User::hasPermission()`. O id vindo do cliente nunca concede acesso.
+
+O fluxo tenant-aware é autenticação → ability → contexto → membership →
+permission → Policy → Action/invariante. O Blade `/admin` continua global;
+não há tenant guardado em sessão, User ou token.
 
 ## Anti privilege escalation
 

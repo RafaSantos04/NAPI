@@ -19,6 +19,9 @@ erDiagram
     menus ||--o{ menus : "parent_id → children"
     users ||--o{ audit_logs : "user_id (ator)"
     users ||--o{ personal_access_tokens : "tokenable"
+    users ||--o{ organization_memberships : ""
+    organizations ||--o{ organization_memberships : ""
+    organizations |o--o{ audit_logs : "organization_id"
 
     user_profiles {
         ulid user_id PK
@@ -45,9 +48,12 @@ Relações Eloquent reais:
 | `User` | `assignedProfiles(): HasMany<UserProfile>` | atribuições feitas por este usuário |
 | `User` | `auditLogs(): HasMany<AuditLog>` | ações das quais ele é o ator |
 | `User` | `tokens()` (Sanctum `HasApiTokens`) | `personal_access_tokens` com `ulidMorphs` |
+| `User` | `organizationMemberships()` | identidade global vinculada a tenants |
+| `Organization` | `memberships()` | boundary do tenant, sem lifecycle próprio em P1 |
+| `OrganizationMembership` | `organization()` e `user()` | role `owner|member`, status `active|disabled` |
 | `Profile` | `users()`, `menus(): BelongsToMany<Menu, MenuProfile>` | a matriz de permissões está no pivot `menu_profiles` |
 | `Menu` | `parent()`, `children()` (ordenado por `order`), `profiles()` | scopes `active()` e `roots()` |
-| `AuditLog` | `user(): BelongsTo` | sem `updated_at` (`$timestamps = false`) |
+| `AuditLog` | `user()` e `organization(): BelongsTo` | sem `updated_at`; append-only no model e banco |
 
 ## Conceitos
 
@@ -70,6 +76,10 @@ Relações Eloquent reais:
   (INV-08).
 - **Auditoria**: `audit_logs`, só inserção pela aplicação. Veja
   [audit.md](../security/audit.md).
+- **Organization**: boundary explícito de tenant; não substitui a identidade
+  nem concede acesso por si só.
+- **Membership**: vínculo contextual. Owner gerencia organização e membros;
+  member só lê. Estado disabled revoga o acesso tenant imediatamente.
 
 ## Estado semeado (demonstração)
 
@@ -110,6 +120,8 @@ existir fora de ambiente local.
 | Perfis de um menu (Fase 4.4) | `SyncProfilesRequest` → `SyncMenuProfilesDto` → `SyncMenuProfiles` → `SyncMenuPermissions` por perfil alterado | `permissions.update` + `syncMenus` para cada perfil que muda | mesma matriz vista pelo menu; tudo ou nada; perfil sem mudança não é gravado | `permission_changed` por perfil |
 | Árvore de menus | — | autenticado + `read` | menus ativos com `{key}.view`, filhos só sob pai visível | não |
 | Tokens pessoais | `TokenStoreRequest` | autenticado; escopo no próprio usuário | abilities ⊆ as do token atual; expiração ≤ 7 dias | `token_created`, `token_revoked` |
+| Criar/editar Organization | requests → DTOs → `CreateOrganization`/`UpdateOrganization` | autoatendimento na criação; permission + `OrganizationPolicy` depois | criador vira owner ativo; slug único | `organization_created`, `organization_updated` |
+| Gerir memberships | requests → DTOs → Actions de Tenancy | `members.view/manage` + `OrganizationMembershipPolicy` | usuário existente/ativo; lifecycle active/disabled; ao menos um owner válido (409) | `membership_created`, `membership_updated`, `membership_removed` |
 
 ## Invariantes do módulo
 
@@ -135,10 +147,11 @@ FIND-007, FIND-010) foram resolvidas na Fase 3.2; veja
 ## Implementação
 
 - Models: `app/Models/{User,Profile,Menu,UserProfile,MenuProfile,AuditLog,UserDetails}.php`
+- Tenancy: `app/Models/{Organization,OrganizationMembership}.php`, `app/Domain/Tenancy/*`
 - Policies: `app/Policies/*`
 - Actions: `app/Domain/IAM/Actions/*`
 - Invariante e contexto: `app/Domain/IAM/{EnsureActiveAdministratorRemains,AuditContext}.php`
-- Middleware: `app/Http/Middleware/{CheckPermission,EnsureTokenAbility,EnsureUserIsActive,EnsureUserCanAccessAdmin}.php`
+- Middleware: `app/Http/Middleware/{CheckPermission,ResolveOrganizationContext,EnsureTokenAbility,EnsureUserIsActive,EnsureUserCanAccessAdmin}.php`
 - Adapters: `app/Http/Controllers/Api/V1/*` (JSON) e `app/Http/Controllers/Web/Admin/*` (Blade); seções da área administrativa em `app/Http/Admin/AdminNavigation.php`
 - Eventos e auditoria: `app/Events/*`, `app/Listeners/RecordAuditLog.php`
 - Seeders: `database/seeders/*`
