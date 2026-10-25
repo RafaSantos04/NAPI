@@ -1,11 +1,13 @@
 <?php
 
 use App\Domain\IAM\Exceptions\LastActiveAdministratorException;
+use App\Exceptions\LastActiveOrganizationOwnerException;
 use App\Http\Middleware\CheckPermission;
 use App\Http\Middleware\EnsureSecurityLabEnabled;
 use App\Http\Middleware\EnsureTokenAbility;
 use App\Http\Middleware\EnsureUserCanAccessAdmin;
 use App\Http\Middleware\EnsureUserIsActive;
+use App\Http\Middleware\ResolveOrganizationContext;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -24,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin.access' => EnsureUserCanAccessAdmin::class,
             'security.lab' => EnsureSecurityLabEnabled::class,
             'token.ability' => EnsureTokenAbility::class,
+            'organization.context' => ResolveOrganizationContext::class,
         ]);
 
         // Session (admin area): deactivated users lose the session, and
@@ -35,6 +38,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         // A known business rule rejected by the domain (409), not a server error.
         $exceptions->dontReport(LastActiveAdministratorException::class);
+        $exceptions->dontReport(LastActiveOrganizationOwnerException::class);
 
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),

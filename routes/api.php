@@ -3,6 +3,8 @@
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Auth\TokenController;
 use App\Http\Controllers\Api\V1\MenuController;
+use App\Http\Controllers\Api\V1\OrganizationController;
+use App\Http\Controllers\Api\V1\OrganizationMembershipController;
 use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\UserProfileController;
@@ -28,6 +30,39 @@ Route::prefix('v1')->group(function () {
         Route::apiResource('tokens', TokenController::class)
             ->only(['index', 'store', 'destroy'])
             ->whereNumber('token');
+
+        // Organization is explicit in tenant-aware URLs. The context
+        // middleware identifies it before the existing permission layer;
+        // membership and Policies still decide access (ADR-0011).
+        Route::get('/organizations', [OrganizationController::class, 'index'])
+            ->name('organizations.index');
+        Route::post('/organizations', [OrganizationController::class, 'store'])
+            ->name('organizations.store');
+
+        Route::prefix('organizations/{organization}')
+            ->middleware('organization.context')
+            ->scopeBindings()
+            ->group(function () {
+                Route::get('/', [OrganizationController::class, 'show'])
+                    ->middleware('permission:organizations.view')
+                    ->name('organizations.show');
+                Route::patch('/', [OrganizationController::class, 'update'])
+                    ->middleware('permission:organizations.update')
+                    ->name('organizations.update');
+
+                Route::get('/members', [OrganizationMembershipController::class, 'index'])
+                    ->middleware('permission:members.view')
+                    ->name('organizations.members.index');
+                Route::post('/members', [OrganizationMembershipController::class, 'store'])
+                    ->middleware('permission:members.manage')
+                    ->name('organizations.members.store');
+                Route::patch('/members/{membership}', [OrganizationMembershipController::class, 'update'])
+                    ->middleware('permission:members.manage')
+                    ->name('organizations.members.update');
+                Route::delete('/members/{membership}', [OrganizationMembershipController::class, 'destroy'])
+                    ->middleware('permission:members.manage')
+                    ->name('organizations.members.destroy');
+            });
 
         // Users
         Route::get('/users', [UserController::class, 'index'])

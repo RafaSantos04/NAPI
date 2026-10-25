@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Domain\Tenancy\OrganizationContext;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -13,6 +14,8 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class CheckPermission
 {
+    public function __construct(private OrganizationContext $organizationContext) {}
+
     public function handle(Request $request, Closure $next, string $permission): Response
     {
         $user = $request->user();
@@ -21,7 +24,7 @@ class CheckPermission
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 
-        if (! $user->hasPermission($permission)) {
+        if (! $user->hasPermission($permission, $this->organizationContext->get())) {
             // 404 instead of 403 so the area's existence is not revealed (ADR-0006).
             // The admin area gets the same status as an HTML page (Phase 4.2).
             if (! $request->is('api/*') && ! $request->expectsJson()) {
