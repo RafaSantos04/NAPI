@@ -4,6 +4,7 @@ namespace App\Domain\IAM\Actions;
 
 use App\Domain\IAM\AuditContext;
 use App\Domain\IAM\EnsureActiveAdministratorRemains;
+use App\Domain\Tenancy\EnsureActiveOrganizationOwnerRemains;
 use App\Events\UserDeactivated;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -27,6 +28,7 @@ class DeactivateUser
         }
 
         DB::transaction(function () use ($user, $context) {
+            EnsureActiveOrganizationOwnerRemains::beforeRemovingUser($user);
             EnsureActiveAdministratorRemains::beforeRemoving($user);
 
             // Before the update, so the count reaches the audit entry (the
