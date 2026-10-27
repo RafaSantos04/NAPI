@@ -114,6 +114,29 @@ O administrador global não recebe bypass de tenant. Scoped binding reduz a
 superfície de recurso aninhado, mas a Policy reconfirma Organization e
 membership.
 
+## Tenancy (P2): árvore de projetos
+
+Auditoria adversarial do P2-T05 sobre Project → Application → Environment
+([ADR-0012](../architecture/decisions/ADR-0012-project-tree-tenant-integrity.md)).
+Testes transversais em `tests/Feature/Security/ProjectTreeSecurityTest.php`.
+
+| Ameaça | Status | Mitigação | Teste | Risco residual |
+|---|---|---|---|---|
+| Filho de um tenant apontando para pai de outro | ✅ | FK composta `(organization_id, parent_id)` em toda a árvore, também para criador e responsável | `*IntegrityTest` (SQL direto) | — |
+| Reatribuição de tenant ou pai depois do INSERT | ✅ | trigger `napi_prevent_tenant_reassignment()` | `*IntegrityTest` | superusuário do banco pode remover o trigger |
+| IDOR entre recursos da mesma organização | ✅ | scoped binding em cadeia + Policy reconfirma a cadeia | por slice; `scopes every nested tenant binding to its parent` | — |
+| Usuário de duas organizações mistura ids numa URL | ✅ | binding limitado à organização da rota (404); sem ele a Policy ainda nega (403, verificado por mutação) | `mixes their resources in one URL` | — |
+| Papel de outra organização aplicado no tenant da rota | ✅ | `hasPermission()` consulta a membership da organização da rota | `applies the role of the organization in the URL` | — |
+| Não-membro, membership desativada ou admin global | ✅ | contexto + membership ativa + permission | matriz sobre **todas** as rotas `organizations.projects.*` | — |
+| Mass assignment de tenant, pai, criador ou `archived_at` | ✅ | campos fora de `#[Fillable]`; DTOs com `Arr::only` | `ignores tenant, parent, creator and lifecycle fields sent to PATCH` (9 casos) e payload do POST por slice | — |
+| ID malformado na URL | ✅ | binding por ULID com parâmetros ligados | `returns 404 for malformed or unknown ids` | — |
+| Escalada via arquivamento | ✅ | `*.archive` × `*.archive_own` + criador do Project na Policy; responsável não arquiva | por slice | — |
+| Exclusão destrutiva | ✅ | sem rota DELETE; FKs `restrict` | `never deletes records of the project tree` | — |
+| Escrita sem trilha ou trilha sem escrita | ✅ | evento síncrono dentro da transação da Action | as 12 operações: 1 linha exata e rollback quando a trilha falha | — |
+| Escopo autorizado vazando em logs | ✅ | `environment_updated` registra só nomes de campos | `EnvironmentTest` | — |
+| Escrita concorrente com arquivamento do ancestral | ⚠️ | ancestrais `FOR SHARE` de cima para baixo, linha alterada `FOR UPDATE` | sem teste paralelo (como no P1) | protocolo de lock verificado por revisão, não por teste |
+| Abuso de volume nas rotas novas | ❌ | — | — | FIND-016; tratado no P2.5 antes do P3 |
+
 ## Entrada
 
 | Ameaça | Status | Mitigação existente | Teste | Risco residual | Fase |

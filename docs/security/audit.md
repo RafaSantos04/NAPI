@@ -49,6 +49,12 @@ carregado pelo evento.
 | `security_test_executed` | `SecurityTestExecuted` | `RunIdorTest` (Fase 5.1), `RunMassAssignmentTest` (Fase 5.2) | `App\Models\SecurityTestRun` | `test_key`, `scenario`, `acting_as_user_id`, `verdict` |
 | `organization_created` / `organization_updated` | `OrganizationCreated` / `OrganizationUpdated` | Actions de P1 | `App\Models\Organization` | campos alterados no update |
 | `membership_created` / `membership_updated` / `membership_removed` | eventos `OrganizationMembership*` | Actions de P1 | `App\Models\OrganizationMembership` | user, role/status ou mudanças relevantes |
+| `project_created` / `project_archived` / `project_restored` | `ProjectCreated` / `ProjectArchived` / `ProjectRestored` | `CreateProject`, `ArchiveProject`, `RestoreProject` (P2) | `App\Models\Project` | — |
+| `project_updated` | `ProjectUpdated` | `UpdateProject` (P2; só se algo mudou) | `App\Models\Project` | `fields` (nomes) |
+| `application_created` / `application_archived` / `application_restored` | `Application*` | `CreateApplication`, `ArchiveApplication`, `RestoreApplication` (P2) | `App\Models\Application` | — |
+| `application_updated` | `ApplicationUpdated` | `UpdateApplication` (P2) | `App\Models\Application` | `fields` (nomes) |
+| `environment_created` / `environment_archived` / `environment_restored` | `Environment*` | `CreateEnvironment`, `ArchiveEnvironment`, `RestoreEnvironment` (P2) | `App\Models\Environment` | — |
+| `environment_updated` | `EnvironmentUpdated` | `UpdateEnvironment` (P2) | `App\Models\Environment` | `fields` (nomes; o conteúdo de `authorized_scope` nunca entra) |
 
 O id do token vai em `meta` porque é inteiro e `subject_id` é ULID. O segredo
 do token nunca é gravado.
@@ -81,6 +87,7 @@ Classificação feita na Fase 3.2 ([FIND-012](../findings/README.md#find-012--la
 | Login falho | **defer** (Fase 5) | exige decidir como guardar o e-mail tentado (dado pessoal, possivelmente de terceiros) e se relaciona com a revisão do rate limit ([FIND-016](../findings/README.md#find-016--rate-limiting-restrito-ao-login-e-por-emailip), [FIND-018](../findings/README.md#find-018--sinais-de-enumeração-no-login)) |
 | CRUD de perfil | **audit now** (Fase 4.3; adiado na 3.2) | com a tela no admin, criar, renomear e excluir perfis virou operação de rotina; excluir um perfil remove a matriz dele |
 | CRUD de menu | **audit now** (Fase 4.4; adiado na 3.2) | editar menu não altera autorização, mas criar uma chave cria uma área de permissão e excluir um menu remove as permissões da área de todos os perfis |
+| Árvore de projetos: criar, alterar, arquivar e restaurar | **audit now** (P2) | dados comerciais do tenant; arquivar muda o que pode ser avaliado. Sempre com `organization_id` |
 | Acessos negados (401/403/404) | **not needed** na aplicação | volume alto e baixo valor por linha; é papel de logs de acesso e observabilidade |
 
 ## Desenho: domínio → evento → listener → log
@@ -144,6 +151,12 @@ auditado num único ponto, a Action, e por isso a API e a área administrativa
 produzem a mesma linha. `tests/Feature/Admin/UserManagementTest.php` verifica
 ator, subject e `meta` das operações feitas pela área administrativa, e que a
 senha não aparece na trilha.
+
+Desde o P2, `tests/Feature/Security/ProjectTreeSecurityTest.php` percorre as
+**12 operações de escrita** da árvore de projetos: cada uma grava exatamente
+uma linha com ação, `organization_id`, ator e subject corretos, e, quando a
+gravação da trilha falha, as tabelas da árvore ficam idênticas ao estado
+anterior. Uma mutação que dispara o evento depois da transação é pega.
 
 `tests/Feature/Security/AuditIntegrityTest.php` usa tokens reais e verifica
 **cardinalidade** (`count() === 1`) para cada ação, o ator gravado, o

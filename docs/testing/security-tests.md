@@ -34,6 +34,8 @@ correção correspondente.
 | `AdminInvariantTest` | 7 | FIND-006 | último admin ativo → 409; admin inativo e admin excluído não contam; com dois admins ativos a mudança passa; exclusão via Action respeita a invariante; rejeição não gera auditoria |
 | `AuditIntegrityTest` | 8 | FIND-002, 012, 013, 017 | `count() === 1` para login, logout, atribuição, matriz, usuário (criar/alterar/excluir) e token (criar/revogar); ator correto; `assigned_by` no pivot; contexto vem do evento, não da sessão |
 | `RouteCoverageTest` (Fases 4.2 e 5.1) | 11 | FIND-021, 022 | toda rota `api/*` exceto login tem `auth:sanctum` e `token.ability`; toda rota autenticada da API tem `permission:` ou está na lista explícita de autoatendimento; nenhuma rota da API inicia sessão (`statefulApi` desligado); toda rota `admin*` está no grupo `web`, exige `auth` (exceto landing e login) e `admin.access` (exceto login e logout); toda rota `admin/*` de recurso tem `permission:`; visitante e `dev` são barrados em **todas** as rotas internas do admin |
+| `RouteCoverageTest` (+2, P2) | — | ADR-0012 | toda rota `organizations/{organization}/*` com parâmetro filho exige scoped binding; nenhuma rota da árvore de projetos é `DELETE` |
+| `ProjectTreeSecurityTest` (P2-T05) | 53 | ADR-0012 | auditoria das 12 escritas da árvore (1 linha exata; rollback quando a trilha falha); 404 em **todas** as rotas `organizations.projects.*` para não-membro, membro de outra organização, membership desativada e admin global, sem escrita nem trilha; usuário de duas organizações misturando ids numa URL (404); papel da organização da rota, não o mais forte (403); ids malformados (404); `PATCH` ignora tenant, pai, criador e `archived_at` |
 | `MenuTreeTest` | 7 | FIND-010 | admin vê todos os ativos; inativos (raiz e filho) ocultos; filho sem `view` oculto; filho de pai oculto oculto; `dev` recebe 200 com árvore vazia; mais de um nível; aparecer na árvore não concede acesso |
 
 ## Área administrativa: `tests/Feature/Admin/` (Fase 4.2)
@@ -136,6 +138,10 @@ teste; payload aceitando qualquer chave; rota de execução pedindo só `view`.
 | INV-27 ao menos um owner válido por Organization | `OrganizationOwnerInvariantTest` (7), inclusive desativação/exclusão global | `Tenancy/OrganizationOwnerInvariantTest` |
 | INV-28 auditoria é append-only e tem tenant | `Append-only audit trail` (3), eventos de Organization/Membership | `Tenancy/OrganizationTest`, `Tenancy/OrganizationMembershipTest` |
 | INV-29 membership tem lifecycle e conjuntos fechados | duplicidade, usuário inativo, role/status inválidos, disable/reativação | `Tenancy/OrganizationMembershipTest` |
+| INV-30 nenhum recurso da árvore referencia pai, criador ou responsável de outra organização | FK composta por SQL direto, trigger de imutabilidade | `Projects/ProjectIntegrityTest`, `Applications/ApplicationIntegrityTest`, `Environments/EnvironmentIntegrityTest` |
+| INV-31 ancestral arquivado deixa a subárvore somente leitura | 409 em criar, alterar, arquivar e restaurar sob project ou application arquivados | `Applications/ApplicationTest`, `Environments/EnvironmentTest` |
+| INV-32 arquivar exige `*.archive` ou ter criado o Project ancestral | matriz owner, manager e member; responsável não arquiva | `*Test` dos três recursos, `Security/ProjectTreeSecurityTest` |
+| INV-33 toda escrita da árvore tem exatamente uma linha de auditoria atômica | as 12 operações, inclusive rollback | `Security/ProjectTreeSecurityTest` |
 | INV-05/06 reconferidas sob lock | `keeps a profile with users even when the Policy is bypassed`, `keeps a menu with submenus even when the Policy is bypassed` | `Admin/ProfileManagementTest`, `Admin/MenuManagementTest` |
 | Integridade de vínculos | testes de `force deleting … cascades` | `UserTest`, `ProfileTest`, `MenuTest` |
 
@@ -145,6 +151,7 @@ teste; payload aceitando qualquer chave; rota de execução pedindo só `view`.
 |---|---|
 | Corrida concorrente na invariante de administrador | `RefreshDatabase` usa uma única transação por teste, então duas conexões simultâneas não enxergam os dados. O lock foi verificado manualmente no PostgreSQL (INV-08) |
 | Corrida concorrente na invariante de owner | A suíte cobre o protocolo e as falhas; o lock comum na linha da Organization serializa mudanças em memberships diferentes, mas o mesmo limite de `RefreshDatabase` impede um teste paralelo real |
+| Escrita concorrente com arquivamento de ancestral (P2) | Mesmo limite de `RefreshDatabase`; o protocolo de locks (ancestrais `FOR SHARE`, linha `FOR UPDATE`, sempre de cima para baixo) está no ADR-0012 e foi verificado por revisão |
 | 401 em cada rota individual de Profiles, Menus e Tokens | INV-01; o grupo é único, e o 401 é testado em `/auth/me` e com token inválido |
 | Login falho auditado | adiado (FIND-012) |
 | Enumeração no login por tempo | FIND-018, Fase 5 |
