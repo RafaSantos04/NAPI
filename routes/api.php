@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\V1\MenuController;
 use App\Http\Controllers\Api\V1\OrganizationController;
 use App\Http\Controllers\Api\V1\OrganizationMembershipController;
 use App\Http\Controllers\Api\V1\ProfileController;
+use App\Http\Controllers\Api\V1\ProjectController;
+use App\Http\Controllers\Api\V1\ProjectStatusController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\UserProfileController;
 use App\Http\Controllers\Api\V1\UserStatusController;
@@ -62,6 +64,28 @@ Route::prefix('v1')->group(function () {
                 Route::delete('/members/{membership}', [OrganizationMembershipController::class, 'destroy'])
                     ->middleware('permission:members.manage')
                     ->name('organizations.members.destroy');
+
+                // Project tree (P2, ADR-0012). No DELETE: archiving keeps history.
+                Route::get('/projects', [ProjectController::class, 'index'])
+                    ->middleware('permission:projects.view')
+                    ->name('organizations.projects.index');
+                Route::post('/projects', [ProjectController::class, 'store'])
+                    ->middleware('permission:projects.create')
+                    ->name('organizations.projects.store');
+                Route::get('/projects/{project}', [ProjectController::class, 'show'])
+                    ->middleware('permission:projects.view')
+                    ->name('organizations.projects.show');
+                Route::patch('/projects/{project}', [ProjectController::class, 'update'])
+                    ->middleware('permission:projects.update')
+                    ->name('organizations.projects.update');
+                // Every role able to archive anything holds `archive_own`;
+                // the Policy decides which projects it reaches.
+                Route::post('/projects/{project}/archive', [ProjectStatusController::class, 'archive'])
+                    ->middleware('permission:projects.archive_own')
+                    ->name('organizations.projects.archive');
+                Route::post('/projects/{project}/restore', [ProjectStatusController::class, 'restore'])
+                    ->middleware('permission:projects.archive_own')
+                    ->name('organizations.projects.restore');
             });
 
         // Users
