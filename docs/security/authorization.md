@@ -128,6 +128,8 @@ A matriz completa das 19 permissions está em
 | `POST .../projects` (P2) | `projects.create` contextual |
 | `PATCH .../projects/{project}` (P2) | `projects.update` contextual |
 | `POST .../projects/{project}/archive`, `.../restore` (P2) | `projects.archive_own` contextual (todo papel que arquiva algo a possui); a Policy decide o alcance |
+| `GET`, `POST`, `PATCH .../projects/{project}/applications[/{application}]` (P2) | `applications.view`, `applications.create`, `applications.update` contextuais |
+| `POST .../applications/{application}/archive`, `.../restore` (P2) | `applications.archive_own` contextual; a Policy decide o alcance |
 
 Perfis padrão:
 
@@ -159,6 +161,7 @@ apenas o que depende da instância ou do ator:
 | `OrganizationPolicy` | membership ativa no tenant; owner altera, manager e member só leem |
 | `OrganizationMembershipPolicy` | parent Organization explícita e `members.view|manage`; scoped binding não substitui a Policy |
 | `ProjectPolicy` (P2) | project da Organization da rota; `archive`/`restore`: `projects.archive` alcança qualquer project, `projects.archive_own` só o criado pela membership do usuário (403 nos demais) |
+| `ApplicationPolicy` (P2) | reconfirma a cadeia application → project → Organization sem depender do binding; `archive`/`restore`: `applications.archive` alcança qualquer application, `applications.archive_own` só as de um project criado pela membership do usuário |
 
 ## Contexto organizacional (P1)
 

@@ -5,8 +5,8 @@
 ## Status
 
 Proposed (P2). Implementados: a fundação compartilhada do passo 0 (papéis,
-catálogo de permissões, guard de imutabilidade e envelope JSON) e o slice 1,
-Project completo. Application e Environment entram nos slices seguintes.
+catálogo de permissões, guard de imutabilidade e envelope JSON) e os slices
+1 e 2, Project e Application completos. Environment entra no slice 3.
 Passa a Accepted no JUDGE do P2.
 
 ## Context
@@ -58,7 +58,9 @@ organizações e não ignora membership (ADR-0011).
 9. Archive e restore são Actions explícitas e auditadas. Abaixo de um pai
    arquivado nada é criado nem alterado. A Action trava os ancestrais de cima
    para baixo (Project → Application) antes de escrever, serializando com um
-   arquivamento concorrente sem risco de deadlock.
+   arquivamento concorrente sem risco de deadlock. Ancestrais recebem
+   `FOR SHARE` (escritas em filhos diferentes não se bloqueiam); a linha
+   alterada recebe `FOR UPDATE`.
 10. Arquivar um Project não reescreve os filhos: a árvore fica efetivamente
     inativa pela regra do item 9 e volta inteira no restore.
 
