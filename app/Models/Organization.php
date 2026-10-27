@@ -22,4 +22,14 @@ class Organization extends Model
     {
         return $this->hasMany(OrganizationMembership::class);
     }
+
+    /**
+     * Also scopes the {project} route binding to this organization.
+     *
+     * @return HasMany<Project, $this>
+     */
+    public function projects(): HasMany
+    {
+        return $this->hasMany(Project::class);
+    }
 }

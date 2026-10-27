@@ -1,6 +1,7 @@
 <?php
 
 use App\Domain\IAM\Exceptions\LastActiveAdministratorException;
+use App\Domain\Projects\Exceptions\ProjectLifecycleException;
 use App\Exceptions\LastActiveOrganizationOwnerException;
 use App\Http\Middleware\CheckPermission;
 use App\Http\Middleware\EnsureSecurityLabEnabled;
@@ -39,6 +40,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // A known business rule rejected by the domain (409), not a server error.
         $exceptions->dontReport(LastActiveAdministratorException::class);
         $exceptions->dontReport(LastActiveOrganizationOwnerException::class);
+        $exceptions->dontReport(ProjectLifecycleException::class);
 
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),

@@ -8,6 +8,7 @@ use App\Models\Menu;
 use App\Models\Organization;
 use App\Models\OrganizationMembership;
 use App\Models\Profile;
+use App\Models\Project;
 use App\Models\SecurityLabResource;
 use App\Models\SecurityTestRun;
 use App\Models\User;
@@ -15,6 +16,7 @@ use App\Policies\MenuPolicy;
 use App\Policies\OrganizationMembershipPolicy;
 use App\Policies\OrganizationPolicy;
 use App\Policies\ProfilePolicy;
+use App\Policies\ProjectPolicy;
 use App\Policies\SecurityLabResourcePolicy;
 use App\Policies\SecurityTestRunPolicy;
 use App\Policies\UserPolicy;
@@ -54,6 +56,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Menu::class, MenuPolicy::class);
         Gate::policy(Organization::class, OrganizationPolicy::class);
         Gate::policy(OrganizationMembership::class, OrganizationMembershipPolicy::class);
+        Gate::policy(Project::class, ProjectPolicy::class);
         Gate::policy(SecurityTestRun::class, SecurityTestRunPolicy::class);
         Gate::policy(SecurityLabResource::class, SecurityLabResourcePolicy::class);
 
