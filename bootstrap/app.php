@@ -2,6 +2,7 @@
 
 use App\Domain\IAM\Exceptions\LastActiveAdministratorException;
 use App\Domain\Projects\Exceptions\ApplicationLifecycleException;
+use App\Domain\Projects\Exceptions\EnvironmentLifecycleException;
 use App\Domain\Projects\Exceptions\ProjectLifecycleException;
 use App\Exceptions\LastActiveOrganizationOwnerException;
 use App\Http\Middleware\CheckPermission;
@@ -43,6 +44,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->dontReport(LastActiveOrganizationOwnerException::class);
         $exceptions->dontReport(ProjectLifecycleException::class);
         $exceptions->dontReport(ApplicationLifecycleException::class);
+        $exceptions->dontReport(EnvironmentLifecycleException::class);
 
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),

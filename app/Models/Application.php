@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 // Tenant and project are not fillable: the Action takes both from the route,
 // never from the payload.
@@ -38,6 +39,16 @@ class Application extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    /**
+     * Also scopes the {environment} route binding to this application.
+     *
+     * @return HasMany<Environment, $this>
+     */
+    public function environments(): HasMany
+    {
+        return $this->hasMany(Environment::class);
     }
 
     public function isArchived(): bool
