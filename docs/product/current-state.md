@@ -3,15 +3,15 @@
 [← Produto](README.md) · [Modelo de produto](product-model.md) · [Fases existentes](../phases/README.md)
 
 Auditoria inicial realizada em 25/10/2026 contra o commit `6ff5cdd` e
-atualizada após a implementação ainda não commitada de P1.
+atualizada após P1 e após P2 (27/10/2026).
 
 ## Baseline verificado
 
 | Evidência | Resultado |
 |---|---|
-| Rotas próprias | 69 (`php artisan route:list --except-vendor`) |
-| Models / migrations / Actions | 11 / 19 / 21 |
-| Testes | 424, 1.785 assertions após P1 |
+| Rotas próprias | 87 (`php artisan route:list --except-vendor`) |
+| Models / migrations / Actions | 14 / 24 / 33 |
+| Testes | 628, 2.667 assertions após P2 |
 | Formatação | `composer lint` aprovado |
 | Análise estática | `composer analyse` aprovado, sem erros |
 | Stack instalada | Laravel 13.32, PHP 8.4.27, Sanctum 4.3, PostgreSQL, Pest 4.7 |
@@ -29,6 +29,7 @@ atualizada após a implementação ainda não commitada de P1.
 | Security Lab | IDOR/BOLA e Mass Assignment, dados sintéticos, flag e histórico | diferencial educacional reutilizável |
 | Qualidade | Pest, PostgreSQL real, Pint, Larastan e strict mode | baseline forte para evolução |
 | Tenancy P1 | Organization, Membership, contexto por rota, permissions contextuais, invariante de owner | fundação dos agregados comerciais |
+| Árvore P2 | Project, Application, Environment com FK composta, trigger de imutabilidade, arquivamento, papel `manager`, responsável e escopo autorizado | base para inventário OpenAPI e assessments |
 
 As Fases 4.3 e 4.4 estão implementadas. O texto original do novo roadmap as
 marcava como planejamento, mas os commits `833e0dd` a `051b2c0`, as rotas,
@@ -36,7 +37,7 @@ os controllers e os testes comprovam a entrega.
 
 ## Ainda não existe
 
-- projeto, aplicação, ambiente ou cadastro de alvo autorizado;
+- allowlist executável de alvo (o escopo autorizado do P2 é registro humano);
 - importação/versionamento OpenAPI e inventário de endpoints;
 - assessment de cliente, finding comercial, evidência ou reteste;
 - filas/processamento assíncrono em uso, storage de evidências ou workers
@@ -55,7 +56,7 @@ As ocorrências de “finding” existentes pertencem ao Reality Check interno e
 |---|---|
 | Reutilizar | identidade global `User`, Actions/DTOs, Policies, eventos/auditoria, PostgreSQL, API versionada, backoffice Blade e práticas de teste |
 | Evoluir | rate limits; contrato JSON; filas; storage; observabilidade |
-| Criar | Project, Application, Environment, ApiSpecificationVersion, Assessment, Finding, Evidence, Retest, Report e frontend SaaS |
+| Criar | ApiSpecificationVersion, Assessment, Finding, Evidence, Retest, Report e frontend SaaS |
 | Não misturar | `SecurityTestRun` com assessment/check real; `SecurityLabResource` com alvo/evidência de cliente; `Profile/Menu` globais com papéis de tenant sem ADR; Blade interno com a experiência do cliente |
 
 ## Dívidas que viram gates do produto
@@ -75,8 +76,9 @@ exiba CPF. O MVP não precisa usar CPF e não deve ampliar essa superfície.
 
 ## Conclusão da auditoria
 
-O repositório agora tem um boundary multi-tenant testado e pode seguir para
-P2. Ele ainda não é um produto de API security para clientes: não há projeto,
-aplicação, assessment nem frontend comercial. Os novos agregados devem nascer
-sob Organization e reutilizar o contexto entregue por P1.
+O repositório tem um boundary multi-tenant testado e a árvore Project →
+Application → Environment com isolamento garantido pelo banco. Ele ainda não
+é um produto de API security para clientes: não há inventário OpenAPI,
+assessment nem frontend comercial. O P2.5 fecha o rate limiting antes do P3,
+e os próximos agregados reutilizam a FK composta do ADR-0012.
 

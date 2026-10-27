@@ -29,8 +29,10 @@ pilotos com o público-alvo. Preços, limites de planos, disposição a pagar e
 prioridade entre integrações são hipóteses, não decisões de código.
 
 P1 já implementou Organization, Membership e tenancy; veja o
-[relatório da fase](phases/p1-organizations-tenancy.md). Os demais agregados
-comerciais continuam planejados. Antes de cada fase devem ser escritos e
+[relatório da fase](phases/p1-organizations-tenancy.md). P2 implementou
+Project, Application e Environment com integridade de tenant no PostgreSQL;
+veja o [relatório do P2](phases/p2-projects-applications-environments.md).
+Os demais agregados comerciais continuam planejados. Antes de cada fase devem ser escritos e
 aceitos os ADRs listados no [roadmap](roadmap.md#decisões-arquiteturais-obrigatórias).
 
 ## Princípios

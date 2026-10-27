@@ -3,8 +3,9 @@
 [← Produto](README.md) · [Estado atual](current-state.md) · [Modelo de segurança](security-product-model.md)
 
 Este modelo orienta as próximas fases. Organization e Membership foram
-confirmadas e implementadas em P1; os demais conceitos continuam conceituais
-até seus ADRs e fases.
+confirmadas e implementadas em P1; Project, Application e Environment, em P2
+([ADR-0012](../architecture/decisions/ADR-0012-project-tree-tenant-integrity.md)).
+Os demais conceitos continuam conceituais até seus ADRs e fases.
 
 ```text
 User (identidade global)

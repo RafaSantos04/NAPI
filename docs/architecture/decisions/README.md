@@ -31,7 +31,7 @@ decisão registrada na Fase 3), ela é citada.
 | [ADR-0009](ADR-0009-web-session-and-bearer-adapters.md) | Sessão web (Blade) e Bearer (API) como adapters separados do mesmo domínio; sem SPA por cookie | Accepted (Fase 4.2) |
 | [ADR-0010](ADR-0010-controlled-security-lab.md) | Security Lab controlado: código vulnerável só dentro de um caso de uso, alvos e personas sintéticos, feature flag desligada por padrão | Accepted (Fase 5.1, complementado na Fase 5.2) |
 | [ADR-0011](ADR-0011-multi-tenant-organization-context.md) | Organization como tenant, Membership contextual, organização corrente explícita e invariante do último owner | Accepted (P1; catálogo de papéis e permissões estendido pelo ADR-0012) |
-| [ADR-0012](ADR-0012-project-tree-tenant-integrity.md) | Project/Application/Environment com `organization_id`, FK composta e trigger de imutabilidade; papéis owner, manager e member; arquivamento pelo criador | Proposed (P2) |
+| [ADR-0012](ADR-0012-project-tree-tenant-integrity.md) | Project/Application/Environment com `organization_id`, FK composta e trigger de imutabilidade; papéis owner, manager e member; arquivamento pelo criador | Accepted (P2) |
 
 ## Template
 

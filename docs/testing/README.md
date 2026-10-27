@@ -18,7 +18,7 @@
 - Qualidade complementar: `composer lint` (Pint) e `composer analyse`
   (Larastan nível 6 em `app/`).
 
-## Inventário (424 testes, P1)
+## Inventário (628 testes, P2)
 
 | Categoria | Arquivo | Testes | Nível |
 |---|---|---|---|
@@ -36,11 +36,16 @@
 | Security: último admin | `Feature/Security/AdminInvariantTest.php` | 7 | HTTP + Action |
 | Security: auditoria | `Feature/Security/AuditIntegrityTest.php` | 11 | HTTP + banco + evento |
 | Security: árvore de menus | `Feature/Security/MenuTreeTest.php` | 7 | HTTP, Bearer real |
-| Security: cobertura de rotas | `Feature/Security/RouteCoverageTest.php` | 12 | rotas registradas + HTTP |
-| Tenancy: Organizations | `Feature/Tenancy/OrganizationTest.php` | 9 | HTTP + model + trigger |
-| Tenancy: memberships | `Feature/Tenancy/OrganizationMembershipTest.php` | 9 | HTTP + constraints |
+| Security: cobertura de rotas | `Feature/Security/RouteCoverageTest.php` | 14 | rotas registradas + HTTP |
+| Security: árvore de projetos (P2-T05) | `Feature/Security/ProjectTreeSecurityTest.php` | 53 | HTTP, Bearer real + rotas registradas + banco |
+| Tenancy: Organizations | `Feature/Tenancy/OrganizationTest.php` | 10 | HTTP + model + trigger |
+| Tenancy: memberships | `Feature/Tenancy/OrganizationMembershipTest.php` | 14 | HTTP + constraints + trigger |
 | Tenancy: isolamento | `Feature/Tenancy/TenantIsolationTest.php` | 5 | HTTP, Bearer real |
-| Tenancy: último owner | `Feature/Tenancy/OrganizationOwnerInvariantTest.php` | 7 | HTTP + Actions |
+| Tenancy: último owner | `Feature/Tenancy/OrganizationOwnerInvariantTest.php` | 8 | HTTP + Actions |
+| Tenancy: matriz de papéis (P2) | `Unit/Domain/Tenancy/Enums/OrganizationRoleTest.php` | 20 | unitário, sem framework |
+| Projects (P2) | `Feature/Projects/ProjectTest.php`, `ProjectIntegrityTest.php` | 32 + 5 | HTTP + Policy + SQL direto |
+| Applications (P2) | `Feature/Applications/ApplicationTest.php`, `ApplicationIntegrityTest.php` | 31 + 5 | HTTP + Policy direta + SQL direto |
+| Environments (P2) | `Feature/Environments/EnvironmentTest.php`, `EnvironmentIntegrityTest.php` | 39 + 10 | HTTP + Action + Policy direta + SQL direto |
 | Security Lab: acesso e feature flag | `Feature/SecurityLab/SecurityLabAccessTest.php` | 31 | HTTP, sessão `web` + Actions + seeder |
 | Security Lab: teste IDOR | `Feature/SecurityLab/IdorTestExecutionTest.php` | 23 | HTTP + Action + Policy + constraints |
 | Security Lab: teste Mass Assignment | `Feature/SecurityLab/MassAssignmentTestExecutionTest.php` | 36 | HTTP + Action + estado do banco + histórico |
@@ -54,10 +59,13 @@
 | Model/DB: Menus | `Feature/MenuTest.php` | 5 | Eloquent + constraints |
 | Esqueleto | `Unit/ExampleTest.php`, `Feature/ExampleTest.php` | 2 | exemplos padrão do Laravel |
 
-**Não há testes unitários reais.** `tests/Unit` só contém o exemplo. As
-Actions e Policies são testadas pela camada HTTP; a exceção é
-`prevents deleting a profile that still has users`, que chama a Policy
-diretamente.
+**Um teste unitário real** desde o P2: a matriz papel × permission
+(`OrganizationRoleTest`), lógica pura de enum. As Actions e Policies são
+testadas pela camada HTTP; as exceções chamam a Policy ou a Action
+diretamente para provar uma barreira que o HTTP não alcança
+(`prevents deleting a profile that still has users`, `denies ... without
+relying on the route binding`, `rechecks the responsible membership inside
+the action`).
 
 ## Padrões observados
 

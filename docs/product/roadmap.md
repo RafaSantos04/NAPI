@@ -15,7 +15,8 @@ são renumeradas: elas registram como as fundações foram construídas.
 | 5.3+ | novos Labs | paralelo/futuro | executar somente quando apoiar aprendizado ou findings reais |
 | P0 | definição, arquitetura e validação do produto | em validação | documentos entregues + entrevistas/pilotos confirmados |
 | P1 | Organizations, Memberships & Tenancy | concluída | isolamento de tenant e autorização contextual testados |
-| P2 | Projects, Applications & Environments | planejada | hierarquia comercial e escopo de ambiente auditáveis |
+| P2 | Projects, Applications & Environments | concluída | hierarquia comercial e escopo de ambiente auditáveis |
+| P2.5 | Platform Security Gate | planejada | rate limiting geral, limites de payload e política de operações caras antes do P3 |
 | P3 | Vue SaaS Foundation | planejada | shell do cliente autenticado e tenant-aware, sem duplicar domínio |
 | P4 | API Inventory / OpenAPI Import | planejada | import versionado e inventário consultável |
 | P5 | Security Assessments | planejada | assessment manual autorizado com workflow e checklist |
@@ -66,6 +67,22 @@ Gate: testes negativos de acesso cruzado e ADR aceito. Não inclui Project.
 - não criar Customer enquanto pilotos não provarem a necessidade.
 
 Gate: nenhum recurso pode referenciar pai de outra organização.
+
+**Entregue:** veja o [relatório P2](phases/p2-projects-applications-environments.md) e o
+[ADR-0012](../architecture/decisions/ADR-0012-project-tree-tenant-integrity.md).
+O gate é garantido por FK composta no PostgreSQL, não só por Policy.
+
+### P2.5 — Platform Security Gate
+
+- rate limiting além do login: por IP no login e limiter padrão por usuário
+  nas rotas autenticadas (FIND-016);
+- limite de tamanho de corpo e revisão de `max:`/paginação;
+- FIND-026 (UTF-8 inválido → 500) e, opcionalmente, FIND-018;
+- ADR da política de operações caras (fila, timeout, concorrência por
+  organização, tetos de tamanho e de `$ref`, idempotência), aplicada a partir
+  do import de OpenAPI; nenhum limiter sem rota consumidora.
+
+Gate: o P3 não começa com o FIND-016 aberto.
 
 ### P3 — Vue SaaS Foundation
 
@@ -137,6 +154,8 @@ hipótese ainda aberta:
 | Antes de | ADR necessário |
 |---|---|
 | P1 | modelo multi-tenant, contexto de organização e autorização de memberships — ADR-0011 entregue |
+| P2 | integridade de tenant da árvore de projetos, lifecycle e papéis — ADR-0012 entregue |
+| P2.5 | política de abuso e de operações caras (rate limit, payload, fila) |
 | P3 | topologia frontend/backend e autenticação do Vue; relação com ADR-0009 |
 | P4 | armazenamento/versionamento do contrato OpenAPI e política para referências externas |
 | P6 | classificação, criptografia, retenção e acesso a evidências |

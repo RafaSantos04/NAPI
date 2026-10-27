@@ -28,6 +28,18 @@ app/
 │   │   └── RunMassAssignmentTest.php                     (Fase 5.2)
 │   └── Enums/                 SecurityTest, SecurityTestScenario,
 │                              SecurityTestExecutionStatus, ...ObservedOutcome, ...Verdict
+├── Domain/Tenancy/            Organizations e memberships (P1, ADR-0011)
+│   ├── Actions/               {Create,Update}Organization, AddOrganizationMember,
+│   │                          UpdateOrganizationMembership, RemoveOrganizationMember
+│   ├── Enums/                 OrganizationRole (owner|manager|member, P2), OrganizationPermission
+│   │                          (catálogo fechado de 19 keys), OrganizationMembershipStatus
+│   ├── OrganizationContext.php                   Tenant da requisição; identifica, não autoriza
+│   └── EnsureActiveOrganizationOwnerRemains.php  Invariante do último owner
+├── Domain/Projects/           Árvore Project → Application → Environment (P2, ADR-0012)
+│   ├── Actions/               {Create,Update,Archive,Restore}{Project,Application,Environment}:
+│   │                          ancestrais FOR SHARE de cima para baixo, linha FOR UPDATE
+│   ├── Enums/                 EnvironmentClassification
+│   └── Exceptions/            {Project,Application,Environment}LifecycleException (409)
 ├── DTOs/                      Dados validados HTTP → Action
 │   ├── AssignProfilesToUserDto.php
 │   ├── CreateUserDto.php, UpdateUserDto.php              (Fase 4.2)
@@ -36,6 +48,9 @@ app/
 │   ├── SyncMenuProfilesDto.php                           (Fase 4.4)
 │   ├── RunIdorTestDto.php                                (Fase 5.1)
 │   ├── RunMassAssignmentTestDto.php                      (Fase 5.2)
+│   ├── {Create,Update}OrganizationDto, AddOrganizationMemberDto,
+│   │   UpdateOrganizationMembershipDto                   (P1)
+│   ├── {Create,Update}{Project,Application,Environment}Dto   (P2)
 │   └── SyncMenuPermissionsDto.php
 ├── Events/                    Fatos de domínio (síncronos)
 │   ├── Contracts/Auditable.php
@@ -46,6 +61,8 @@ app/
 │   ├── Profile{Created,Updated,Deleted}.php              (Fase 4.3)
 │   ├── Menu{Created,Updated,Deleted}.php                 (Fase 4.4)
 │   ├── SecurityTestExecuted.php                          (Fase 5.1)
+│   ├── Organization{Created,Updated}, OrganizationMembership{Created,Updated,Removed}   (P1)
+│   ├── {Project,Application,Environment}{Created,Updated,Archived,Restored}            (P2)
 │   └── TokenCreated.php, TokenRevoked.php
 ├── Listeners/                 Reações; hoje, apenas auditoria
 │   └── RecordAuditLog.php     Uma linha por evento Auditable
@@ -54,6 +71,9 @@ app/
 │   ├── Controllers/Api/V1/    Controllers REST versionados
 │   │   ├── Auth/{AuthController, TokenController}.php
 │   │   ├── MenuController.php
+│   │   ├── Organization{,Membership}Controller.php       (P1)
+│   │   ├── {Project,Application,Environment}Controller.php        (P2)
+│   │   ├── {Project,Application,Environment}StatusController.php  archive/restore (P2)
 │   │   ├── ProfileController.php
 │   │   ├── UserController.php
 │   │   ├── UserProfileController.php
@@ -70,23 +90,32 @@ app/
 │   │   ├── EnsureTokenAbility.php         Ability do token pelo método HTTP (403)
 │   │   ├── EnsureUserIsActive.php         Encerra sessão web de inativo (grupo web)
 │   │   ├── EnsureUserCanAccessAdmin.php   `admin.access`: entrada na área administrativa
-│   │   └── EnsureSecurityLabEnabled.php   `security.lab`: feature flag do laboratório (404)
+│   │   ├── EnsureSecurityLabEnabled.php   `security.lab`: feature flag do laboratório (404)
+│   │   └── ResolveOrganizationContext.php `organization.context`: tenant da rota, limpo em finally (P1)
 │   ├── Requests/              FormRequests (namespace plano, Auth/ separado: Login, TokenStore)
 │   │   └── Web/Admin/         Login web e requests de usuários, perfis e menus, que estendem os da API;
 │   │                          Concerns/ com mensagens em português e SendsEveryField
-│   └── Resources/             UserResource, ProfileResource, MenuResource
+│   └── Resources/             User, Profile, Menu, Organization, OrganizationMembership,
+│                              Project, Application, EnvironmentResource
+├── Exceptions/                LastActiveOrganizationOwnerException (409, P1)
 ├── Models/                    User, UserDetails, Profile, Menu, AuditLog,
-│                              SecurityLabResource, SecurityTestRun
+│                              SecurityLabResource, SecurityTestRun,
+│                              Organization, OrganizationMembership (P1),
+│                              Project, Application, Environment (P2)
 │                              + pivots UserProfile, MenuProfile
 ├── Policies/                  UserPolicy, ProfilePolicy, MenuPolicy,
-│                              SecurityTestRunPolicy, SecurityLabResourcePolicy
+│                              SecurityTestRunPolicy, SecurityLabResourcePolicy,
+│                              Organization{,Membership}Policy (P1),
+│                              {Project,Application,Environment}Policy (P2)
 └── Providers/AppServiceProvider.php
 bootstrap/app.php              Rotas, alias de middleware, exceções JSON
 config/sanctum.php             Expiração (7 dias) e prefixo de token (napi_)
 config/security.php            Feature flag do Security Lab (desligada por padrão)
 database/
-├── migrations/                citext, users, tokens, IAM, audit_logs
-├── factories/                 User, UserDetails, Profile, Menu
+├── migrations/                citext, users, tokens, IAM, audit_logs, tenancy (P1),
+│                              árvore de projetos com FK composta e triggers (P2)
+├── factories/                 User, UserDetails, Profile, Menu, Organization,
+│                              OrganizationMembership, Project, Application, Environment
 └── seeders/                   Perfis, menus de sistema, usuários de demonstração
 routes/api.php                 Todas as rotas /api/v1
 routes/web.php                 Área administrativa /admin
@@ -97,6 +126,9 @@ tests/
 ├── Feature/Security/          Regressão de segurança com tokens Bearer reais (Fase 3.2) e cobertura de rotas
 ├── Feature/Admin/             Área administrativa por sessão web (Fases 4.1 a 4.4)
 ├── Feature/SecurityLab/       Security Lab: acesso, flag, testes IDOR e Mass Assignment, histórico (Fases 5.1 e 5.2)
+├── Feature/Tenancy/           Organizations, memberships, isolamento e último owner (P1)
+├── Feature/{Projects,Applications,Environments}/   HTTP + integridade no PostgreSQL (P2)
+├── Unit/Domain/Tenancy/       Matriz papel × permission (P2)
 └── Feature/{User,Profile,Menu}Test.php   Testes de model/constraints
 ```
 
@@ -144,7 +176,7 @@ ou hierarquia sem um problema concreto que eles resolvam.
   com subnamespace só para autenticação (`Requests\Auth`). A Fase 3 manteve a
   convenção da Fase 2 em vez de criar subpastas por model, para não haver
   duas classes `UserStoreRequest` em namespaces diferentes.
-- **Actions sob `app/Domain/IAM` e `app/Domain/Security`**, DTOs em `app/DTOs`. Actions expõem um
+- **Actions sob `app/Domain/{IAM,Security,Tenancy,Projects}`**, DTOs em `app/DTOs`. Actions expõem um
   método estático `execute()`. Não são resolvidas pelo container, portanto
   não recebem dependências injetadas.
 - **Models com atributos PHP 8** (`#[Fillable]`, `#[Hidden]`) em vez de
@@ -154,6 +186,15 @@ ou hierarquia sem um problema concreto que eles resolvam.
   `MenuProfile` foi criado na Fase 3 para o Larastan tipar `$menu->pivot->can_view`.
 - **Rotas explícitas por verbo** em vez de `apiResource`, para que cada verbo
   receba seu próprio `permission:{route_name},{ação}`.
+- **Tabelas tenant-aware** (desde o P2, ADR-0012): `organization_id`
+  `NOT NULL`; referência ao pai, criador ou responsável por FK composta
+  `(organization_id, coluna)` com colunas `NOT NULL`; `UNIQUE(organization_id, id)`
+  quando a tabela for pai; trigger `napi_prevent_tenant_reassignment(...)`
+  congelando tenant e pai; tenant e pai fora de `#[Fillable]`, definidos
+  pela Action a partir da rota.
+- **`Application` é o model de domínio.** A classe homônima do Laravel só
+  aparece em `bootstrap/app.php`; um arquivo que precise das duas usa
+  `use Illuminate\Foundation\Application as LaravelApplication;`.
 - **Controller base** (`app/Http/Controllers/Controller.php`) usa
   `AuthorizesRequests`, habilitando `$this->authorize()`.
 

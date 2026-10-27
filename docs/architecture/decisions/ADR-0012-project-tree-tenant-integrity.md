@@ -4,11 +4,8 @@
 
 ## Status
 
-Proposed (P2). Implementados: a fundação compartilhada do passo 0 (papéis,
-catálogo de permissões, guard de imutabilidade e envelope JSON) e os três
-slices, Project, Application e Environment. Faltam a auditoria adversarial
-(T05) e o JUDGE (T06).
-Passa a Accepted no JUDGE do P2.
+Accepted (P2). Implementado, auditado (T05) e validado pelo JUDGE do T06;
+veja o [relatório do P2](../../product/phases/p2-projects-applications-environments.md).
 
 ## Context
 
