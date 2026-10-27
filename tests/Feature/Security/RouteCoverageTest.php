@@ -72,6 +72,22 @@ describe('API route coverage', function () {
             expect(hasPermissionMiddleware($route))->toBeTrue("{$route->uri()} has no tenant permission");
         }
     });
+
+    it('scopes every nested tenant binding to its parent', function () {
+        // Without scoping, a child id from another parent would reach the
+        // Policy, which would then be the only barrier (ADR-0012).
+        foreach (routesUnder('api/v1/organizations/{organization}/*') as $route) {
+            if (count($route->parameterNames()) > 1) {
+                expect($route->enforcesScopedBindings())->toBeTrue("{$route->uri()} does not scope its bindings");
+            }
+        }
+    });
+
+    it('never deletes records of the project tree', function () {
+        foreach (routesUnder('api/v1/organizations/{organization}/projects*') as $route) {
+            expect($route->methods())->not->toContain('DELETE');
+        }
+    });
 });
 
 describe('Admin route coverage', function () {
