@@ -124,6 +124,10 @@ A matriz completa das 19 permissions está em
 | `PATCH /organizations/{organization}` | `organizations.update` contextual |
 | `GET /organizations/{organization}/members` | `members.view` contextual |
 | mutações em `/organizations/{organization}/members` | `members.manage` contextual |
+| `GET .../projects`, `GET .../projects/{project}` (P2) | `projects.view` contextual |
+| `POST .../projects` (P2) | `projects.create` contextual |
+| `PATCH .../projects/{project}` (P2) | `projects.update` contextual |
+| `POST .../projects/{project}/archive`, `.../restore` (P2) | `projects.archive_own` contextual (todo papel que arquiva algo a possui); a Policy decide o alcance |
 
 Perfis padrão:
 
@@ -154,6 +158,7 @@ apenas o que depende da instância ou do ator:
 | `SecurityLabResourcePolicy::view` | só o dono do recurso sintético, sem exceção para `admin`. É o controle que o [teste IDOR](idor.md) demonstra, avaliado para o actor com `Gate::forUser()` |
 | `OrganizationPolicy` | membership ativa no tenant; owner altera, manager e member só leem |
 | `OrganizationMembershipPolicy` | parent Organization explícita e `members.view|manage`; scoped binding não substitui a Policy |
+| `ProjectPolicy` (P2) | project da Organization da rota; `archive`/`restore`: `projects.archive` alcança qualquer project, `projects.archive_own` só o criado pela membership do usuário (403 nos demais) |
 
 ## Contexto organizacional (P1)
 

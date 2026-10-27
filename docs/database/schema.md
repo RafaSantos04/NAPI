@@ -25,6 +25,8 @@ erDiagram
     users ||--o{ organization_memberships : "user_id, restrict"
     organizations ||--o{ organization_memberships : "organization_id, restrict"
     organizations |o--o{ audit_logs : "organization_id, set null"
+    organizations ||--o{ projects : "organization_id, restrict"
+    organization_memberships ||--o{ projects : "(organization_id, created_by_membership_id), restrict"
 ```
 
 ## Tabelas
@@ -154,6 +156,25 @@ prendem um registro a uma membership da própria organização, e o trigger
 `organization_memberships_tenant_immutable` recusa `UPDATE` de
 `organization_id` e `user_id` ([ADR-0012](../architecture/decisions/ADR-0012-project-tree-tenant-integrity.md)).
 
+### `projects` (P2)
+
+| Coluna | Tipo | Constraint |
+|---|---|---|
+| `id` | ULID | PK |
+| `organization_id` | ULID | FK `organizations` **restrict**; imutável (trigger) |
+| `created_by_membership_id` | ULID | `NOT NULL`; FK composta `(organization_id, created_by_membership_id)` → `organization_memberships(organization_id, id)` **restrict**; imutável (trigger) |
+| `name` | varchar(100) | |
+| `slug` | varchar(100) | UNIQUE `(organization_id, slug)` |
+| `description` | text | nullable |
+| `archived_at` | timestamp | nullable; `null` = ativo |
+| `created_at`, `updated_at` | timestamp | |
+
+A FK composta impede, mesmo por SQL direto, um project cujo criador seja
+membership de outra organização. `UNIQUE(organization_id, id)` é o alvo da FK
+composta de `applications`. O trigger `projects_tenant_immutable` congela
+tenant e criador. Não há soft delete nem DELETE pela API; arquivar preenche
+`archived_at` e deixa a árvore somente leitura.
+
 ### `personal_access_tokens` (Sanctum)
 
 `id` **bigint** PK · `tokenable_type` + `tokenable_id` (`ulidMorphs`,
@@ -245,7 +266,8 @@ de consultas sobre esta tabela.
 | UNIQUE composto | `organization_memberships` | um vínculo por User e Organization |
 | `SELECT … FOR UPDATE` | linha da Organization | serializa remoção/demote/disable de owners diferentes |
 | Trigger | `audit_logs` | trilha append-only mesmo sem Eloquent |
-| Trigger `napi_prevent_tenant_reassignment()` | `organization_memberships` (P2); tabelas da árvore de projetos nos slices do P2 | congela tenant e pai: a FK composta valida o INSERT, o trigger impede mover a linha depois |
+| Trigger `napi_prevent_tenant_reassignment()` | `organization_memberships`, `projects` (P2); demais tabelas da árvore nos próximos slices | congela tenant e pai: a FK composta valida o INSERT, o trigger impede mover a linha depois |
+| FK composta | `projects` → `organization_memberships` (P2) | criador sempre da mesma organização |
 
 P1 usa `restrict` nas duas FKs de `organization_memberships`, porque um
 vínculo histórico não pode desaparecer pela exclusão do User ou da

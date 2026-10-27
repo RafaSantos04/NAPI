@@ -4,9 +4,10 @@
 
 ## Status
 
-Proposed (P2, passo 0). A fundação compartilhada está implementada (papéis,
-catálogo de permissões, guard de imutabilidade e envelope JSON); as tabelas
-da hierarquia entram nos slices seguintes. Passa a Accepted no JUDGE do P2.
+Proposed (P2). Implementados: a fundação compartilhada do passo 0 (papéis,
+catálogo de permissões, guard de imutabilidade e envelope JSON) e o slice 1,
+Project completo. Application e Environment entram nos slices seguintes.
+Passa a Accepted no JUDGE do P2.
 
 ## Context
 
