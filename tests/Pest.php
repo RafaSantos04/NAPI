@@ -6,6 +6,7 @@ use App\Models\Menu;
 use App\Models\Organization;
 use App\Models\OrganizationMembership;
 use App\Models\Profile;
+use App\Models\Project;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
@@ -169,4 +170,16 @@ function organizationFor(
     ]);
 
     return $organization;
+}
+
+/**
+ * Project created by the given user's membership in the organization.
+ *
+ * @param  array<string, mixed>  $attributes
+ */
+function projectCreatedBy(User $user, Organization $organization, array $attributes = []): Project
+{
+    $membership = $user->organizationMemberships()->whereBelongsTo($organization)->sole();
+
+    return Project::factory()->createdBy($membership)->create($attributes);
 }

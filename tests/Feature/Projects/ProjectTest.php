@@ -3,22 +3,9 @@
 use App\Domain\Tenancy\Enums\OrganizationMembershipStatus;
 use App\Domain\Tenancy\Enums\OrganizationRole;
 use App\Models\AuditLog;
-use App\Models\Organization;
 use App\Models\OrganizationMembership;
 use App\Models\Project;
 use App\Models\User;
-
-/**
- * Project created by the given user's membership in the organization.
- *
- * @param  array<string, mixed>  $attributes
- */
-function projectCreatedBy(User $user, Organization $organization, array $attributes = []): Project
-{
-    $membership = $user->organizationMemberships()->whereBelongsTo($organization)->sole();
-
-    return Project::factory()->createdBy($membership)->create($attributes);
-}
 
 describe('Creating projects', function () {
     it('creates a project with the member as its creator and audits it', function () {
