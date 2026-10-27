@@ -130,6 +130,8 @@ A matriz completa das 19 permissions está em
 | `POST .../projects/{project}/archive`, `.../restore` (P2) | `projects.archive_own` contextual (todo papel que arquiva algo a possui); a Policy decide o alcance |
 | `GET`, `POST`, `PATCH .../projects/{project}/applications[/{application}]` (P2) | `applications.view`, `applications.create`, `applications.update` contextuais |
 | `POST .../applications/{application}/archive`, `.../restore` (P2) | `applications.archive_own` contextual; a Policy decide o alcance |
+| `GET`, `POST`, `PATCH .../applications/{application}/environments[/{environment}]` (P2) | `environments.view`, `environments.create`, `environments.update` contextuais |
+| `POST .../environments/{environment}/archive`, `.../restore` (P2) | `environments.archive_own` contextual; a Policy decide o alcance |
 
 Perfis padrão:
 
@@ -162,6 +164,7 @@ apenas o que depende da instância ou do ator:
 | `OrganizationMembershipPolicy` | parent Organization explícita e `members.view|manage`; scoped binding não substitui a Policy |
 | `ProjectPolicy` (P2) | project da Organization da rota; `archive`/`restore`: `projects.archive` alcança qualquer project, `projects.archive_own` só o criado pela membership do usuário (403 nos demais) |
 | `ApplicationPolicy` (P2) | reconfirma a cadeia application → project → Organization sem depender do binding; `archive`/`restore`: `applications.archive` alcança qualquer application, `applications.archive_own` só as de um project criado pela membership do usuário |
+| `EnvironmentPolicy` (P2) | reconfirma environment → application → project → Organization; `archive`/`restore` como em applications, pelo criador do project ancestral; ser o responsável do environment não concede arquivamento |
 
 ## Contexto organizacional (P1)
 

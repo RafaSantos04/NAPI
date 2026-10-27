@@ -5,8 +5,9 @@
 ## Status
 
 Proposed (P2). Implementados: a fundação compartilhada do passo 0 (papéis,
-catálogo de permissões, guard de imutabilidade e envelope JSON) e os slices
-1 e 2, Project e Application completos. Environment entra no slice 3.
+catálogo de permissões, guard de imutabilidade e envelope JSON) e os três
+slices, Project, Application e Environment. Faltam a auditoria adversarial
+(T05) e o JUDGE (T06).
 Passa a Accepted no JUDGE do P2.
 
 ## Context
@@ -105,6 +106,17 @@ organizações e não ignora membership (ADR-0011).
     `production|staging|development|other` com CHECK, `authorized_scope`
     obrigatório e `authorization_reference` opcional. O escopo é registro
     humano e auditável; allowlist executável, egress e SSRF ficam para o P10.
+    O responsável é opcional no payload (padrão: membership de quem cria),
+    precisa estar ativo quando atribuído (validação e revalidação na Action
+    sob lock) e pode ser trocado por quem tem `environments.update`. Ser
+    responsável não concede arquivamento. O trigger não congela o responsável.
+
+### Nome
+
+20. `Application` é mantido: é o termo da área (OWASP, DAST/SAST, AppSec) e
+    do modelo de produto. A classe homônima do Laravel só aparece em
+    `bootstrap/app.php`; um arquivo que precise das duas usa
+    `use Illuminate\Foundation\Application as LaravelApplication;`.
 
 ## Rationale
 

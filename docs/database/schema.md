@@ -28,6 +28,8 @@ erDiagram
     organizations ||--o{ projects : "organization_id, restrict"
     organization_memberships ||--o{ projects : "(organization_id, created_by_membership_id), restrict"
     projects ||--o{ applications : "(organization_id, project_id), restrict"
+    applications ||--o{ environments : "(organization_id, application_id), restrict"
+    organization_memberships ||--o{ environments : "(organization_id, responsible_membership_id), restrict"
 ```
 
 ## Tabelas
@@ -197,6 +199,29 @@ FK composta de `environments`. O trigger `applications_tenant_immutable`
 congela tenant e project. Escritas travam o project com `FOR SHARE` antes da
 application, o que serializa com um `ArchiveProject` concorrente.
 
+### `environments` (P2)
+
+| Coluna | Tipo | Constraint |
+|---|---|---|
+| `id` | ULID | PK |
+| `organization_id` | ULID | `NOT NULL`; imutável (trigger) |
+| `application_id` | ULID | `NOT NULL`; FK composta `(organization_id, application_id)` → `applications(organization_id, id)` **restrict**; imutável (trigger) |
+| `responsible_membership_id` | ULID | `NOT NULL`; FK composta `(organization_id, responsible_membership_id)` → `organization_memberships(organization_id, id)` **restrict**; pode mudar |
+| `name` | varchar(100) | |
+| `slug` | varchar(100) | UNIQUE `(organization_id, application_id, slug)` |
+| `classification` | varchar(20) | CHECK `production` \| `staging` \| `development` \| `other` |
+| `authorized_scope` | text | `NOT NULL`; registro humano, não allowlist |
+| `authorization_reference` | varchar(255) | nullable |
+| `archived_at` | timestamp | nullable; `null` = ativo |
+| `created_at`, `updated_at` | timestamp | |
+
+As duas FKs compostas impedem, por SQL direto, environment sob application de
+outra organização e responsável de outra organização. Estar **ativo** é regra
+de estado, verificada pela Action com a membership travada em `FOR SHARE`. O
+trigger `environments_tenant_immutable` congela tenant e application, mas não
+o responsável. Escritas travam project e application com `FOR SHARE` antes do
+environment.
+
 ### `personal_access_tokens` (Sanctum)
 
 `id` **bigint** PK · `tokenable_type` + `tokenable_id` (`ulidMorphs`,
@@ -288,8 +313,9 @@ de consultas sobre esta tabela.
 | UNIQUE composto | `organization_memberships` | um vínculo por User e Organization |
 | `SELECT … FOR UPDATE` | linha da Organization | serializa remoção/demote/disable de owners diferentes |
 | Trigger | `audit_logs` | trilha append-only mesmo sem Eloquent |
-| Trigger `napi_prevent_tenant_reassignment()` | `organization_memberships`, `projects`, `applications` (P2); `environments` no próximo slice | congela tenant e pai: a FK composta valida o INSERT, o trigger impede mover a linha depois |
-| FK composta | `projects` → `organization_memberships`, `applications` → `projects` (P2) | criador e pai sempre da mesma organização |
+| Trigger `napi_prevent_tenant_reassignment()` | `organization_memberships`, `projects`, `applications`, `environments` (P2) | congela tenant e pai: a FK composta valida o INSERT, o trigger impede mover a linha depois |
+| FK composta | `projects` → `organization_memberships`, `applications` → `projects`, `environments` → `applications` e → `organization_memberships` (P2) | criador, pai e responsável sempre da mesma organização |
+| CHECK de classificação | `environments` (P2) | conjunto fechado; regras futuras (P10) dependem dele |
 
 P1 usa `restrict` nas duas FKs de `organization_memberships`, porque um
 vínculo histórico não pode desaparecer pela exclusão do User ou da
