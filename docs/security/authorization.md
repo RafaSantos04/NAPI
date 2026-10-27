@@ -80,9 +80,20 @@ $user->hasPermission('members.manage', $organization);
 ```
 
 Sem Organization, a decisão continua na matriz global. Com Organization,
-uma membership ativa concede o catálogo pequeno de capacidades do papel
-`owner|member`. Não existe fallback: administrador global sem membership é
-negado no tenant.
+uma membership ativa concede o catálogo fechado de capacidades do papel
+(`owner`, `manager` ou `member`, desde o P2). Não existe fallback:
+administrador global sem membership é negado no tenant, e o perfil global
+`admin` não concede nada dentro de uma organização.
+
+| Papel | Organização e membros | Árvore de projetos (P2) |
+|---|---|---|
+| `owner` | ver, alterar, gerir membros | tudo, inclusive arquivar qualquer item |
+| `manager` | ver | tudo, inclusive arquivar qualquer item |
+| `member` | ver | ver, criar, alterar; arquivar só a árvore de um Project que criou (`*.archive_own`, regra da Policy) |
+
+A matriz completa das 19 permissions está em
+`tests/Unit/Domain/Tenancy/Enums/OrganizationRoleTest.php` e no
+[ADR-0012](../architecture/decisions/ADR-0012-project-tree-tenant-integrity.md).
 
 - **Admin**: o perfil de sistema `admin` detém todas as permissões
   funcionais, inclusive de chaves criadas depois do seed. A matriz dele não
@@ -141,7 +152,7 @@ apenas o que depende da instância ou do ator:
 | `MenuPolicy::delete` | menu com filhos não é excluído; menu `is_system`, só pelo Administrador (revisão da Fase 4.4) |
 | `SecurityTestRunPolicy::viewAny`/`create` | nenhuma: `security-lab.view` e `security-lab.create` (Fase 5.1). Vale para todos os testes do laboratório |
 | `SecurityLabResourcePolicy::view` | só o dono do recurso sintético, sem exceção para `admin`. É o controle que o [teste IDOR](idor.md) demonstra, avaliado para o actor com `Gate::forUser()` |
-| `OrganizationPolicy` | membership ativa no tenant; owner altera, member só lê |
+| `OrganizationPolicy` | membership ativa no tenant; owner altera, manager e member só leem |
 | `OrganizationMembershipPolicy` | parent Organization explícita e `members.view|manage`; scoped binding não substitui a Policy |
 
 ## Contexto organizacional (P1)

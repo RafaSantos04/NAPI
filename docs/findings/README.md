@@ -52,7 +52,7 @@ Nos demais casos, a evidência é a leitura do código citado.
 | [FIND-017](#find-017--assigned_by-não-é-preenchido-pela-api) | `assigned_by` não é preenchido pela API | Maintainability | Low | RESOLVED | = |
 | [FIND-018](#find-018--sinais-de-enumeração-no-login) | Sinais de enumeração no login | Security | Low | OPEN | = |
 | [FIND-019](#find-019--menu-pode-ser-pai-de-si-mesmo) | Menu pode ser pai de si mesmo | Maintainability | Low | OPEN | = · RESOLVED na Fase 4.4 |
-| [FIND-020](#find-020--respostas-de-autorização-e-de-tokens-inconsistentes) | Respostas de autorização e de tokens inconsistentes | Maintainability | Improvement | RESOLVED (parcial) | = |
+| [FIND-020](#find-020--respostas-de-autorização-e-de-tokens-inconsistentes) | Respostas de autorização e de tokens inconsistentes | Maintainability | Improvement | RESOLVED (parcial) | = · envelope de `store` unificado no P2 |
 | [FIND-021](#find-021--lacunas-de-testes-de-segurança) | Lacunas de testes de segurança | Testing | Improvement | RESOLVED (parcial) | RESOLVED |
 | [FIND-022](#find-022--documentação-e-histórico-divergem-do-código) | Documentação e histórico divergem do código | Documentation | Improvement | RESOLVED (parcial) | RESOLVED |
 | [FIND-023](#find-023--análise-estática-ignorava-os-casts-dos-models) | Análise estática ignorava os casts dos models | Maintainability | Improvement | — | — (aberto e resolvido na Fase 5.1) |
@@ -945,6 +945,16 @@ Hardening.
 ### Status (Fase 4.2)
 
 **Status:** sem mudança. A área administrativa não alterou envelopes JSON. Ela segue a mesma política de códigos: página 404 para negação funcional (o `CheckPermission` responde HTML fora da API) e 403 para regra contextual.
+
+### Status (P2, passo 0)
+
+**Status:** RESOLVED (parcial) · restante OPEN
+
+**Resolution:** os cinco `store` da API v1 (users, profiles, menus, organizations e members) passaram a responder `Resource::make()->response()->setStatusCode(201)`, com o mesmo envelope `{"data": {...}}` de `show`/`update` ([ADR-0012](../architecture/decisions/ADR-0012-project-tree-tenant-integrity.md)). `POST /tokens` mantém `{token, message}`, porque não é um Resource. Continua aberta a negação manual em `index`/`show`.
+
+**Tests:** `AuditIntegrityTest`, `OrganizationTest` e `OrganizationMembershipTest` leem `data.*` na resposta de criação.
+
+**Commit:** pending (P2)
 
 ---
 

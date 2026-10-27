@@ -138,9 +138,9 @@ deleção nem soft delete.
 | Coluna | Tipo | Constraint |
 |---|---|---|
 | `id` | ULID | PK |
-| `organization_id` | ULID | FK `organizations` **restrict** |
-| `user_id` | ULID | FK `users` **restrict** |
-| `role` | varchar(20) | CHECK `owner` \| `member` |
+| `organization_id` | ULID | FK `organizations` **restrict**; imutável (trigger, P2) |
+| `user_id` | ULID | FK `users` **restrict**; imutável (trigger, P2) |
+| `role` | varchar(20) | CHECK `owner` \| `manager` \| `member` (`manager` desde o P2) |
 | `status` | varchar(20) | CHECK `active` \| `disabled`; default `active` |
 | `created_at`, `updated_at` | timestamp | |
 
@@ -148,6 +148,11 @@ UNIQUE `(organization_id, user_id)` impede memberships duplicadas. Índices
 `(user_id, status)` e `(organization_id, status, role)` atendem listagem do
 usuário, permissão contextual e invariante do owner. Remoção lógica do
 vínculo usa `status = disabled`; não há soft delete.
+
+Desde o P2, `UNIQUE(organization_id, id)` é o alvo das FKs compostas que
+prendem um registro a uma membership da própria organização, e o trigger
+`organization_memberships_tenant_immutable` recusa `UPDATE` de
+`organization_id` e `user_id` ([ADR-0012](../architecture/decisions/ADR-0012-project-tree-tenant-integrity.md)).
 
 ### `personal_access_tokens` (Sanctum)
 
@@ -240,6 +245,7 @@ de consultas sobre esta tabela.
 | UNIQUE composto | `organization_memberships` | um vínculo por User e Organization |
 | `SELECT … FOR UPDATE` | linha da Organization | serializa remoção/demote/disable de owners diferentes |
 | Trigger | `audit_logs` | trilha append-only mesmo sem Eloquent |
+| Trigger `napi_prevent_tenant_reassignment()` | `organization_memberships` (P2); tabelas da árvore de projetos nos slices do P2 | congela tenant e pai: a FK composta valida o INSERT, o trigger impede mover a linha depois |
 
 P1 usa `restrict` nas duas FKs de `organization_memberships`, porque um
 vínculo histórico não pode desaparecer pela exclusão do User ou da
