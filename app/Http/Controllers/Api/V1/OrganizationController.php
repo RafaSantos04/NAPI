@@ -57,7 +57,7 @@ class OrganizationController extends Controller
             AuditContext::fromRequest($request),
         );
 
-        return response()->json(OrganizationResource::make($organization), 201);
+        return OrganizationResource::make($organization)->response()->setStatusCode(201);
     }
 
     /**

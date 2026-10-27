@@ -51,10 +51,7 @@ class UserController extends Controller
     {
         $user = CreateUser::execute(CreateUserDto::from($request), AuditContext::fromRequest($request));
 
-        return response()->json(
-            UserResource::make($user),
-            201
-        );
+        return UserResource::make($user)->response()->setStatusCode(201);
     }
 
     public function update(UserUpdateRequest $request, User $user): UserResource

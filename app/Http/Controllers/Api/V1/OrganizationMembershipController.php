@@ -53,7 +53,7 @@ class OrganizationMembershipController extends Controller
             AuditContext::fromRequest($request),
         );
 
-        return response()->json(OrganizationMembershipResource::make($membership->load('user')), 201);
+        return OrganizationMembershipResource::make($membership->load('user'))->response()->setStatusCode(201);
     }
 
     /**

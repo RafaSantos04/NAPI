@@ -53,10 +53,7 @@ class ProfileController extends Controller
     {
         $profile = CreateProfile::execute(CreateProfileDto::from($request), AuditContext::fromRequest($request));
 
-        return response()->json(
-            ProfileResource::make($profile),
-            201
-        );
+        return ProfileResource::make($profile)->response()->setStatusCode(201);
     }
 
     public function update(ProfileUpdateRequest $request, Profile $profile): ProfileResource

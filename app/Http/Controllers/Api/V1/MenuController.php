@@ -50,10 +50,7 @@ class MenuController extends Controller
     {
         $menu = CreateMenu::execute(CreateMenuDto::from($request), AuditContext::fromRequest($request));
 
-        return response()->json(
-            MenuResource::make($menu),
-            201
-        );
+        return MenuResource::make($menu)->response()->setStatusCode(201);
     }
 
     public function update(MenuUpdateRequest $request, Menu $menu): MenuResource
