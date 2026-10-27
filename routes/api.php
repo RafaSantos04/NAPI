@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\V1\ApplicationController;
+use App\Http\Controllers\Api\V1\ApplicationStatusController;
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Auth\TokenController;
 use App\Http\Controllers\Api\V1\MenuController;
@@ -86,6 +88,27 @@ Route::prefix('v1')->group(function () {
                 Route::post('/projects/{project}/restore', [ProjectStatusController::class, 'restore'])
                     ->middleware('permission:projects.archive_own')
                     ->name('organizations.projects.restore');
+
+                // {application} is scoped to {project}, itself scoped to the
+                // organization: another project's application is a 404.
+                Route::get('/projects/{project}/applications', [ApplicationController::class, 'index'])
+                    ->middleware('permission:applications.view')
+                    ->name('organizations.projects.applications.index');
+                Route::post('/projects/{project}/applications', [ApplicationController::class, 'store'])
+                    ->middleware('permission:applications.create')
+                    ->name('organizations.projects.applications.store');
+                Route::get('/projects/{project}/applications/{application}', [ApplicationController::class, 'show'])
+                    ->middleware('permission:applications.view')
+                    ->name('organizations.projects.applications.show');
+                Route::patch('/projects/{project}/applications/{application}', [ApplicationController::class, 'update'])
+                    ->middleware('permission:applications.update')
+                    ->name('organizations.projects.applications.update');
+                Route::post('/projects/{project}/applications/{application}/archive', [ApplicationStatusController::class, 'archive'])
+                    ->middleware('permission:applications.archive_own')
+                    ->name('organizations.projects.applications.archive');
+                Route::post('/projects/{project}/applications/{application}/restore', [ApplicationStatusController::class, 'restore'])
+                    ->middleware('permission:applications.archive_own')
+                    ->name('organizations.projects.applications.restore');
             });
 
         // Users
