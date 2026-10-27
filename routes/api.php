@@ -4,6 +4,8 @@ use App\Http\Controllers\Api\V1\ApplicationController;
 use App\Http\Controllers\Api\V1\ApplicationStatusController;
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Auth\TokenController;
+use App\Http\Controllers\Api\V1\EnvironmentController;
+use App\Http\Controllers\Api\V1\EnvironmentStatusController;
 use App\Http\Controllers\Api\V1\MenuController;
 use App\Http\Controllers\Api\V1\OrganizationController;
 use App\Http\Controllers\Api\V1\OrganizationMembershipController;
@@ -109,6 +111,31 @@ Route::prefix('v1')->group(function () {
                 Route::post('/projects/{project}/applications/{application}/restore', [ApplicationStatusController::class, 'restore'])
                     ->middleware('permission:applications.archive_own')
                     ->name('organizations.projects.applications.restore');
+
+                // {environment} is scoped to {application}, and so on up to
+                // the organization.
+                Route::prefix('/projects/{project}/applications/{application}/environments')
+                    ->name('organizations.projects.applications.environments.')
+                    ->group(function () {
+                        Route::get('/', [EnvironmentController::class, 'index'])
+                            ->middleware('permission:environments.view')
+                            ->name('index');
+                        Route::post('/', [EnvironmentController::class, 'store'])
+                            ->middleware('permission:environments.create')
+                            ->name('store');
+                        Route::get('/{environment}', [EnvironmentController::class, 'show'])
+                            ->middleware('permission:environments.view')
+                            ->name('show');
+                        Route::patch('/{environment}', [EnvironmentController::class, 'update'])
+                            ->middleware('permission:environments.update')
+                            ->name('update');
+                        Route::post('/{environment}/archive', [EnvironmentStatusController::class, 'archive'])
+                            ->middleware('permission:environments.archive_own')
+                            ->name('archive');
+                        Route::post('/{environment}/restore', [EnvironmentStatusController::class, 'restore'])
+                            ->middleware('permission:environments.archive_own')
+                            ->name('restore');
+                    });
             });
 
         // Users
