@@ -74,7 +74,7 @@ describe('Audit integrity', function () {
 
         $id = asToken($admin, 'POST', '/api/v1/users', [
             'name' => 'New', 'email' => 'new@napi.dev', 'password' => 'password123', 'password_confirmation' => 'password123',
-        ])->assertCreated()->json('id');
+        ])->assertCreated()->json('data.id');
 
         asToken($admin, 'PUT', "/api/v1/users/{$id}", ['email' => 'renamed@napi.dev'])->assertOk();
         asToken($admin, 'DELETE', "/api/v1/users/{$id}")->assertOk();
@@ -96,7 +96,7 @@ describe('Audit integrity', function () {
         $admin = seededUser('admin');
 
         $id = asToken($admin, 'POST', '/api/v1/profiles', ['name' => 'Suporte', 'slug' => 'suporte'])
-            ->assertCreated()->json('id');
+            ->assertCreated()->json('data.id');
 
         asToken($admin, 'PUT', "/api/v1/profiles/{$id}", ['description' => 'Atendimento'])->assertOk();
         asToken($admin, 'DELETE', "/api/v1/profiles/{$id}")->assertOk();
@@ -117,7 +117,7 @@ describe('Audit integrity', function () {
         $admin = seededUser('admin');
 
         $id = asToken($admin, 'POST', '/api/v1/menus', ['key' => 'relatorios', 'label' => 'Relatórios', 'route_name' => 'reports.index'])
-            ->assertCreated()->json('id');
+            ->assertCreated()->json('data.id');
 
         asToken($admin, 'PUT', "/api/v1/menus/{$id}", ['route_name' => 'reports.list'])->assertOk();
         asToken($admin, 'DELETE', "/api/v1/menus/{$id}")->assertOk();

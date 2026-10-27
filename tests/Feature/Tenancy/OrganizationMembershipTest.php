@@ -19,8 +19,8 @@ describe('Organization memberships', function () {
             'user_id' => $member->id,
             'role' => 'member',
         ])->assertCreated()
-            ->assertJsonPath('user.id', $member->id)
-            ->json('id');
+            ->assertJsonPath('data.user.id', $member->id)
+            ->json('data.id');
 
         $membership = OrganizationMembership::findOrFail($id);
         expect($membership->status)->toBe(OrganizationMembershipStatus::Active)
@@ -60,10 +60,10 @@ describe('Organization memberships', function () {
         ])->assertUnprocessable()->assertJsonValidationErrors('user_id');
     });
 
-    it('does not let a regular member add or change members', function () {
+    it('returns 404 when a non-owner adds or changes members', function (OrganizationRole $role) {
         $member = User::factory()->create();
         $target = User::factory()->create();
-        $organization = organizationFor($member, OrganizationRole::Member);
+        $organization = organizationFor($member, $role);
         $membership = OrganizationMembership::factory()->for($organization)->for($target)->create();
 
         asToken($member, 'POST', "/api/v1/organizations/{$organization->id}/members", [
@@ -74,6 +74,54 @@ describe('Organization memberships', function () {
         asToken($member, 'PATCH', "/api/v1/organizations/{$organization->id}/members/{$membership->id}", [
             'role' => 'owner',
         ])->assertNotFound();
+
+        expect($membership->fresh()->role)->toBe(OrganizationRole::Member)
+            ->and(OrganizationMembership::whereBelongsTo($organization)->count())->toBe(2);
+    })->with([
+        'member' => [OrganizationRole::Member],
+        'manager' => [OrganizationRole::Manager],
+    ]);
+
+    it('lets an owner promote a member to manager', function () {
+        $owner = User::factory()->create();
+        $organization = organizationFor($owner);
+        $membership = OrganizationMembership::factory()->for($organization)->create();
+
+        asToken($owner, 'PATCH', "/api/v1/organizations/{$organization->id}/members/{$membership->id}", [
+            'role' => 'manager',
+        ])->assertOk()->assertJsonPath('data.role', 'manager');
+
+        expect($membership->fresh()->role)->toBe(OrganizationRole::Manager)
+            ->and(AuditLog::where('action', 'membership_updated')->sole()->meta)->toEqual([
+                'user_id' => $membership->user_id,
+                'changes' => ['role' => 'manager'],
+            ]);
+    });
+
+    it('keeps a membership bound to its organization and user in PostgreSQL', function (string $column) {
+        $membership = OrganizationMembership::factory()->create();
+        $replacement = $column === 'organization_id'
+            ? organizationFor(User::factory()->create())->id
+            : User::factory()->create()->id;
+
+        // Savepoint, so the rejected statement does not abort the test transaction.
+        expect(fn () => DB::transaction(fn () => DB::table('organization_memberships')
+            ->where('id', $membership->id)
+            ->update([$column => $replacement])))
+            ->toThrow(QueryException::class, "organization_memberships.{$column} is immutable");
+
+        expect($membership->fresh()->{$column})->toBe($membership->{$column});
+    })->with(['organization_id', 'user_id']);
+
+    it('still lets PostgreSQL change the role and status of a membership', function () {
+        $membership = OrganizationMembership::factory()->create();
+
+        DB::table('organization_memberships')
+            ->where('id', $membership->id)
+            ->update(['role' => 'manager', 'status' => 'disabled']);
+
+        expect($membership->fresh()->role)->toBe(OrganizationRole::Manager)
+            ->and($membership->fresh()->status)->toBe(OrganizationMembershipStatus::Disabled);
     });
 
     it('lets members view the roster without granting management', function () {

@@ -17,8 +17,8 @@ describe('Organizations', function () {
             'name' => 'ACME Software',
             'slug' => 'acme-software',
         ])->assertCreated()
-            ->assertJsonPath('name', 'ACME Software')
-            ->json('id');
+            ->assertJsonPath('data.name', 'ACME Software')
+            ->json('data.id');
 
         $organization = Organization::findOrFail($id);
         $membership = OrganizationMembership::whereBelongsTo($organization)->sole();
@@ -53,9 +53,9 @@ describe('Organizations', function () {
             ->assertJsonPath('data.0.membership_role', 'owner');
     });
 
-    it('lets an active member view but only an owner update', function () {
+    it('lets a non-owner view but returns 404 on update', function (OrganizationRole $role) {
         $member = User::factory()->create();
-        $organization = organizationFor($member, OrganizationRole::Member);
+        $organization = organizationFor($member, $role);
 
         asToken($member, 'GET', "/api/v1/organizations/{$organization->id}")
             ->assertOk()
@@ -65,7 +65,10 @@ describe('Organizations', function () {
             ->assertNotFound();
 
         expect($organization->fresh()->name)->not->toBe('Changed');
-    });
+    })->with([
+        'member' => [OrganizationRole::Member],
+        'manager' => [OrganizationRole::Manager],
+    ]);
 
     it('lets an owner update the organization and audits only changed fields', function () {
         $owner = User::factory()->create();

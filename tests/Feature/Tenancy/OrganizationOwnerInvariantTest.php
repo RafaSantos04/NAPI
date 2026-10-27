@@ -33,6 +33,7 @@ describe('Last active organization owner invariant', function () {
             ->and($membership->fresh()->isActive())->toBeTrue();
     })->with([
         'demotion' => [['role' => 'member']],
+        'demotion to manager' => [['role' => 'manager']],
         'disable' => [['status' => 'disabled']],
     ]);
 
