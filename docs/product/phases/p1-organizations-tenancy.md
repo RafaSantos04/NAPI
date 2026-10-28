@@ -2,7 +2,7 @@
 
 [← Produto](../README.md) · [Roadmap](../roadmap.md) · [ADR-0011](../../architecture/decisions/ADR-0011-multi-tenant-organization-context.md)
 
-**Status:** implementada e validada · **Commit:** pending
+**Status:** implementada e validada · **Commits:** `dd2baff` a `07415a2`
 
 ## Executive Summary
 
@@ -77,7 +77,7 @@ long-lived. Trocar de organização é trocar a rota da próxima requisição.
 ### Web
 
 `/admin` continua backoffice interno e não recebe tenant context. Não há
-workspace Blade nem seleção em sessão. P3 decidirá o adapter do Vue.
+workspace Blade nem seleção em sessão. P13 decidirá o adapter do Vue.
 
 ## Authorization
 

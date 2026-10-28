@@ -92,7 +92,7 @@ organizações e não ignora membership (ADR-0011).
     `scopeBindings()`: `projects/{project}/applications/{application}/environments/{environment}`.
     Archive e restore são `POST .../archive` e `POST .../restore`, como
     `activate`/`deactivate` de usuários. A profundidade será revista quando
-    P4/P5 aninharem specifications e assessments sob o environment.
+    P3/P4 aninharem specifications e assessments sob o environment.
 18. `store` passa a devolver `{"data": {...}}` com 201, como `show` e
     `update` (FIND-020). A correção vale para todos os `store` da API v1.
 
@@ -151,7 +151,7 @@ organizações e não ignora membership (ADR-0011).
 ### Positive
 
 - Nenhum caminho de escrita cria árvore cross-tenant, inclusive SQL direto.
-- P4/P5 reutilizam o mesmo desenho (assessment, environment e specification
+- P3/P4 reutilizam o mesmo desenho (assessment, environment e specification
   da mesma application).
 - Member opera a árvore sem poder arquivar o trabalho dos outros.
 

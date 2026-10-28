@@ -43,7 +43,7 @@ pelo cliente como autorização.
    do model binding antes da permissão funcional. O contexto só identifica;
    não concede acesso.
 7. O Blade em `/admin` continua backoffice global e não recebe organização
-   corrente em P1. O workspace comercial será definido em P3.
+   corrente em P1. O workspace comercial será definido em P13.
 
 ### Autorização e isolamento
 

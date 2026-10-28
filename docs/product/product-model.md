@@ -78,7 +78,7 @@ observado, por quem e com qual contrato?”.
 
 O workflow inicial de finding pode estudar `open`, `confirmed`,
 `in_progress`, `resolved`, `accepted_risk` e `false_positive`. A enumeração
-só será aceita em P6 depois de observar o fluxo dos pilotos. Assessment e
+só será aceita em P5 depois de observar o fluxo dos pilotos. Assessment e
 retest também precisam de máquinas de estado e transições autorizadas, não
 apenas strings editáveis.
 

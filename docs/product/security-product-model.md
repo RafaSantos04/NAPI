@@ -8,7 +8,7 @@
 |---|---|---|---|
 | `SecurityTestRun` | recurso e personas sintéticos do NAPI | ensinar/demonstrar vulnerável × protegido | já existe no Lab |
 | `SecurityAssessment` | aplicação real registrada pelo cliente | organizar uma avaliação autorizada | manual/assistida primeiro |
-| `SecurityFinding` | problema observado num assessment | acompanhar risco, evidência e correção | novo domínio em P6 |
+| `SecurityFinding` | problema observado num assessment | acompanhar risco, evidência e correção | novo domínio em P5 |
 | `SecurityCheckRun` | alvo autorizado e check automatizável | produzir observação/evidência repetível | futuro, P10 |
 
 `SecurityTestRun` não será generalizado para os outros três. O Lab pode ser
@@ -52,8 +52,8 @@ como “protegido”, preservando a regra já aplicada no Security Lab.
 
 ## Limite seguro do MVP
 
-P4 importa arquivos OpenAPI enviados pelo usuário; não precisa buscar URLs
-arbitrárias nem resolver referências remotas. P5–P8 suportam avaliações
+P3 importa arquivos OpenAPI enviados pelo usuário; não precisa buscar URLs
+arbitrárias nem resolver referências remotas. P4–P7 suportam avaliações
 manuais/assistidas sem tráfego ativo do NAPI contra o alvo. Isso entrega
 valor enquanto as fronteiras de automação são projetadas e validadas.
 

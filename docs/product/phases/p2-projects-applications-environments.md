@@ -2,7 +2,7 @@
 
 [← Produto](../README.md) · [Roadmap](../roadmap.md) · [ADR-0012](../../architecture/decisions/ADR-0012-project-tree-tenant-integrity.md) · [P1](p1-organizations-tenancy.md)
 
-**Status:** implementada e validada · **JUDGE:** concluído · **Commits:** `0ce81ef` a `29835bb`, T05 e T06 pending
+**Status:** implementada e validada · **JUDGE:** concluído · **Commits:** `0ce81ef` a `1adb60f`
 
 ## Executive Summary
 
@@ -39,8 +39,8 @@ completos), e o T05 ficou como auditoria adversarial transversal.
 | Slice 1 | Project com criador imutável e lifecycle | `6619514`, `126f5af`, `2726e3e`, `e8781a9` |
 | Slice 2 | Application com FK composta para Project e ancestral arquivado | `b034c1e`, `218619c`, `62f1789`, `bb47cbe` |
 | Slice 3 | Environment com responsável, classificação fechada e escopo autorizado | `5b8868a`, `08a5f85`, `e7cb877`, `29835bb` |
-| T05 | auditoria adversarial e trilha das 12 escritas | pending |
-| T06 | JUDGE, relatório, ADR aceito, docs | pending |
+| T05 | auditoria adversarial e trilha das 12 escritas | `f527314`, `d734a27` |
+| T06 | JUDGE, relatório, ADR aceito, docs | `1adb60f` |
 
 ## Data Model
 
@@ -180,7 +180,7 @@ Mutações executadas e revertidas (19), cada uma derrubando ao menos um teste:
 | Índice para FKs de membership | não | — | — | não criado: memberships nunca são apagadas |
 | Pacote de filtros de query | não | — | `when()` | não instalado |
 | Service, Repository, classes base | não | — | — | não criados |
-| Rotas rasas | não agora | — | viáveis com FK composta | adiadas para P4/P5 |
+| Rotas rasas | não agora | — | viáveis com FK composta | adiadas para P3/P4 |
 
 ## Abstraction Review
 
@@ -233,8 +233,8 @@ Tentativas de refutar a hierarquia e as decisões, com evidência:
 | Customer deveria existir | nenhuma operação compartilhada entre projects exige; product-model | mantém fora |
 | Member deveria poder arquivar tudo | arquivar altera o que pode ser avaliado; criador e manager cobrem o fluxo | mantém |
 | O responsável deveria poder arquivar | responsabilidade de contato ≠ governança da árvore | mantém; testado |
-| Status da application deveria refletir o project arquivado | decisão A: estado próprio; o cliente lê o project | mantém; rever no P3 se o Vue precisar |
-| Rotas de quatro níveis não escalam | aceitável até 4; P4/P5 aprofundariam | mantém; revisão registrada no ADR |
+| Status da application deveria refletir o project arquivado | decisão A: estado próprio; o cliente lê o project | mantém; rever no P13 se o Vue precisar |
+| Rotas de quatro níveis não escalam | aceitável até 4; P3/P4 aprofundariam | mantém; revisão registrada no ADR |
 | Concorrência não testada | limite do `RefreshDatabase`; protocolo de locks documentado | risco residual aceito, como no P1 |
 | Slug de item arquivado não pode ser reutilizado | UNIQUE inclui arquivados: identificador estável para histórico e futuro CLI (P11) | mantém |
 | Responsável desativado depois continua referenciado | FK preserva o vínculo; não há aviso | aceito no P2; ver "Riscos residuais" |
@@ -246,7 +246,7 @@ Tentativas de refutar a hierarquia e as decisões, com evidência:
 - Escrita concorrente com arquivamento de ancestral: verificada por revisão,
   sem teste paralelo.
 - Responsável de environment com membership desativada continua gravado; o
-  P5 deve decidir se um assessment exige responsável ativo.
+  P4 deve decidir se um assessment exige responsável ativo.
 - Rate limiting nas rotas novas: FIND-016, a resolver no P2.5 antes do P3.
 - Superusuário do banco pode remover triggers.
 

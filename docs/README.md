@@ -21,7 +21,7 @@ organizado em duas áreas conceituais:
 O estado acima é a fundação já implementada. A direção de produto agora é
 uma plataforma de validação de segurança de APIs para equipes de
 desenvolvimento e software houses. A definição, o confronto com o código e o
-roadmap P0–P12 estão em [Produto](product/README.md).
+roadmap P0–P14 estão em [Produto](product/README.md).
 
 Stack confirmada no repositório: Laravel 13.32, PHP 8.4.27 (constraint `^8.4.27`, plataforma do Composer fixada em `8.4.27`),
 PostgreSQL, Sanctum 4, Pest 4, Larastan (nível 6) e Pint (preset `laravel`).
@@ -74,7 +74,7 @@ PostgreSQL, Sanctum 4, Pest 4, Larastan (nível 6) e Pint (preset `laravel`).
 - [Fase 4.4: Administração de menus](phases/phase-04-4-menu-administration.md)
 - [Fase 5.1: Security Lab e IDOR/BOLA](phases/phase-05-1-security-lab-idor.md)
 - [Fase 5.2: Security Lab, Mass Assignment](phases/phase-05-2-security-lab-mass-assignment.md)
-- [Trilha de produto P0–P12](product/README.md)
+- [Trilha de produto P0–P14](product/README.md)
 - [Findings](findings/README.md): problemas e riscos encontrados no Reality
   Check da Fase 3.1, com o status de cada um após a Fase 3.2
 

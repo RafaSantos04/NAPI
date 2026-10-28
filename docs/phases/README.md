@@ -30,7 +30,7 @@ Fase 5 — Área Segurança
     ↓
 Trilha P — Produto
     ├ P0 — Product Definition & Architecture          ← atual (validação)
-    └ P1–P12 — Plataforma comercial                   (planejado/futuro)
+    └ P1–P14 — Plataforma comercial                   (em andamento)
 ```
 
 | Fase | Commit | Entrega confirmada | Evidência da numeração |
@@ -71,6 +71,6 @@ resolvidos na Fase 3.2. O FIND-019 (menus) foi resolvido na 4.4.
 Continua pendente, antes de qualquer tela com CPF, o FIND-008. Veja [findings](../findings/README.md).
 
 A nova direção comercial não substitui estas fases. Ela começa na
-[trilha de produto P0–P12](../product/roadmap.md), que registra o estado
+[trilha de produto P0–P14](../product/roadmap.md), que registra o estado
 atual, os domínios novos e os gates antes de tenancy, assessments e
 automação.
