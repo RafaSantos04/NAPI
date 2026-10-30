@@ -1,12 +1,18 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Support\Str;
 
+// The API login serves non-privileged accounts; a privileged one gets its
+// token in the admin area (ADR-0013, item 11, PrivilegedTokenBoundaryTest).
 describe('Authentication', function () {
     it('logs in with valid credentials', function () {
+        $password = Str::password();
+        $user = User::factory()->create(['password' => $password]);
+
         $response = $this->postJson('/api/v1/auth/login', [
-            'email' => 'admin@napi.dev',
-            'password' => 'password',
+            'email' => $user->email,
+            'password' => $password,
         ]);
 
         $response->assertStatus(200);
@@ -14,9 +20,11 @@ describe('Authentication', function () {
     });
 
     it('rejects invalid password', function () {
+        $user = User::factory()->create(['password' => Str::password()]);
+
         $response = $this->postJson('/api/v1/auth/login', [
-            'email' => 'admin@napi.dev',
-            'password' => 'wrong-password',
+            'email' => $user->email,
+            'password' => Str::password(),
         ]);
 
         $response->assertStatus(422);
@@ -42,16 +50,19 @@ describe('Authentication', function () {
     });
 
     it('rate limits login after 5 failed attempts from the same origin', function () {
+        $password = Str::password();
+        $user = User::factory()->create(['password' => $password]);
+
         for ($i = 0; $i < 5; $i++) {
             $this->postJson('/api/v1/auth/login', [
-                'email' => 'admin@napi.dev',
-                'password' => 'wrong-password',
+                'email' => $user->email,
+                'password' => Str::password(),
             ]);
         }
 
         $response = $this->postJson('/api/v1/auth/login', [
-            'email' => 'admin@napi.dev',
-            'password' => 'password',
+            'email' => $user->email,
+            'password' => $password,
         ]);
 
         $response->assertStatus(429);

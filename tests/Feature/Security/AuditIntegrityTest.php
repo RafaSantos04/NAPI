@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\Menu;
 use App\Models\Profile;
 use App\Models\User;
+use Illuminate\Support\Str;
 
 // FIND-002, FIND-012, FIND-013: one domain event produces exactly one audit
 // entry, carrying the actor and request context of the event itself.
@@ -16,7 +17,10 @@ function auditRows(string $action): int
 
 describe('Audit integrity', function () {
     it('records a login exactly once', function () {
-        $this->postJson('/api/v1/auth/login', ['email' => 'admin@napi.dev', 'password' => 'password'])
+        $password = Str::password();
+        $user = User::factory()->create(['password' => $password]);
+
+        $this->postJson('/api/v1/auth/login', ['email' => $user->email, 'password' => $password])
             ->assertOk();
 
         expect(auditRows('login'))->toBe(1);
@@ -71,9 +75,10 @@ describe('Audit integrity', function () {
 
     it('records user creation, update and deletion exactly once each', function () {
         $admin = seededUser('admin');
+        $password = Str::password();
 
         $id = asToken($admin, 'POST', '/api/v1/users', [
-            'name' => 'New', 'email' => 'new@napi.dev', 'password' => 'password123', 'password_confirmation' => 'password123',
+            'name' => 'New', 'email' => 'new@napi.dev', 'password' => $password, 'password_confirmation' => $password,
         ])->assertCreated()->json('data.id');
 
         asToken($admin, 'PUT', "/api/v1/users/{$id}", ['email' => 'renamed@napi.dev'])->assertOk();
@@ -146,11 +151,12 @@ describe('Audit integrity', function () {
     });
 
     it('records token creation and revocation exactly once each', function () {
-        $admin = seededUser('admin');
+        // Issuance through the API is for non-privileged accounts (ADR-0013).
+        $dev = seededUser('dev');
 
-        asToken($admin, 'POST', '/api/v1/tokens', ['name' => 'ci', 'abilities' => ['read']])->assertCreated();
-        $tokenId = $admin->tokens()->where('name', 'ci')->value('id');
-        asToken($admin, 'DELETE', "/api/v1/tokens/{$tokenId}")->assertOk();
+        asToken($dev, 'POST', '/api/v1/tokens', ['name' => 'ci', 'abilities' => ['read']])->assertCreated();
+        $tokenId = $dev->tokens()->where('name', 'ci')->value('id');
+        asToken($dev, 'DELETE', "/api/v1/tokens/{$tokenId}")->assertOk();
 
         expect(auditRows('token_created'))->toBe(1)
             ->and(auditRows('token_revoked'))->toBe(1);

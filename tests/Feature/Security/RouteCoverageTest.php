@@ -117,9 +117,17 @@ describe('Admin route coverage', function () {
         }
     });
 
-    it('gives every admin resource route a functional permission', function () {
+    it('gives every admin resource route a functional permission or a self-service scope', function () {
+        // Self-service (P2.5-T06): the signed-in user's own tokens and the
+        // password confirmation that guards creating them.
+        $selfService = [
+            'admin.login', 'admin.logout',
+            'admin.password.confirm', 'admin.password.confirm.store',
+            'admin.tokens.index', 'admin.tokens.create', 'admin.tokens.store', 'admin.tokens.destroy',
+        ];
+
         foreach (routesUnder('admin/*') as $route) {
-            if (in_array($route->getName(), ['admin.login', 'admin.logout'], true)) {
+            if (in_array($route->getName(), $selfService, true)) {
                 continue;
             }
 
@@ -135,6 +143,7 @@ describe('Admin route coverage', function () {
             '{user}' => $subject->id,
             '{profile}' => Profile::where('slug', 'viewer')->value('id'),
             '{menu}' => Menu::where('key', 'users')->value('id'),
+            '{token}' => $subject->createToken('probe')->accessToken->id,
         ];
 
         foreach (routesUnder('admin/*') as $route) {

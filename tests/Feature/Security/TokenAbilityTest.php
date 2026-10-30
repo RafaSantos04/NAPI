@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Support\Str;
 
 // FIND-001: token abilities must restrict what a token can do, independently
 // of (and in addition to) what its owner is allowed to do.
@@ -49,54 +50,63 @@ describe('Token abilities', function () {
     });
 
     it('does not let a write token bypass IAM authorization', function () {
+        $password = Str::password();
+
         asToken(seededUser('viewer'), 'POST', '/api/v1/users', [
             'name' => 'Intruder',
             'email' => 'intruder@napi.dev',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
+            'password' => $password,
+            'password_confirmation' => $password,
         ])->assertNotFound();
 
         expect(User::where('email', 'intruder@napi.dev')->exists())->toBeFalse();
     });
 
+    // Token issuance through the API is for non-privileged accounts
+    // (ADR-0013, item 12), so these tests mint as the seeded dev user.
     it('issues a login token able to perform every operation of its owner', function () {
-        $token = $this->postJson('/api/v1/auth/login', [
-            'email' => 'admin@napi.dev',
-            'password' => 'password',
-        ])->json('token');
-        $dev = seededUser('dev');
+        $password = Str::password();
+        $user = User::factory()->create(['password' => $password]);
+        $other = $user->createToken('other', ['read']);
 
-        $this->withToken($token)->deleteJson("/api/v1/users/{$dev->id}")
-            ->assertOk();
+        $token = $this->postJson('/api/v1/auth/login', [
+            'email' => $user->email,
+            'password' => $password,
+        ])->json('token');
+
+        // read, write and delete, each on the caller's own account.
+        $this->withToken($token)->getJson('/api/v1/auth/me')->assertOk();
+        $this->withToken($token)->postJson('/api/v1/tokens', ['name' => 'ci', 'abilities' => ['read']])->assertCreated();
+        $this->withToken($token)->deleteJson("/api/v1/tokens/{$other->accessToken->id}")->assertOk();
     });
 
     it('does not let a read token create tokens', function () {
-        asToken(seededUser('admin'), 'POST', '/api/v1/tokens', [
+        asToken(seededUser('dev'), 'POST', '/api/v1/tokens', [
             'name' => 'escalated',
             'abilities' => ['read'],
         ], ['read'])->assertForbidden();
     });
 
     it('does not let a token mint a token with broader abilities', function () {
-        $admin = seededUser('admin');
+        $dev = seededUser('dev');
 
-        asToken($admin, 'POST', '/api/v1/tokens', [
+        asToken($dev, 'POST', '/api/v1/tokens', [
             'name' => 'escalated',
             'abilities' => ['read', 'delete'],
         ], ['read', 'write'])->assertForbidden();
 
-        expect($admin->tokens()->where('name', 'escalated')->exists())->toBeFalse();
+        expect($dev->tokens()->where('name', 'escalated')->exists())->toBeFalse();
     });
 
     it('lets a token mint a token with a subset of its abilities', function () {
-        asToken(seededUser('admin'), 'POST', '/api/v1/tokens', [
+        asToken(seededUser('dev'), 'POST', '/api/v1/tokens', [
             'name' => 'reader',
             'abilities' => ['read'],
         ], ['read', 'write'])->assertCreated();
     });
 
     it('caps token lifetime at the global Sanctum expiration', function () {
-        asToken(seededUser('admin'), 'POST', '/api/v1/tokens', [
+        asToken(seededUser('dev'), 'POST', '/api/v1/tokens', [
             'name' => 'long-lived',
             'abilities' => ['read'],
             'expires_in_days' => 30,
