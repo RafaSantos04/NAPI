@@ -22,7 +22,7 @@ depois do Release Candidate do backend.
 | P1 | Organizations, Memberships & Tenancy | concluída | isolamento de tenant e autorização contextual testados |
 | P1.1 | IAM × Organization Hardening | concluída | IAM, contexto da API e Sanctum consolidados com Organization |
 | P2 | Projects, Applications & Environments | concluída | hierarquia comercial e escopo de ambiente auditáveis |
-| P2.5 | Platform Security Gate | planejada | rate limiting geral, limites de payload e política de operações caras antes do P3 |
+| P2.5 | Platform Security Gate | em andamento | rate limiting geral, limites de payload e política de operações caras antes do P3 |
 | P3 | API Inventory / OpenAPI | planejada | import versionado e inventário consultável |
 | P4 | Assessments | planejada | assessment manual autorizado com workflow e checklist |
 | P5 | Findings / Evidence | planejada | finding estruturado e evidência privada com redaction |
@@ -116,15 +116,19 @@ O gate é garantido por FK composta no PostgreSQL, não só por Policy.
 
 ### P2.5 — Platform Security Gate
 
-- rate limiting além do login: por IP no login e limiter padrão por usuário
-  nas rotas autenticadas (FIND-016);
+- proteção de credenciais única para o login do admin e o da API, com
+  contadores por identidade, identidade + IP e IP, e limiter padrão por
+  usuário nas rotas autenticadas (FIND-016, 027, 028, 029, 033, 034);
+- senha de conta privilegiada só no `/admin/login`; o token dela nasce na
+  sessão do admin com reautenticação (FIND-035, 036, task P2.5-T06);
 - limite de tamanho de corpo e revisão de `max:`/paginação;
-- FIND-026 (UTF-8 inválido → 500) e, opcionalmente, FIND-018;
+- FIND-026 (UTF-8 inválido → 500) e FIND-018 (enumeração no login);
 - ADR da política de operações caras (fila, timeout, concorrência por
   organização, tetos de tamanho e de `$ref`, idempotência), aplicada a partir
   do import de OpenAPI; nenhum limiter sem rota consumidora.
 
-Gate: o P3 não começa com o FIND-016 aberto.
+Gate: o P3 não começa com o FIND-016 aberto, nem com qualquer forma de
+somar o orçamento de tentativas alternando entre admin e API.
 
 ### P3 — API Inventory / OpenAPI
 
@@ -215,7 +219,7 @@ hipótese ainda aberta:
 |---|---|
 | P1 | modelo multi-tenant, contexto de organização e autorização de memberships — ADR-0011 entregue |
 | P2 | integridade de tenant da árvore de projetos, lifecycle e papéis — ADR-0012 entregue |
-| P2.5 | política de abuso e de operações caras (rate limit, payload, fila) |
+| P2.5 | política de abuso e de operações caras (credenciais, rate limit, payload, fila) — ADR-0013 com decisões aprovadas, Accepted no JUDGE |
 | P3 | armazenamento/versionamento do contrato OpenAPI e política para referências externas |
 | P5 | classificação, criptografia, retenção e acesso a evidências |
 | P7 | snapshots e compartilhamento externo |
