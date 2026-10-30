@@ -86,8 +86,11 @@ relevantes para entender a arquitetura:
   rotas atuais, mas uma allowlist explícita ainda é necessária para
   autoatendimento;
 - as respostas ainda não seguem um contrato único (envelope, negação manual
-  em `index`/`show`) ([FIND-020](../findings/README.md#find-020--respostas-de-autorização-e-de-tokens-inconsistentes));
-- o rate limit cobre só o login ([FIND-016](../findings/README.md#find-016--rate-limiting-restrito-ao-login-e-por-emailip)).
+  em `index`/`show`) ([FIND-020](../findings/README.md#find-020--respostas-de-autorização-e-de-tokens-inconsistentes)).
+
+O rate limit cobre o login (proteção de credenciais compartilhada entre
+admin e API) e todas as rotas autenticadas, por usuário, desde o P2.5-T02
+([ADR-0013](decisions/ADR-0013-abuse-limits-and-expensive-operations.md)).
 
 Os limites estruturais registrados na Fase 3.1 (abilities inertes, duas fontes
 de autorização, menus como chaves mutáveis) foram resolvidos na Fase 3.2.
@@ -95,5 +98,6 @@ de autorização, menus como chaves mutáveis) foram resolvidos na Fase 3.2.
 ## Referências
 
 - `bootstrap/app.php`: roteamento, aliases `permission`, `token.ability` e `organization.context`, renderização JSON de exceções em `api/*`
-- `app/Providers/AppServiceProvider.php`: Policies, callback de autenticação (usuário ativo), rate limiter `login`, strict mode
+- `app/Providers/AppServiceProvider.php`: Policies, callback de autenticação (usuário ativo), rate limiter `authenticated`, strict mode
+- `app/Domain/IAM/Actions/VerifyLoginCredentials.php`: único ponto que confere senha, com os contadores de login (ADR-0013)
 - ADRs: [decisions/README.md](decisions/README.md)

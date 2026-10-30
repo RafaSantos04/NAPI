@@ -107,7 +107,14 @@ teste; payload aceitando qualquer chave; rota de execução pedindo só `view`.
 | Invariante | Teste | Arquivo |
 |---|---|---|
 | INV-01 autenticação obrigatória | `returns 401 when accessing protected route without token`, `rejects an invalid bearer token` | `IAM/AuthenticationTest`, `Security/TokenAbilityTest` |
-| Rate limit de login | `rate limits login after 6 attempts in 30 minutes` | `IAM/AuthenticationTest` |
+| Rate limit de login | `rate limits login after 5 failed attempts from the same origin` | `IAM/AuthenticationTest` |
+| Orçamento único admin × API, nos dois sentidos | `blocks the API login after failures on the admin form`, `blocks the admin form after failures on the API login` | `Security/LoginThrottleTest` |
+| Contadores por identidade e por IP | `keeps limiting an account when the attacker rotates IPs`, `keeps limiting an origin when the attacker rotates e-mails…` | `Security/LoginThrottleTest` |
+| Grafias do e-mail somam no mesmo contador | `treats every spelling of an e-mail as the same identity` | `Security/LoginThrottleTest` |
+| Decisão pelo valor do incremento atômico | `decides on the value the atomic increment returns…` (mock estrito: qualquer leitura falha) | `Security/LoginThrottleTest` |
+| Resposta e tempo iguais para e-mail inexistente, inativo e senha errada | `gives the same answer and the same wait…` | `Security/LoginThrottleTest` |
+| Proxies confiáveis | `ignores X-Forwarded-For when no proxy is trusted`, `counts the forwarded client IP behind a trusted proxy` | `Security/LoginThrottleTest` |
+| Limite por usuário nas rotas autenticadas | `limits a user across all of their tokens…`; cobertura de toda rota em `RouteCoverageTest` | `Security/LoginThrottleTest`, `Security/RouteCoverageTest` |
 | Mensagem uniforme | `rejects invalid password` | `IAM/AuthenticationTest` |
 | Logout revoga tokens | `logs out and revokes tokens` | `IAM/AuthenticationTest` |
 | INV-02 gerenciar perfis exige permissão | `blocks viewer from creating profile`, `lets a custom profile with the permission use the endpoint`, `denies with 404 when the permission is missing` | `IAM/ProfileTest`, `Security/AuthorizationMatrixTest` |
@@ -154,5 +161,4 @@ teste; payload aceitando qualquer chave; rota de execução pedindo só `view`.
 | Escrita concorrente com arquivamento de ancestral (P2) | Mesmo limite de `RefreshDatabase`; o protocolo de locks (ancestrais `FOR SHARE`, linha `FOR UPDATE`, sempre de cima para baixo) está no ADR-0012 e foi verificado por revisão |
 | 401 em cada rota individual de Profiles, Menus e Tokens | INV-01; o grupo é único, e o 401 é testado em `/auth/me` e com token inválido |
 | Login falho auditado | adiado (FIND-012) |
-| Enumeração no login por tempo | FIND-018, Fase 5 |
-| Rate limit das rotas autenticadas | FIND-016 |
+| Corrida concorrente nos contadores de login | Mesmo limite de `RefreshDatabase`. O teste com mock estrito prova que a decisão vem do incremento; a concorrência real foi verificada manualmente no PostgreSQL (20 requisições paralelas: 5 × 422, 15 × 429) |

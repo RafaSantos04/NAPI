@@ -72,13 +72,13 @@ Veja [phases](../phases/README.md).
 
 | Ameaça | Status | Mitigação existente | Teste | Risco residual | Fase |
 |---|---|---|---|---|---|
-| Brute force em uma conta | ⚠️ | `throttle:login`, 6 tentativas / 30 min por **email + IP** | ✅ `rate limits login…` | Tentativas distribuídas por IPs não são limitadas; não há bloqueio de conta nem alerta | Hardening |
-| Credential stuffing (muitos e-mails, um IP) | ❌ | A chave inclui o e-mail, então cada e-mail novo tem cota própria | ❌ | Alto volume por IP é possível ([FIND-016](../findings/README.md#find-016--rate-limiting-restrito-ao-login-e-por-emailip)) | Hardening |
+| Brute force em uma conta | ✅ | `VerifyLoginCredentials`, compartilhado por admin e API: 5 / 30 min por identidade + IP e 20 / h por identidade, independente do IP; incremento atômico antes do bcrypt (ADR-0013) | ✅ `LoginThrottleTest` | Bloqueio provocado: com duas ou mais origens, ~20 req/h mantêm uma conta bloqueada até existir MFA; não há alerta, só o evento `Lockout` | P2.5 |
+| Credential stuffing (muitos e-mails, um IP) | ✅ | Contador por IP, 100 / h, que não zera no sucesso; IP real via `TRUSTED_PROXIES` | ✅ `keeps limiting an origin…` | Usuários atrás do mesmo NAT dividem a cota; ataque de muitas origens depende do contador por identidade | P2.5 |
 | Vazamento de token | ⚠️ | Hash SHA-256 no banco; prefixo `napi_`; expiração de 7 dias; revogação; **abilities aplicadas** | ✅ `TokenAbilityTest` | Um token de login vazado tem o poder do dono até expirar | — |
 | Replay de token | ⚠️ | Expiração global de 7 dias; logout revoga todos | ✅ logout | Válido por até 7 dias sem rotação nem vínculo com IP ou dispositivo | Hardening |
 | Usuário desativado com token válido | ✅ | Callback de autenticação do Sanctum + limpeza ao desativar | ✅ `DisabledUserAuthenticationTest` | — | — |
 | Usuário excluído (soft delete) com token | ✅ | O Sanctum não resolve `tokenable` excluído | ✅ `rejects the token of a soft-deleted user` | Linhas de token órfãs permanecem | — |
-| Enumeração de usuários pelo login | ⚠️ | Mensagem única `Invalid credentials.` | ✅ senha inválida | Diferença de tempo (`exists:users` evita o bcrypt); `Account is inactive.` confirma credenciais válidas ([FIND-018](../findings/README.md#find-018--sinais-de-enumeração-no-login)) | Fase 5 |
+| Enumeração de usuários pelo login | ✅ | Mesma resposta para e-mail inexistente, conta inativa e senha errada; `Timebox` de 200 ms do guard; sem `exists:users` | ✅ `gives the same answer and the same wait…` | O `/admin/login` ainda diz "sem acesso à área" para credenciais válidas sem permissão (não revela nada além do que a senha certa já revela) | P2.5 |
 
 ## Autorização
 
@@ -150,7 +150,7 @@ Testes transversais em `tests/Feature/Security/ProjectTreeSecurityTest.php`.
 
 | Ameaça | Status | Mitigação existente | Teste | Risco residual | Fase |
 |---|---|---|---|---|---|
-| Ausência de rate limit | ❌ | Só o login é limitado | ❌ | Endpoints autenticados sem limite ([FIND-016](../findings/README.md#find-016--rate-limiting-restrito-ao-login-e-por-emailip)) | Hardening |
+| Ausência de rate limit | ✅ | `throttle:authenticated`, 120 / min por usuário, em toda rota autenticada da API e do admin | ✅ `LoginThrottleTest`, `RouteCoverageTest` | A corrida do `throttle` padrão deixa um usuário passar da cota pelas próprias requisições simultâneas (aceito, ADR-0013 item 20) | P2.5 |
 | Enumeração de recursos | ✅ | ULIDs; 404 uniforme para "sem permissão funcional" e "inexistente" | ✅ | Tokens usam `bigint`, mas com escopo no dono | — |
 | Exposição excessiva | ✅ | Resources com lista explícita de campos; `password` oculto; `user_details` não exposto; listagem e árvore filtradas | ✅ | — | — |
 | Respostas inconsistentes | ⚠️ | 404 funcional, 403 contextual/ability, 409 invariante | ✅ | Controllers ainda negam `index`/`show` à mão; envelope de resposta divergente ([FIND-020](../findings/README.md#find-020--respostas-de-autorização-e-de-tokens-inconsistentes)) | Hardening |

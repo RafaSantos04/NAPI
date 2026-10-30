@@ -108,7 +108,7 @@ existir fora de ambiente local.
 
 | Caso de uso | Entrada | Autorização | Regra de negócio | Auditoria |
 |---|---|---|---|---|
-| Login | `LoginRequest` | pública + rate limit | usuário ativo | `login` |
+| Login | `LoginRequest` → `VerifyLoginCredentials` (API e admin) | pública; contadores por identidade, identidade + IP e IP (ADR-0013) | usuário ativo; resposta igual para e-mail inexistente, conta inativa e senha errada | `login` |
 | Logout | — | autenticado + `write` | revoga **todos** os tokens | `logout` |
 | CRUD de usuário | `UserStore/UpdateRequest` → `CreateUserDto`/`UpdateUserDto` → `CreateUser`/`UpdateUser` | `users.{ação}` + `UserPolicy` | só nome, e-mail e senha (criação); ninguém exclui a si mesmo; só admin altera ou exclui administrador; exclusão via `DeleteUser` protege o último admin ativo | `user_created`, `user_updated`, `user_deleted` |
 | Desativar usuário | — → `DeactivateUser` | `users.update` + `UserPolicy::deactivate` | ninguém desativa a si mesmo; só admin desativa administrador; último admin ativo (409); revoga tokens e remove sessões web | `user_deactivated` |

@@ -19,26 +19,62 @@ são exercidos pelas rotas da API ([ADR-0009](../architecture/decisions/ADR-0009
 
 ```mermaid
 flowchart TD
-    A[Requisição] --> B{throttle:login<br/>6 tentativas / 30 min<br/>por email + IP}
-    B -- excedido --> Z1[429]
-    B --> C{LoginRequest<br/>email existe? senha ≥ 6?}
-    C -- não --> Z2[422 'Invalid credentials.']
-    C --> D{Hash::check}
-    D -- falha --> Z2
-    D --> E{is_active?}
-    E -- não --> Z3[422 'Account is inactive.']
-    E --> F[transação: event UserLoggedIn → audit 'login'<br/>createToken read,write,delete]
+    A[Requisição] --> C{LoginRequest<br/>e-mail válido? senha ≥ 6?}
+    C -- não --> Z0[422]
+    C --> B{VerifyLoginCredentials<br/>incrementa os 3 contadores<br/>algum acima da cota?}
+    B -- sim --> Z1[429 + Retry-After<br/>evento Lockout]
+    B --> D{guard web validate<br/>senha + is_active<br/>Timebox 200 ms}
+    D -- falha --> Z2[422 'Invalid credentials.']
+    D --> F[transação: event UserLoggedIn → audit 'login'<br/>createToken read,write,delete]
     F --> H[200 user + token]
 ```
 
 | Controle | Implementação | Teste |
 |---|---|---|
-| Hash de senha | cast `password => hashed` em `User`; bcrypt (`BCRYPT_ROUNDS=12` no `.env.example`) | indireto (login) |
-| Mensagem uniforme para e-mail e senha errados | `LoginRequest::messages()` e `ValidationException` com `'Invalid credentials.'` | `rejects invalid password` |
-| Rate limit | `RateLimiter::for('login')` em `AppServiceProvider`: `Limit::perMinutes(30, 6)` por `email + IP` | `rate limits login after 6 attempts in 30 minutes` |
-| Bloqueio de conta inativa | `AuthController::login` | `does not issue a token to an inactive user` |
+| Hash de senha | cast `password => hashed` em `User`; bcrypt (`BCRYPT_ROUNDS=12` no `.env.example`); rehash no login quando o custo muda | indireto (login) |
+| Resposta uniforme para e-mail inexistente, conta inativa e senha errada | `VerifyLoginCredentials` devolve `null` nos três casos; o `Timebox` do guard iguala o tempo ([FIND-018](../findings/README.md#find-018--sinais-de-enumeração-no-login)) | `gives the same answer and the same wait…` |
+| Rate limit | [proteção de credenciais](#proteção-de-credenciais), compartilhada com o admin | `LoginThrottleTest` |
+| Bloqueio de conta inativa | `is_active` nas credenciais do `validate()` | `does not issue a token to an inactive user` |
 | Auditoria de login | `UserLoggedIn` → `RecordAuditLog`, **uma** linha | `records a login exactly once` |
-| Tentativas falhas auditadas | **não existe** (adiado, veja [audit.md](audit.md#cobertura)) | — |
+| Tentativas falhas auditadas | **não existe** (adiado, veja [audit.md](audit.md#cobertura)); o bloqueio dispara o evento `Lockout` | — |
+
+## Proteção de credenciais
+
+Desde o P2.5-T02 ([ADR-0013](../architecture/decisions/ADR-0013-abuse-limits-and-expensive-operations.md)),
+toda rota que confere senha chama a Action
+`App\Domain\IAM\Actions\VerifyLoginCredentials`: o login da API e o
+`/admin/login`. Só a proteção é compartilhada: o admin abre a sessão `web`
+e a API emite o token Sanctum.
+
+| Contador | Chave | Cota | Zera no sucesso |
+|---|---|---|---|
+| identidade + IP | sha256 do e-mail em minúsculas + IP | 5 a cada 30 min | sim |
+| identidade | sha256 do e-mail em minúsculas | 20 por hora | não |
+| IP | IP | 100 por hora | não |
+
+- As chaves são as mesmas nas duas rotas: alternar entre admin e API não
+  soma cota ([FIND-033](../findings/README.md#find-033--login-do-admin-e-login-da-api-com-orçamentos-independentes)).
+- O e-mail é comparado em minúsculas, como o `citext` ([FIND-027](../findings/README.md#find-027--limiter-do-login-da-api-diferencia-maiúsculas-no-e-mail)),
+  e guardado como hash, então o cache não tem e-mails em texto claro.
+- `RateLimiter::increment()` roda **antes** do bcrypt, e a decisão usa o
+  valor que ele devolve. O incremento é atômico no cache `database`:
+  requisições simultâneas recebem contadores diferentes ([FIND-028](../findings/README.md#find-028--rate-limiting-não-é-atômico-entre-requisições-simultâneas)).
+  Verificado com 20 requisições paralelas contra o PostgreSQL: 5 chegaram à
+  senha (422) e 15 receberam 429.
+- Tentativa recusada também conta. O 429 traz `Retry-After`, o maior tempo
+  restante entre os contadores estourados ([FIND-029](../findings/README.md#find-029--429-do-login-sai-sem-retry-after)).
+- Custo aceito: quem conhece um e-mail e usa duas ou mais origens mantém a
+  conta bloqueada com ~20 requisições por hora. Sessões e tokens já emitidos
+  continuam valendo.
+- O IP vem do `TrustProxies` do Laravel. Atrás de um balanceador,
+  `TRUSTED_PROXIES` (`config/trustedproxy.php`) é obrigatória; sem ela,
+  `X-Forwarded-For` é ignorado ([FIND-030](../findings/README.md#find-030--limites-por-ip-dependem-de-proxies-confiáveis-não-configurados)).
+
+As rotas autenticadas (grupo `auth:sanctum` da API e grupo `auth` do admin)
+têm o limiter `authenticated`: 120 requisições por minuto **por usuário**,
+somando todos os tokens e a sessão. Ali, o `throttle` padrão do Laravel lê e
+depois incrementa; a ultrapassagem se limita às requisições simultâneas do
+próprio usuário, e isso é aceito (ADR-0013, item 20).
 
 ## Tokens
 
@@ -51,7 +87,7 @@ flowchart TD
 | Revogação individual | `DELETE /tokens/{id}`, só entre os tokens do próprio usuário. Token inexistente ou alheio → 404 |
 | Logout | apaga **todos** os tokens do usuário (logout global) e audita `logout` com a quantidade revogada |
 | Auditoria | `token_created` e `token_revoked` com id, nome e abilities (nunca o segredo) |
-| Limpeza de expirados | não agendada |
+| Limpeza de expirados | não agendada (entra no P2.5-T06) |
 | Prefixo | `napi_`, detectável por secret scanning |
 
 ## Estado da conta
@@ -65,7 +101,7 @@ invalida o token quando o dono não está ativo ([FIND-003](../findings/README.m
 |---|---|---|
 | `is_active = false` com token emitido antes | 401 em qualquer rota autenticada | `rejects a valid token once its owner is deactivated` |
 | Soft delete | 401 (o `tokenable` some pelo escopo do `SoftDeletes`) | `rejects the token of a soft-deleted user` |
-| Nova tentativa de login inativo | 422, sem token | `does not issue a token to an inactive user` |
+| Nova tentativa de login inativo | 422 `Invalid credentials.`, sem token, igual a senha errada | `does not issue a token to an inactive user` |
 
 Há duas proteções distintas:
 
@@ -96,8 +132,10 @@ o logout web não revoga nenhum. `POST /admin/login` responde
 `Credenciais inválidas.` para e-mail inexistente, senha errada e conta
 inativa, regenera a sessão e audita via `UserLoggedIn`; o logout invalida a
 sessão e rotaciona o token CSRF. `EnsureUserIsActive` (grupo `web`) encerra
-a sessão de quem for desativado depois do login. Rate limit: 5 tentativas
-por `email + IP`.
+a sessão de quem for desativado depois do login. Rate limit: a mesma
+[proteção de credenciais](#proteção-de-credenciais) da API, com os mesmos
+contadores; o bloqueio volta ao formulário com
+`Muitas tentativas. Tente novamente em N segundos.`.
 
 Desde a Fase 4.2, credenciais válidas de quem não tem acesso à área
 administrativa (por exemplo `dev` e `viewer`) não abrem sessão e recebem

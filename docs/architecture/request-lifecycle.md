@@ -11,8 +11,10 @@ Authenticate:sanctum → SubstituteBindings → EnsureTokenAbility → CheckPerm
 ```
 
 O grupo `api` do Laravel 13 contém apenas `SubstituteBindings`. Não há
-throttle global nem `EnsureFrontendRequestsAreStateful` (o
-`bootstrap/app.php` não chama `statefulApi()`).
+`EnsureFrontendRequestsAreStateful` (o `bootstrap/app.php` não chama
+`statefulApi()`). As rotas autenticadas acrescentam
+`throttle:authenticated` depois de `EnsureTokenAbility`: 120 por minuto por
+usuário (ADR-0013).
 
 ## Fluxo completo: `PUT /api/v1/users/{user}/profiles`
 
@@ -100,10 +102,11 @@ dispara `UserCreated`/`UserUpdated` dentro de `DB::transaction`.
 `Model::create($request->validated())` ou `$model->update(...)`, sem evento
 (auditoria adiada, veja [audit.md](../security/audit.md#cobertura)).
 
-**Login** (`POST /auth/login`): sem `auth:sanctum`; passa pelo rate limiter
-nomeado `login`, pelo `LoginRequest` e pelo `AuthController`, que dispara
+**Login** (`POST /auth/login`): sem `auth:sanctum`; passa pelo
+`LoginRequest` e pelo `AuthController`, que chama `VerifyLoginCredentials`
+(contadores compartilhados com o admin, depois a senha) e então dispara
 `UserLoggedIn` e emite um token com `read`, `write` e `delete` na mesma
-transação. Veja [authentication.md](../security/authentication.md).
+transação. Veja [authentication.md](../security/authentication.md#proteção-de-credenciais).
 
 ## Ordem de rotas
 

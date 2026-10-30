@@ -48,9 +48,9 @@ Nos demais casos, a evidência é a leitura do código citado.
 | [FIND-013](#find-013--contexto-de-auditoria-acoplado-ao-processo-http-e-sem-atomicidade) | Contexto de auditoria acoplado ao processo HTTP e sem atomicidade | Architecture | Low | RESOLVED (parcial) | = |
 | [FIND-014](#find-014--audit_logs-é-mutável) | `audit_logs` é mutável | Security | Low | OPEN | RESOLVED em P1 |
 | [FIND-015](#find-015--expiração-de-token-aceita-valores-que-nunca-terão-efeito) | Expiração de token aceita valores que nunca terão efeito | Security | Low | RESOLVED (parcial) | = |
-| [FIND-016](#find-016--rate-limiting-restrito-ao-login-e-por-emailip) | Rate limiting restrito ao login e por email+IP | Security | Low | OPEN | = |
+| [FIND-016](#find-016--rate-limiting-restrito-ao-login-e-por-emailip) | Rate limiting restrito ao login e por email+IP | Security | Low | OPEN | = · RESOLVED no P2.5-T02 |
 | [FIND-017](#find-017--assigned_by-não-é-preenchido-pela-api) | `assigned_by` não é preenchido pela API | Maintainability | Low | RESOLVED | = |
-| [FIND-018](#find-018--sinais-de-enumeração-no-login) | Sinais de enumeração no login | Security | Low | OPEN | = |
+| [FIND-018](#find-018--sinais-de-enumeração-no-login) | Sinais de enumeração no login | Security | Low | OPEN | = · RESOLVED no P2.5-T02 |
 | [FIND-019](#find-019--menu-pode-ser-pai-de-si-mesmo) | Menu pode ser pai de si mesmo | Maintainability | Low | OPEN | = · RESOLVED na Fase 4.4 |
 | [FIND-020](#find-020--respostas-de-autorização-e-de-tokens-inconsistentes) | Respostas de autorização e de tokens inconsistentes | Maintainability | Improvement | RESOLVED (parcial) | = · envelope de `store` unificado no P2 |
 | [FIND-021](#find-021--lacunas-de-testes-de-segurança) | Lacunas de testes de segurança | Testing | Improvement | RESOLVED (parcial) | RESOLVED |
@@ -59,18 +59,23 @@ Nos demais casos, a evidência é a leitura do código citado.
 | [FIND-024](#find-024--personas-do-security-lab-são-contas-administráveis) | Personas do Security Lab são contas administráveis | Security | Low | — | — (aberto na Fase 5.2, OPEN deferred) |
 | [FIND-025](#find-025--resultado-da-última-execução-não-era-filtrado-por-teste) | Resultado da última execução não era filtrado por teste | Maintainability | Low | — | — (aberto e resolvido na Fase 5.2) |
 | [FIND-026](#find-026--bytes-inválidos-em-utf-8-num-formulário-viram-erro-500) | Bytes inválidos em UTF-8 num formulário viram erro 500 | Maintainability | Low | — | — (aberto na Fase 4.4, OPEN) |
-| [FIND-027](#find-027--limiter-do-login-da-api-diferencia-maiúsculas-no-e-mail) | Limiter do login da API diferencia maiúsculas no e-mail | Security | Medium | — | — (aberto na análise do P2.5, OPEN) |
-| [FIND-028](#find-028--rate-limiting-não-é-atômico-entre-requisições-simultâneas) | Rate limiting não é atômico entre requisições simultâneas | Security | Low | — | — (aberto na análise do P2.5, OPEN) |
-| [FIND-029](#find-029--429-do-login-sai-sem-retry-after) | 429 do login sai sem `Retry-After` | Maintainability | Low | — | — (aberto na análise do P2.5, OPEN) |
-| [FIND-030](#find-030--limites-por-ip-dependem-de-proxies-confiáveis-não-configurados) | Limites por IP dependem de proxies confiáveis não configurados | Security | Low | — | — (aberto na análise do P2.5, OPEN) |
+| [FIND-027](#find-027--limiter-do-login-da-api-diferencia-maiúsculas-no-e-mail) | Limiter do login da API diferencia maiúsculas no e-mail | Security | Medium | — | — (aberto na análise do P2.5, RESOLVED no P2.5-T02) |
+| [FIND-028](#find-028--rate-limiting-não-é-atômico-entre-requisições-simultâneas) | Rate limiting não é atômico entre requisições simultâneas | Security | Low | — | — (aberto na análise do P2.5, RESOLVED no P2.5-T02) |
+| [FIND-029](#find-029--429-do-login-sai-sem-retry-after) | 429 do login sai sem `Retry-After` | Maintainability | Low | — | — (aberto na análise do P2.5, RESOLVED no P2.5-T02) |
+| [FIND-030](#find-030--limites-por-ip-dependem-de-proxies-confiáveis-não-configurados) | Limites por IP dependem de proxies confiáveis não configurados | Security | Low | — | — (aberto na análise do P2.5, RESOLVED no P2.5-T02) |
 | [FIND-031](#find-031--listas-e-senhas-sem-limite-de-tamanho-na-validação) | Listas e senhas sem limite de tamanho na validação | Security | Low | — | — (aberto na análise do P2.5, OPEN) |
 | [FIND-032](#find-032--tokens-por-usuário-sem-teto-e-listagem-sem-paginação) | Tokens por usuário sem teto e listagem sem paginação | Security | Low | — | — (aberto na análise do P2.5, OPEN) |
-| [FIND-033](#find-033--login-do-admin-e-login-da-api-com-orçamentos-independentes) | Login do admin e login da API com orçamentos independentes | Security | Medium | — | — (aberto na revisão Admin × API do P2.5, OPEN) |
-| [FIND-034](#find-034--sem-contador-por-identidade-independente-do-ip) | Sem contador por identidade independente do IP | Security | Medium | — | — (aberto na revisão Admin × API do P2.5, OPEN) |
+| [FIND-033](#find-033--login-do-admin-e-login-da-api-com-orçamentos-independentes) | Login do admin e login da API com orçamentos independentes | Security | Medium | — | — (aberto na revisão Admin × API do P2.5, RESOLVED no P2.5-T02) |
+| [FIND-034](#find-034--sem-contador-por-identidade-independente-do-ip) | Sem contador por identidade independente do IP | Security | Medium | — | — (aberto na revisão Admin × API do P2.5, RESOLVED no P2.5-T02) |
 | [FIND-035](#find-035--conta-privilegiada-troca-a-senha-por-token-na-api) | Conta privilegiada troca a senha por token na API | Security | Medium | — | — (aberto na revisão Admin × API do P2.5, OPEN) |
 | [FIND-036](#find-036--token-derivado-pode-viver-mais-que-o-token-de-origem) | Token derivado pode viver mais que o token de origem | Security | Low | — | — (aberto na revisão Admin × API do P2.5, OPEN) |
 
 Contagem: 1 High · 13 Medium · 18 Low · 4 Improvement. Nenhum Critical.
+
+Após o P2.5-T02 (2026-10-30): **8 RESOLVED** na task (FIND-016, 018, 027,
+028, 029, 030, 033 e 034; o 028 com a exceção das rotas autenticadas
+registrada no ADR-0013) e **7 OPEN** (FIND-008, 024, 026, 031, 032, 035 e
+036), todos com task no quadro, exceto os adiados 008 e 024.
 
 Na análise do P2.5 (2026-10-30): **seis findings novos** (FIND-027 a
 FIND-032), todos no escopo das tasks da fase. A análise também ampliou a
@@ -836,6 +841,21 @@ e falta o contador por identidade
 correção é um boundary único de proteção de credenciais (ADR-0013, itens 1
 a 9) mais o limiter `authenticated` (itens 19 e 20).
 
+
+### Status (P2.5-T02)
+
+**Status:** RESOLVED (P2.5-T02)
+
+**Resolution:** o login, no admin e na API, passa por
+`App\Domain\IAM\Actions\VerifyLoginCredentials`, com três contadores
+cumulativos e as mesmas chaves nas duas rotas: identidade + IP (5 a cada 30
+min), identidade (20 por hora) e IP (100 por hora). Toda rota autenticada da
+API e do admin tem `throttle:authenticated`, 120 requisições por minuto por
+usuário (ADR-0013).
+
+**Tests:** `tests/Feature/Security/LoginThrottleTest.php`;
+`RouteCoverageTest` exige o limiter em toda rota autenticada nova.
+
 ---
 
 ## FIND-017 — `assigned_by` não é preenchido pela API
@@ -910,6 +930,22 @@ Fase 5 (bom cenário de verificação para o Security Lab).
 **Status:** OPEN, no escopo do P2.5-T02 (decisão de 2026-10-30). O login do
 admin já responde igual para e-mail inexistente, senha errada e conta
 inativa; falta a API.
+
+
+### Status (P2.5-T02)
+
+**Status:** RESOLVED (P2.5-T02)
+
+**Resolution:** o `LoginRequest` da API não tem mais `exists:users`. A senha
+é conferida por `Auth::guard('web')->validate()` com `is_active` nas
+credenciais, dentro do `Timebox` de 200 ms do guard. E-mail inexistente,
+conta inativa e senha errada recebem o mesmo 422 `Invalid credentials.` e o
+mesmo tempo mínimo. **Contrato alterado:** `Account is inactive.` deixou de
+existir.
+
+**Tests:** `gives the same answer and the same wait…` (dataset com os três
+casos, com `Sleep::assertSleptTimes`), `does not issue a token to an inactive
+user`. Mutação pega: aceitar conta inativa.
 
 ---
 
@@ -1310,6 +1346,18 @@ Revisão de 2026-10-30 (ADR-0013, item 2): a normalização é só
 que o login do admin usa hoje sai, porque juntaria e-mails distintos num
 mesmo contador.
 
+
+### Status (P2.5-T02)
+
+**Status:** RESOLVED (P2.5-T02)
+
+**Resolution:** as chaves usam o sha256 de `mb_strtolower(e-mail)`, o mesmo
+critério do `citext`; o `TrimStrings` global já remove os espaços. O hash
+também tira os e-mails do cache em texto claro.
+
+**Tests:** `treats every spelling of an e-mail as the same identity`.
+Mutação pega: chave sem normalização.
+
 ---
 
 ## FIND-028 — Rate limiting não é atômico entre requisições simultâneas
@@ -1355,6 +1403,23 @@ corrida é aceita: a ultrapassagem se limita às requisições simultâneas de u
 usuário já autenticado, que não é superfície de força bruta. O finding fecha
 pelo login, com essa exceção registrada.
 
+
+### Status (P2.5-T02)
+
+**Status:** RESOLVED (P2.5-T02), com a exceção registrada no ADR-0013
+(item 20)
+
+**Resolution:** o login reserva a tentativa com `RateLimiter::increment()`
+antes do bcrypt e decide pelo valor devolvido. Nas rotas autenticadas fica o
+`throttle` padrão, com a corrida aceita.
+
+**Tests:** `decides on the value the atomic increment returns…`, com um mock
+estrito do `RateLimiter`: qualquer leitura separada (`tooManyAttempts`,
+`attempts`) quebraria a requisição. Mutação pega: ler antes de incrementar.
+**Verificação manual:** 20 requisições simultâneas contra o PostgreSQL
+(`php artisan serve` com 10 workers, cache `database`) para a mesma
+identidade: 5 responderam 422 e 15 responderam 429.
+
 ---
 
 ## FIND-029 — 429 do login sai sem `Retry-After`
@@ -1381,6 +1446,18 @@ padrão do Laravel.
 ### Status (análise do P2.5)
 
 **Status:** OPEN, no escopo do P2.5-T02.
+
+
+### Status (P2.5-T02)
+
+**Status:** RESOLVED (P2.5-T02)
+
+**Resolution:** `TooManyLoginAttemptsException::render()` responde 429 com
+`Retry-After`, o maior tempo restante entre os contadores estourados. O
+admin mostra os segundos no formulário.
+
+**Tests:** `assertHeader('Retry-After', …)` com o tempo congelado: 1800 para
+identidade + IP, 3600 para identidade, 60 nas rotas autenticadas.
 
 ---
 
@@ -1409,6 +1486,19 @@ documentar o requisito no deploy.
 ### Status (análise do P2.5)
 
 **Status:** OPEN, no escopo do P2.5-T02 (pré-requisito do limite por IP).
+
+
+### Status (P2.5-T02)
+
+**Status:** RESOLVED (P2.5-T02)
+
+**Resolution:** `config/trustedproxy.php` com `TRUSTED_PROXIES`, lido pelo
+fallback do próprio `TrustProxies` do Laravel. Sem a variável, nenhum proxy
+é confiável e `X-Forwarded-For` é ignorado. Documentado no `.env.example` e
+em `docs/security/authentication.md`.
+
+**Tests:** `ignores X-Forwarded-For when no proxy is trusted`, `counts the
+forwarded client IP behind a trusted proxy`.
 
 ---
 
@@ -1501,6 +1591,18 @@ Sanctum na API).
 
 **Status:** OPEN, no escopo do P2.5-T02 (ADR-0013, itens 1 a 3).
 
+
+### Status (P2.5-T02)
+
+**Status:** RESOLVED (P2.5-T02)
+
+**Resolution:** o `/admin/login` e o login da API chamam a mesma
+`VerifyLoginCredentials`, com as mesmas chaves e cotas. O limiter `login` e
+o `admin-login:` deixaram de existir.
+
+**Tests:** `blocks the API login after failures on the admin form`, `blocks
+the admin form after failures on the API login`.
+
 ---
 
 ## FIND-034 — Sem contador por identidade independente do IP
@@ -1528,6 +1630,19 @@ impede um único IP de esgotar o contador da identidade.
 ### Status (análise do P2.5)
 
 **Status:** OPEN, no escopo do P2.5-T02 (ADR-0013, itens 3 e 9).
+
+
+### Status (P2.5-T02)
+
+**Status:** RESOLVED (P2.5-T02)
+
+**Resolution:** contador por identidade, 20 por hora, independente do IP e
+que não zera no sucesso. O de identidade + IP (5 a cada 30 min) é o único que
+zera.
+
+**Tests:** `keeps limiting an account when the attacker rotates IPs`,
+`resets only the identity + IP counter on success`. Mutação pega: zerar o
+contador da identidade no sucesso.
 
 ---
 

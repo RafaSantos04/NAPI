@@ -123,7 +123,7 @@ deixa a regra de negócio intocada quando o formato da auditoria muda.
 | Limitação | Consequência |
 |---|---|
 | Listener síncrono | Enfileirar a auditoria exigiria `ShouldDispatchAfterCommit` e perderia a atomicidade descrita acima |
-| IP depende do proxy | Não há `trustProxies`; atrás de um balanceador seria gravado o IP dele. Configurar no deploy |
+| IP depende do proxy | Atrás de um balanceador, `TRUSTED_PROXIES` (`config/trustedproxy.php`) é obrigatória; sem ela, é gravado o IP do balanceador (ADR-0013, FIND-030) |
 | `meta` guarda só o estado final | Não se sabe o que foi **removido**, só o conjunto resultante |
 
 ## Proteção dos próprios logs
