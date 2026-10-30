@@ -34,8 +34,11 @@ correção correspondente.
 | `AdminInvariantTest` | 7 | FIND-006 | último admin ativo → 409; admin inativo e admin excluído não contam; com dois admins ativos a mudança passa; exclusão via Action respeita a invariante; rejeição não gera auditoria |
 | `AuditIntegrityTest` | 8 | FIND-002, 012, 013, 017 | `count() === 1` para login, logout, atribuição, matriz, usuário (criar/alterar/excluir) e token (criar/revogar); ator correto; `assigned_by` no pivot; contexto vem do evento, não da sessão |
 | `RouteCoverageTest` (Fases 4.2 e 5.1) | 11 | FIND-021, 022 | toda rota `api/*` exceto login tem `auth:sanctum` e `token.ability`; toda rota autenticada da API tem `permission:` ou está na lista explícita de autoatendimento; nenhuma rota da API inicia sessão (`statefulApi` desligado); toda rota `admin*` está no grupo `web`, exige `auth` (exceto landing e login) e `admin.access` (exceto login e logout); toda rota `admin/*` de recurso tem `permission:`; visitante e `dev` são barrados em **todas** as rotas internas do admin |
+| `RouteCoverageTest` (P2.5-T06) | — | FIND-035 | as rotas de tokens e de confirmação de senha do admin entram numa lista explícita de autoatendimento, como as da API |
 | `RouteCoverageTest` (+2, P2) | — | ADR-0012 | toda rota `organizations/{organization}/*` com parâmetro filho exige scoped binding; nenhuma rota da árvore de projetos é `DELETE` |
 | `ProjectTreeSecurityTest` (P2-T05) | 53 | ADR-0012 | auditoria das 12 escritas da árvore (1 linha exata; rollback quando a trilha falha); 404 em **todas** as rotas `organizations.projects.*` para não-membro, membro de outra organização, membership desativada e admin global, sem escrita nem trilha; usuário de duas organizações misturando ids numa URL (404); papel da organização da rota, não o mais forte (403); ids malformados (404); `PATCH` ignora tenant, pai, criador e `archived_at` |
+| `LoginThrottleTest` (P2.5-T02) | 14 | FIND-016, 018, 027 a 030, 033, 034 | orçamento único admin × API; contadores por identidade, identidade + IP e IP; decisão pelo incremento; resposta uniforme; proxies; limite por usuário. Senhas geradas por teste com `Str::password()`, sem literais |
+| `PrivilegedTokenBoundaryTest` (P2.5-T06) | 8 | FIND-035, 036 | conta privilegiada (admin ou delegado com uma seção) recebe 403 sem token no login e no `POST /tokens`; owner de Organization continua com login na API; token derivado limitado pela validade efetiva da origem, inclusive token de login sem `expires_at`; limpeza diária agendada |
 | `MenuTreeTest` | 7 | FIND-010 | admin vê todos os ativos; inativos (raiz e filho) ocultos; filho sem `view` oculto; filho de pai oculto oculto; `dev` recebe 200 com árvore vazia; mais de um nível; aparecer na árvore não concede acesso |
 
 ## Área administrativa: `tests/Feature/Admin/` (Fase 4.2)
@@ -74,6 +77,16 @@ estrutural, em `RouteCoverageTest`.
 | Exclusão de menu | exclui menu sem submenus com as permissões e audita a chave, avisando quantos perfis perdem acesso; recusa sistema e menu com submenus (403); a Action recusa menu com submenus mesmo sem a Policy; exige `menus.delete` |
 | Perfis de um menu | lista todos os perfis com as ações no menu (Administrador implícito, perfis de sistema sem campos); vincular não mexe nas outras linhas do perfil; desmarcar tudo desvincula; só os perfis alterados são gravados e auditados; só leitura sem `permissions.update` (PUT → 404); anti-escalação igual à da matriz do perfil, e um envio com uma linha proibida não grava nenhuma; perfil de sistema só pelo Administrador, e o perfil `admin` por ninguém; perfil inexistente → 422 |
 | Navegação e identidade | menu desativado pelo admin some da árvore da API e volta quando reativado; submenu sem `view` não aparece para o perfil; trocar rótulo e rota do menu `users` não muda a permissão `users.view` |
+
+## Tokens no admin (P2.5-T06)
+
+`Admin/TokenManagementTest` (13) cobre a única forma de uma conta
+privilegiada obter token ([autenticação](../security/authentication.md#conta-privilegiada)).
+
+| Grupo | Garante |
+|---|---|
+| Confirmação de senha | o formulário pede a senha e volta para ele depois; depois de 5 minutos pede de novo e nenhum token é criado; senha errada não confirma a sessão; erros na confirmação gastam a cota compartilhada com os logins (a API passa a responder 429) |
+| Tela | token de 8 horas com as abilities escolhidas, 201 com `Cache-Control: no-store`, o texto puro não passa pela sessão nem reaparece na lista, e o token funciona na API dentro das abilities; só validades 1, 8 e 24 h e abilities do catálogo; lista só os tokens do próprio usuário; revogação auditada; token alheio → 404 |
 
 ## Security Lab: `tests/Feature/SecurityLab/` (Fases 5.1 e 5.2)
 
@@ -133,6 +146,11 @@ teste; payload aceitando qualquer chave; rota de execução pedindo só `view`.
 | INV-15 e-mail único | `email is unique`, `email is case-insensitive (citext)` | `UserTest` |
 | INV-16 inativo não autentica | `DisabledUserAuthenticationTest` (6) | `Security/DisabledUserAuthenticationTest` |
 | INV-17 token não excede abilities | `TokenAbilityTest` | `Security/TokenAbilityTest` |
+| Conta privilegiada sem token pela API (P2.5-T06) | `refuses a token to a privileged account on the API login (403)`, `treats an account with any admin area section as privileged`, `refuses POST /tokens to a privileged account…`, `keeps the API login for an organization owner…` | `Security/PrivilegedTokenBoundaryTest` |
+| Token derivado não vive mais que a origem (P2.5-T06) | `never lets a derived token outlive the token that minted it`, `caps a token minted by a login token…`, `keeps the requested lifetime when it ends before the parent` | `Security/PrivilegedTokenBoundaryTest` |
+| Token no admin só com senha recente (P2.5-T06) | `asks for the password before the token form…`, `asks again once the confirmation is older than five minutes`, `rejects a wrong password…`, `spends the login budget shared with the API and the admin form` | `Admin/TokenManagementTest` |
+| Token do admin exibido uma vez, curto e auditado (P2.5-T06) | `issues a short-lived token, shows it once and never stores it in the session`, `only accepts the offered lifetimes…`, `revokes the user's own token and audits it`, `answers 404 for another user's token` | `Admin/TokenManagementTest` |
+| Limpeza diária de tokens vencidos | `prunes tokens expired for over a day, every day` | `Security/PrivilegedTokenBoundaryTest` |
 | INV-18 identidade estável de permissão | `Stable permission keys` | `Security/AuthorizationMatrixTest` |
 | INV-19 sessão no admin só com acesso | `Admin area access`, `keeps guests and users without admin access out of every internal admin route` | `Admin/UserManagementTest`, `Security/RouteCoverageTest` |
 | INV-20 dois adapters, mesmas regras | `Same rules through the API and the admin area`, `does not issue an API token on web login` | `Admin/UserManagementTest`, `Admin/AdminShellTest`, `Security/RouteCoverageTest` |

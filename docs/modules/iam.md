@@ -108,7 +108,7 @@ existir fora de ambiente local.
 
 | Caso de uso | Entrada | Autorização | Regra de negócio | Auditoria |
 |---|---|---|---|---|
-| Login | `LoginRequest` → `VerifyLoginCredentials` (API e admin) | pública; contadores por identidade, identidade + IP e IP (ADR-0013) | usuário ativo; resposta igual para e-mail inexistente, conta inativa e senha errada | `login` |
+| Login | `LoginRequest` → `VerifyLoginCredentials` (API e admin) | pública; contadores por identidade, identidade + IP e IP (ADR-0013); na API, `PersonalAccessTokenPolicy::issueViaApi` recusa conta privilegiada (403) | usuário ativo; resposta igual para e-mail inexistente, conta inativa e senha errada | `login` |
 | Logout | — | autenticado + `write` | revoga **todos** os tokens | `logout` |
 | CRUD de usuário | `UserStore/UpdateRequest` → `CreateUserDto`/`UpdateUserDto` → `CreateUser`/`UpdateUser` | `users.{ação}` + `UserPolicy` | só nome, e-mail e senha (criação); ninguém exclui a si mesmo; só admin altera ou exclui administrador; exclusão via `DeleteUser` protege o último admin ativo | `user_created`, `user_updated`, `user_deleted` |
 | Desativar usuário | — → `DeactivateUser` | `users.update` + `UserPolicy::deactivate` | ninguém desativa a si mesmo; só admin desativa administrador; último admin ativo (409); revoga tokens e remove sessões web | `user_deactivated` |
@@ -119,7 +119,8 @@ existir fora de ambiente local.
 | CRUD de menu | `MenuStore/UpdateRequest` → `CreateMenuDto`/`UpdateMenuDto` → `CreateMenu`/`UpdateMenu`/`DeleteMenu` | `menus.{ação}` + `MenuPolicy` | `key` imutável (request e DTO); pai não pode ser o próprio menu nem descendente; menu de sistema ou com filhos não é excluído (filhos reconferidos sob lock, 409) | `menu_created`, `menu_updated`, `menu_deleted` (Fase 4.4) |
 | Perfis de um menu (Fase 4.4) | `SyncProfilesRequest` → `SyncMenuProfilesDto` → `SyncMenuProfiles` → `SyncMenuPermissions` por perfil alterado | `permissions.update` + `syncMenus` para cada perfil que muda | mesma matriz vista pelo menu; tudo ou nada; perfil sem mudança não é gravado | `permission_changed` por perfil |
 | Árvore de menus | — | autenticado + `read` | menus ativos com `{key}.view`, filhos só sob pai visível | não |
-| Tokens pessoais | `TokenStoreRequest` | autenticado; escopo no próprio usuário | abilities ⊆ as do token atual; expiração ≤ 7 dias | `token_created`, `token_revoked` |
+| Tokens pessoais (API) | `TokenStoreRequest` → `IssueAccessToken`; `RevokeAccessToken` | autenticado; escopo no próprio usuário; emissão recusada para conta privilegiada (`issueViaApi`) | abilities ⊆ as do token atual; expiração ≤ 7 dias e ≤ validade efetiva do token que pede (FIND-036) | `token_created`, `token_revoked` |
+| Tokens pessoais (admin, P2.5-T06) | `Web\Admin\Token\StoreTokenRequest` → `IssueAccessToken`; `RevokeAccessToken` | sessão + `admin.access`; criar exige senha confirmada há ≤ 5 min (`password.confirm`, conferida por `VerifyLoginCredentials`) | validade de 1, 8 ou 24 h; token exibido uma única vez, fora da sessão | `token_created`, `token_revoked` |
 | Criar/editar Organization | requests → DTOs → `CreateOrganization`/`UpdateOrganization` | autoatendimento na criação; permission + `OrganizationPolicy` depois | criador vira owner ativo; slug único | `organization_created`, `organization_updated` |
 | Gerir memberships | requests → DTOs → Actions de Tenancy | `members.view/manage` + `OrganizationMembershipPolicy` | usuário existente/ativo; lifecycle active/disabled; ao menos um owner válido (409) | `membership_created`, `membership_updated`, `membership_removed` |
 

@@ -67,10 +67,13 @@ Nos demais casos, a evidência é a leitura do código citado.
 | [FIND-032](#find-032--tokens-por-usuário-sem-teto-e-listagem-sem-paginação) | Tokens por usuário sem teto e listagem sem paginação | Security | Low | — | — (aberto na análise do P2.5, OPEN) |
 | [FIND-033](#find-033--login-do-admin-e-login-da-api-com-orçamentos-independentes) | Login do admin e login da API com orçamentos independentes | Security | Medium | — | — (aberto na revisão Admin × API do P2.5, RESOLVED no P2.5-T02) |
 | [FIND-034](#find-034--sem-contador-por-identidade-independente-do-ip) | Sem contador por identidade independente do IP | Security | Medium | — | — (aberto na revisão Admin × API do P2.5, RESOLVED no P2.5-T02) |
-| [FIND-035](#find-035--conta-privilegiada-troca-a-senha-por-token-na-api) | Conta privilegiada troca a senha por token na API | Security | Medium | — | — (aberto na revisão Admin × API do P2.5, OPEN) |
-| [FIND-036](#find-036--token-derivado-pode-viver-mais-que-o-token-de-origem) | Token derivado pode viver mais que o token de origem | Security | Low | — | — (aberto na revisão Admin × API do P2.5, OPEN) |
+| [FIND-035](#find-035--conta-privilegiada-troca-a-senha-por-token-na-api) | Conta privilegiada troca a senha por token na API | Security | Medium | — | — (aberto na revisão Admin × API do P2.5, RESOLVED no P2.5-T06) |
+| [FIND-036](#find-036--token-derivado-pode-viver-mais-que-o-token-de-origem) | Token derivado pode viver mais que o token de origem | Security | Low | — | — (aberto na revisão Admin × API do P2.5, RESOLVED no P2.5-T06) |
 
 Contagem: 1 High · 13 Medium · 18 Low · 4 Improvement. Nenhum Critical.
+
+Após o P2.5-T06 (2026-10-30): FIND-035 e 036 **RESOLVED**. Ficam **5 OPEN**
+(FIND-008, 024, 026, 031 e 032).
 
 Após o P2.5-T02 (2026-10-30): **8 RESOLVED** na task (FIND-016, 018, 027,
 028, 029, 030, 033 e 034; o 028 com a exceção das rotas autenticadas
@@ -1684,6 +1687,37 @@ auditoria.
 na API entra junto com a emissão no admin, para que a API de IAM nunca fique
 sem forma de autenticar.
 
+### Status (P2.5-T06)
+
+**Status:** RESOLVED (P2.5-T06)
+
+**Cause:** o login da API emitia token para qualquer conta ativa, e a
+Fase 4.2 tratava as duas entradas por senha como equivalentes.
+
+**Resolution:**
+
+- `App\Policies\PersonalAccessTokenPolicy::issueViaApi` recusa a conta
+  privilegiada (`AdminNavigation::allows()`), com 403 e sem token, no login
+  da API (depois da senha conferida) e no `POST /tokens` (pelo
+  `TokenStoreRequest`).
+- O token dessa conta nasce em `/admin/tokens`. Criar exige a senha
+  confirmada há no máximo 5 minutos (`password.confirm`); a confirmação
+  confere a senha pela `VerifyLoginCredentials`, com os contadores do
+  login.
+- A validade é de 1, 8 ou 24 horas, e o token aparece uma única vez, sem
+  passar pela sessão.
+- Emissão e revogação usam as Actions `IssueAccessToken` e
+  `RevokeAccessToken`, as mesmas da API, auditadas por `token_created` e
+  `token_revoked`.
+- `sanctum:prune-expired --hours=24` está agendado diariamente.
+- Os tokens de login já emitidos para contas privilegiadas não foram
+  revogados por código: expiram no prazo global, em até 7 dias.
+
+**Tests:** `tests/Feature/Security/PrivilegedTokenBoundaryTest.php`
+(API), `tests/Feature/Admin/TokenManagementTest.php` (tela, confirmação,
+orçamento compartilhado, exibição única) e `RouteCoverageTest` (rotas de
+autoatendimento do admin).
+
 ---
 
 ## FIND-036 — Token derivado pode viver mais que o token de origem
@@ -1711,3 +1745,22 @@ pede.
 ### Status (análise do P2.5)
 
 **Status:** OPEN, no escopo do P2.5-T06 (ADR-0013, item 15).
+
+### Status (P2.5-T06)
+
+**Status:** RESOLVED (P2.5-T06)
+
+**Cause:** a emissão ficava no controller e só conhecia o teto global; o
+token que pede não entrava no cálculo. Limitar só pelo `expires_at` não
+bastaria: o token de login nasce sem `expires_at` e vale até `created_at`
+mais a expiração global.
+
+**Resolution:** a emissão passa pela Action
+`App\Domain\IAM\Actions\IssueAccessToken`, que limita o `expires_at` ao
+menor valor entre o pedido, o teto global e a validade efetiva do token de
+origem (o `expires_at` dele ou `created_at` + expiração global). Vale para
+qualquer conta. O 201 devolve o `expires_at` real.
+
+**Tests:** `tests/Feature/Security/PrivilegedTokenBoundaryTest.php`
+(token de origem com `expires_at`, token de login sem `expires_at` e
+pedido menor que a origem).

@@ -6,7 +6,8 @@
 
 Proposed (P2.5-T01). Decisões aprovadas pelo usuário em 2026-10-30, incluindo
 a revisão Admin × API do mesmo dia. Passa a Accepted no JUDGE do P2.5-T05,
-como o ADR-0012 no P2.
+como o ADR-0012 no P2. Implementado até aqui: proteção de credenciais e
+rotas autenticadas (T02) e conta privilegiada (T06).
 
 ## Context
 
@@ -135,23 +136,30 @@ a política de operações caras, mas o código dela entra com a rota do P3.
     controller (ADR-0008).
 13. **O token de conta privilegiada nasce na sessão do admin** (P2.5-T06):
     tela dos tokens do próprio usuário, para listar, criar e revogar.
-    Abilities escolhidas do catálogo e expiração curta, com padrão e teto
-    fixados no T06, abaixo dos 7 dias globais. O token aparece uma única
-    vez, e a emissão e a revogação são auditadas pelos eventos
-    `TokenCreated` e `TokenRevoked`, que já existem.
+    Abilities escolhidas do catálogo e expiração curta: 1, 8 ou 24 horas,
+    padrão 8 (fixado no T06). O token aparece uma única vez, na própria
+    resposta do POST, com `Cache-Control: no-store`: um redirect com flash
+    gravaria o texto puro na tabela `sessions`. A emissão e a revogação são
+    auditadas pelos eventos `TokenCreated` e `TokenRevoked`, que já
+    existem. O link da tela fica no cabeçalho, fora das seções do
+    `AdminNavigation`, porque essas seções definem quem é privilegiado.
 14. **Criar token exige reautenticação recente**, pelo middleware
-    `password.confirm` do Laravel (`RequirePassword::using()` com timeout
-    curto na rota de criação, em vez das 3 horas do `password_timeout`). A
+    `password.confirm` do Laravel: `RequirePassword::using()` com 5 minutos
+    nas rotas de criação, em vez das 3 horas do `password_timeout`. A
     rota de confirmação confere a senha pela Action do item 1, com os
     mesmos contadores, e marca a sessão com `passwordConfirmed()`.
 15. **O token derivado não vive mais que o de origem**, para qualquer
-    conta: em `POST /tokens`, o `expires_at` fica limitado ao do token que
-    pede. Fecha o FIND-036.
-16. **A emissão vira uma Action**, com `createToken`, o teto e o evento numa
-    transação; hoje isso está no controller. Ela carrega regra de negócio e
-    passa a ter dois adapters, API e admin (ADR-0007, ADR-0009). A recusa na
-    API entra junto com a tela do admin, para que a API de IAM nunca fique
-    sem forma de autenticar. Fecha o FIND-035.
+    conta: em `POST /tokens`, o `expires_at` fica limitado à validade
+    efetiva do token que pede. A validade efetiva é o `expires_at` dele ou
+    o `created_at` mais a expiração global, o que vier antes, porque o
+    token de login nasce sem `expires_at`. A validade reduzida volta em
+    `expires_at` no 201. Fecha o FIND-036.
+16. **A emissão vira uma Action** (`IssueAccessToken`), com `createToken`,
+    o teto e o evento numa transação, antes no controller. Ela carrega
+    regra de negócio e passa a ter dois adapters, API e admin (ADR-0007,
+    ADR-0009). A revogação também vira Action (`RevokeAccessToken`), pelo
+    mesmo motivo. A recusa na API entra junto com a tela do admin, para que
+    a API de IAM nunca fique sem forma de autenticar. Fecha o FIND-035.
 17. **`sanctum:prune-expired --hours=24` agendado diariamente** em
     `routes/console.php`, como indica a documentação do Sanctum. O deploy
     precisa rodar o scheduler.

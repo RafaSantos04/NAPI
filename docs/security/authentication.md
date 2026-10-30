@@ -25,7 +25,9 @@ flowchart TD
     B -- sim --> Z1[429 + Retry-After<br/>evento Lockout]
     B --> D{guard web validate<br/>senha + is_active<br/>Timebox 200 ms}
     D -- falha --> Z2[422 'Invalid credentials.']
-    D --> F[transação: event UserLoggedIn → audit 'login'<br/>createToken read,write,delete]
+    D --> P{PersonalAccessTokenPolicy<br/>issueViaApi: conta privilegiada?}
+    P -- sim --> Z3[403 sem token]
+    P --> F[transação: event UserLoggedIn → audit 'login'<br/>createToken read,write,delete]
     F --> H[200 user + token]
 ```
 
@@ -35,6 +37,7 @@ flowchart TD
 | Resposta uniforme para e-mail inexistente, conta inativa e senha errada | `VerifyLoginCredentials` devolve `null` nos três casos; o `Timebox` do guard iguala o tempo ([FIND-018](../findings/README.md#find-018--sinais-de-enumeração-no-login)) | `gives the same answer and the same wait…` |
 | Rate limit | [proteção de credenciais](#proteção-de-credenciais), compartilhada com o admin | `LoginThrottleTest` |
 | Bloqueio de conta inativa | `is_active` nas credenciais do `validate()` | `does not issue a token to an inactive user` |
+| Conta privilegiada sem token por senha | `PersonalAccessTokenPolicy::issueViaApi` depois da senha conferida: 403 sem token nem `UserLoggedIn` ([conta privilegiada](#conta-privilegiada)) | `refuses a token to a privileged account on the API login (403)` |
 | Auditoria de login | `UserLoggedIn` → `RecordAuditLog`, **uma** linha | `records a login exactly once` |
 | Tentativas falhas auditadas | **não existe** (adiado, veja [audit.md](audit.md#cobertura)); o bloqueio dispara o evento `Lockout` | — |
 
@@ -42,9 +45,10 @@ flowchart TD
 
 Desde o P2.5-T02 ([ADR-0013](../architecture/decisions/ADR-0013-abuse-limits-and-expensive-operations.md)),
 toda rota que confere senha chama a Action
-`App\Domain\IAM\Actions\VerifyLoginCredentials`: o login da API e o
-`/admin/login`. Só a proteção é compartilhada: o admin abre a sessão `web`
-e a API emite o token Sanctum.
+`App\Domain\IAM\Actions\VerifyLoginCredentials`: o login da API, o
+`/admin/login` e, desde o P2.5-T06, a confirmação de senha do admin. Só a
+proteção é compartilhada: o admin abre a sessão `web` e a API emite o token
+Sanctum.
 
 | Contador | Chave | Cota | Zera no sucesso |
 |---|---|---|---|
@@ -76,18 +80,60 @@ somando todos os tokens e a sessão. Ali, o `throttle` padrão do Laravel lê e
 depois incrementa; a ultrapassagem se limita às requisições simultâneas do
 próprio usuário, e isso é aceito (ADR-0013, item 20).
 
+## Conta privilegiada
+
+Desde o P2.5-T06 ([ADR-0013](../architecture/decisions/ADR-0013-abuse-limits-and-expensive-operations.md), itens 10 a 18),
+a senha de uma conta privilegiada só entra pelo `/admin/login`, e o token
+dela nasce na sessão do admin, com a senha reconfirmada ([FIND-035](../findings/README.md#find-035--conta-privilegiada-troca-a-senha-por-token-na-api)).
+
+- **Privilegiada** é a conta que entra na área administrativa:
+  `AdminNavigation::allows()`, a mesma regra do `admin.access`. Basta uma
+  seção visível (por exemplo, só `menus.view`). Owner ou member de
+  Organization, sem permissão global, não é privilegiado. Não há flag nem
+  lista ([ADR-0008](../architecture/decisions/ADR-0008-layered-authorization-model.md)).
+- **Na API**, `PersonalAccessTokenPolicy::issueViaApi` recusa a conta
+  privilegiada com 403 e a mensagem
+  `Privileged accounts get their tokens in the admin area.` em dois
+  pontos: no login, depois da senha conferida pelos contadores, e no
+  `POST /tokens`, pelo `TokenStoreRequest`. Saber que a senha está certa
+  não dá nada novo, porque o `/admin/login` a aceita com os mesmos
+  contadores. Usar e revogar o token emitido no admin continua permitido.
+- **No admin**, `/admin/tokens` lista (paginado), cria e revoga os tokens do
+  próprio usuário. O link fica no cabeçalho, não na barra lateral: as
+  seções da barra definem quem é privilegiado, e um link visível a todos
+  tornaria todo mundo privilegiado.
+  - Criar exige a senha confirmada nos últimos **5 minutos**
+    (`RequirePassword::using('admin.password.confirm', 300)`), e não nas 3
+    horas do `auth.password_timeout`. A confirmação confere a senha pela
+    `VerifyLoginCredentials`, então erros nela gastam a mesma cota dos
+    logins.
+  - Validade de **1, 8 ou 24 horas** (padrão 8), abilities do catálogo
+    (`read`, `write`, `delete`).
+  - O token aparece **uma única vez**, na própria resposta do POST (201,
+    `Cache-Control: no-store`). Um redirect com flash gravaria o texto
+    puro na tabela `sessions`.
+  - Emissão e revogação são as mesmas Actions da API (`IssueAccessToken`,
+    `RevokeAccessToken`), com `token_created` e `token_revoked`.
+- **Tokens anteriores ao T06**: os tokens de login já emitidos para contas
+  privilegiadas não foram revogados por código e expiram no prazo global,
+  em até 7 dias. O dono pode revogá-los na própria tela.
+- **Risco residual**: uma conta comum promovida a privilegiada mantém os
+  tokens de API que já tinha, até expirarem (≤ 7 dias). Não é um desvio por
+  senha; revogar na promoção ficou fora do escopo do T06.
+
 ## Tokens
 
 | Aspecto | Comportamento |
 |---|---|
 | Emissão no login | nome `api-token`, abilities `['read', 'write', 'delete']`. O limite real é o IAM do dono |
-| Emissão manual (`POST /tokens`) | abilities `read`/`write`/`delete`, **subconjunto** das abilities do token que faz a chamada (senão 403). `expires_in_days` entre 1 e o teto global (7), padrão 7 |
+| Emissão manual (`POST /tokens`) | só conta não privilegiada (senão 403). Abilities `read`/`write`/`delete`, **subconjunto** das abilities do token que faz a chamada (senão 403). `expires_in_days` entre 1 e o teto global (7), padrão 7. O token novo nunca vive mais que o token que o pede: a validade é reduzida à dele e devolvida em `expires_at` no 201 ([FIND-036](../findings/README.md#find-036--token-derivado-pode-viver-mais-que-o-token-de-origem)) |
+| Emissão no admin (`/admin/tokens`) | conta privilegiada, com senha confirmada há no máximo 5 minutos; 1, 8 ou 24 horas ([conta privilegiada](#conta-privilegiada)) |
 | Expiração global | 7 dias a partir de `created_at` (`config/sanctum.php`). `expires_in_days` não aceita valores acima disso ([FIND-015](../findings/README.md#find-015--expiração-de-token-aceita-valores-que-nunca-terão-efeito)) |
 | Abilities | **aplicadas** pelo método HTTP (`EnsureTokenAbility`): GET→`read`, POST/PUT/PATCH→`write`, DELETE→`delete`. Ausência → 403 |
-| Revogação individual | `DELETE /tokens/{id}`, só entre os tokens do próprio usuário. Token inexistente ou alheio → 404 |
+| Revogação individual | `DELETE /tokens/{id}` ou `/admin/tokens`, só entre os tokens do próprio usuário. Token inexistente ou alheio → 404 |
 | Logout | apaga **todos** os tokens do usuário (logout global) e audita `logout` com a quantidade revogada |
 | Auditoria | `token_created` e `token_revoked` com id, nome e abilities (nunca o segredo) |
-| Limpeza de expirados | não agendada (entra no P2.5-T06) |
+| Limpeza de expirados | `sanctum:prune-expired --hours=24` diário (`routes/console.php`); o deploy precisa rodar o scheduler. Token vencido já não autentica antes disso |
 | Prefixo | `napi_`, detectável por secret scanning |
 
 ## Estado da conta
@@ -141,7 +187,8 @@ Desde a Fase 4.2, credenciais válidas de quem não tem acesso à área
 administrativa (por exemplo `dev` e `viewer`) não abrem sessão e recebem
 `Esta conta não tem acesso à área administrativa.`. A mensagem não cria um
 sinal de enumeração novo, porque as mesmas credenciais já são confirmadas
-por `POST /api/v1/auth/login`. Uma sessão aberta que perde o acesso é
+por `POST /api/v1/auth/login`. Desde o P2.5-T06 vale o inverso: a conta que
+entra no admin recebe 403 no login da API ([conta privilegiada](#conta-privilegiada)). Uma sessão aberta que perde o acesso é
 encerrada no próximo request (`EnsureUserCanAccessAdmin`).
 
 A sessão web nunca autentica a API: o grupo `api` não inicia sessão

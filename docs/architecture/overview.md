@@ -100,4 +100,6 @@ de autorização, menus como chaves mutáveis) foram resolvidos na Fase 3.2.
 - `bootstrap/app.php`: roteamento, aliases `permission`, `token.ability` e `organization.context`, renderização JSON de exceções em `api/*`
 - `app/Providers/AppServiceProvider.php`: Policies, callback de autenticação (usuário ativo), rate limiter `authenticated`, strict mode
 - `app/Domain/IAM/Actions/VerifyLoginCredentials.php`: único ponto que confere senha, com os contadores de login (ADR-0013)
+- `app/Policies/PersonalAccessTokenPolicy.php` e `app/Domain/IAM/Actions/{IssueAccessToken,RevokeAccessToken}.php`: onde um token pode nascer (conta privilegiada só no admin) e quanto ele vive (P2.5-T06)
+- `routes/console.php`: limpeza diária dos tokens vencidos (`sanctum:prune-expired`)
 - ADRs: [decisions/README.md](decisions/README.md)

@@ -104,8 +104,9 @@ dispara `UserCreated`/`UserUpdated` dentro de `DB::transaction`.
 
 **Login** (`POST /auth/login`): sem `auth:sanctum`; passa pelo
 `LoginRequest` e pelo `AuthController`, que chama `VerifyLoginCredentials`
-(contadores compartilhados com o admin, depois a senha) e então dispara
-`UserLoggedIn` e emite um token com `read`, `write` e `delete` na mesma
+(contadores compartilhados com o admin, depois a senha). Conta privilegiada
+recebe 403 da `PersonalAccessTokenPolicy` (P2.5-T06); as demais disparam
+`UserLoggedIn` e recebem um token com `read`, `write` e `delete`, na mesma
 transação. Veja [authentication.md](../security/authentication.md#proteção-de-credenciais).
 
 ## Ordem de rotas

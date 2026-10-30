@@ -78,6 +78,8 @@ Veja [phases](../phases/README.md).
 | Replay de token | ⚠️ | Expiração global de 7 dias; logout revoga todos | ✅ logout | Válido por até 7 dias sem rotação nem vínculo com IP ou dispositivo | Hardening |
 | Usuário desativado com token válido | ✅ | Callback de autenticação do Sanctum + limpeza ao desativar | ✅ `DisabledUserAuthenticationTest` | — | — |
 | Usuário excluído (soft delete) com token | ✅ | O Sanctum não resolve `tokenable` excluído | ✅ `rejects the token of a soft-deleted user` | Linhas de token órfãs permanecem | — |
+| Conta privilegiada troca a senha por token na API | ✅ | `PersonalAccessTokenPolicy::issueViaApi`: login da API e `POST /tokens` recusam quem entra no admin (403); o token nasce em `/admin/tokens` com senha confirmada há ≤ 5 min, validade de até 24 h e exibição única ([FIND-035](../findings/README.md#find-035--conta-privilegiada-troca-a-senha-por-token-na-api)) | ✅ `PrivilegedTokenBoundaryTest`, `Admin/TokenManagementTest` | Conta comum promovida mantém os tokens que já tinha até expirarem (≤ 7 dias); tokens de login anteriores ao T06 expiram no prazo global | P2.5 |
+| Token derivado estende a própria validade | ✅ | `IssueAccessToken` limita o `expires_at` à validade efetiva do token de origem ([FIND-036](../findings/README.md#find-036--token-derivado-pode-viver-mais-que-o-token-de-origem)) | ✅ `PrivilegedTokenBoundaryTest` | — | P2.5 |
 | Enumeração de usuários pelo login | ✅ | Mesma resposta para e-mail inexistente, conta inativa e senha errada; `Timebox` de 200 ms do guard; sem `exists:users` | ✅ `gives the same answer and the same wait…` | O `/admin/login` ainda diz "sem acesso à área" para credenciais válidas sem permissão (não revela nada além do que a senha certa já revela) | P2.5 |
 
 ## Autorização
