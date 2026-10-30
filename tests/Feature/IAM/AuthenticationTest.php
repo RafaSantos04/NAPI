@@ -41,11 +41,11 @@ describe('Authentication', function () {
         $response->assertJson(['data' => ['id' => $user->id, 'email' => $user->email]]);
     });
 
-    it('rate limits login after 6 attempts in 30 minutes', function () {
-        for ($i = 0; $i < 6; $i++) {
+    it('rate limits login after 5 failed attempts from the same origin', function () {
+        for ($i = 0; $i < 5; $i++) {
             $this->postJson('/api/v1/auth/login', [
                 'email' => 'admin@napi.dev',
-                'password' => 'wrong',
+                'password' => 'wrong-password',
             ]);
         }
 

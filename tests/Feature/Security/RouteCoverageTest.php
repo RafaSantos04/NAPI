@@ -34,14 +34,14 @@ describe('API route coverage', function () {
         'menus.tree', 'organizations.index', 'organizations.store',
     ];
 
-    it('authenticates every API route except login and checks the token ability', function () {
+    it('authenticates every API route except login, checks the token ability and limits per user', function () {
         foreach (routesUnder('api/*') as $route) {
             if ($route->getName() === 'auth.login') {
                 continue;
             }
 
             expect($route->gatherMiddleware())
-                ->toContain('auth:sanctum', 'token.ability');
+                ->toContain('auth:sanctum', 'token.ability', 'throttle:authenticated');
         }
     });
 
@@ -97,13 +97,13 @@ describe('Admin route coverage', function () {
         }
     });
 
-    it('requires a session for every admin route but the landing and the login', function () {
+    it('requires a session and the per-user limit for every admin route but the landing and the login', function () {
         foreach (routesUnder('admin*') as $route) {
             if (in_array($route->getName(), ['admin.home', 'admin.login'], true)) {
                 continue;
             }
 
-            expect($route->gatherMiddleware())->toContain('auth');
+            expect($route->gatherMiddleware())->toContain('auth', 'throttle:authenticated');
         }
     });
 
