@@ -59,8 +59,36 @@ Nos demais casos, a evidência é a leitura do código citado.
 | [FIND-024](#find-024--personas-do-security-lab-são-contas-administráveis) | Personas do Security Lab são contas administráveis | Security | Low | — | — (aberto na Fase 5.2, OPEN deferred) |
 | [FIND-025](#find-025--resultado-da-última-execução-não-era-filtrado-por-teste) | Resultado da última execução não era filtrado por teste | Maintainability | Low | — | — (aberto e resolvido na Fase 5.2) |
 | [FIND-026](#find-026--bytes-inválidos-em-utf-8-num-formulário-viram-erro-500) | Bytes inválidos em UTF-8 num formulário viram erro 500 | Maintainability | Low | — | — (aberto na Fase 4.4, OPEN) |
+| [FIND-027](#find-027--limiter-do-login-da-api-diferencia-maiúsculas-no-e-mail) | Limiter do login da API diferencia maiúsculas no e-mail | Security | Medium | — | — (aberto na análise do P2.5, OPEN) |
+| [FIND-028](#find-028--rate-limiting-não-é-atômico-entre-requisições-simultâneas) | Rate limiting não é atômico entre requisições simultâneas | Security | Low | — | — (aberto na análise do P2.5, OPEN) |
+| [FIND-029](#find-029--429-do-login-sai-sem-retry-after) | 429 do login sai sem `Retry-After` | Maintainability | Low | — | — (aberto na análise do P2.5, OPEN) |
+| [FIND-030](#find-030--limites-por-ip-dependem-de-proxies-confiáveis-não-configurados) | Limites por IP dependem de proxies confiáveis não configurados | Security | Low | — | — (aberto na análise do P2.5, OPEN) |
+| [FIND-031](#find-031--listas-e-senhas-sem-limite-de-tamanho-na-validação) | Listas e senhas sem limite de tamanho na validação | Security | Low | — | — (aberto na análise do P2.5, OPEN) |
+| [FIND-032](#find-032--tokens-por-usuário-sem-teto-e-listagem-sem-paginação) | Tokens por usuário sem teto e listagem sem paginação | Security | Low | — | — (aberto na análise do P2.5, OPEN) |
+| [FIND-033](#find-033--login-do-admin-e-login-da-api-com-orçamentos-independentes) | Login do admin e login da API com orçamentos independentes | Security | Medium | — | — (aberto na revisão Admin × API do P2.5, OPEN) |
+| [FIND-034](#find-034--sem-contador-por-identidade-independente-do-ip) | Sem contador por identidade independente do IP | Security | Medium | — | — (aberto na revisão Admin × API do P2.5, OPEN) |
+| [FIND-035](#find-035--conta-privilegiada-troca-a-senha-por-token-na-api) | Conta privilegiada troca a senha por token na API | Security | Medium | — | — (aberto na revisão Admin × API do P2.5, OPEN) |
+| [FIND-036](#find-036--token-derivado-pode-viver-mais-que-o-token-de-origem) | Token derivado pode viver mais que o token de origem | Security | Low | — | — (aberto na revisão Admin × API do P2.5, OPEN) |
 
-Contagem: 1 High · 9 Medium · 12 Low · 4 Improvement. Nenhum Critical.
+Contagem: 1 High · 13 Medium · 18 Low · 4 Improvement. Nenhum Critical.
+
+Na análise do P2.5 (2026-10-30): **seis findings novos** (FIND-027 a
+FIND-032), todos no escopo das tasks da fase. A análise também ampliou a
+evidência do FIND-016 (o login do admin tem a mesma chave) e do FIND-026
+(query string da API).
+
+Na revisão Admin × API do mesmo dia (comentários dos cards T01, T02 e T05):
+**mais quatro findings** (FIND-033 a FIND-036) e uma task nova, a P2.5-T06.
+Ficam **15 OPEN** (FIND-008, 016, 018, 024, 026 e 027 a 036). Distribuição
+pelas tasks do quadro:
+
+| Task | Findings |
+|---|---|
+| P2.5-T01 (ADR-0013) | decisões de todos os abaixo |
+| P2.5-T02 (proteção de credenciais e rate limiting) | FIND-016, 018, 027, 028, 029, 030, 033, 034 |
+| P2.5-T03 (corpo e `max:`) | FIND-031, 032 (paginação; o teto de tokens fica adiado) |
+| P2.5-T04 (UTF-8) | FIND-026 |
+| P2.5-T06 (fronteira da conta privilegiada) | FIND-035, 036 |
 
 Após P1: **21 RESOLVED**, 4 deles parcialmente, e **5 OPEN** (FIND-008,
 016, 018, 024 e 026). O FIND-014 foi resolvido com proteção no model e
@@ -789,6 +817,25 @@ Hardening.
 
 **Nota:** Fora do escopo da Fase 3.2.
 
+### Status (análise do P2.5)
+
+**Status:** OPEN, no escopo do P2.5-T02.
+
+**Evidência ampliada:** o login do admin tem a mesma brecha. O
+`Web\Admin\Auth\LoginRequest` limita 5 falhas com a chave
+`admin-login:{email}|{ip}`, então um IP também ganha cota nova a cada e-mail.
+E o `RateLimiter::hit()` é chamado sem decay, então a janela é o padrão de
+60 segundos: 5 falhas por minuto (300 por hora) por conta, contra 6 a cada
+30 minutos na API. A chave da API, além disso, diferencia maiúsculas
+([FIND-027](#find-027--limiter-do-login-da-api-diferencia-maiúsculas-no-e-mail)).
+
+Revisão de 2026-10-30: os dois logins também não compartilham contador
+nenhum ([FIND-033](#find-033--login-do-admin-e-login-da-api-com-orçamentos-independentes)),
+e falta o contador por identidade
+([FIND-034](#find-034--sem-contador-por-identidade-independente-do-ip)). A
+correção é um boundary único de proteção de credenciais (ADR-0013, itens 1
+a 9) mais o limiter `authenticated` (itens 19 e 20).
+
 ---
 
 ## FIND-017 — `assigned_by` não é preenchido pela API
@@ -857,6 +904,12 @@ Fase 5 (bom cenário de verificação para o Security Lab).
 **Status:** OPEN
 
 **Nota:** Fora do escopo da Fase 3.2 (Fase 5).
+
+### Status (análise do P2.5)
+
+**Status:** OPEN, no escopo do P2.5-T02 (decisão de 2026-10-30). O login do
+admin já responde igual para e-mail inexistente, senha errada e conta
+inativa; falta a API.
 
 ---
 
@@ -1211,3 +1264,335 @@ uma regra por campo.
 
 Fora do escopo da fase, que não deveria mudar o tratamento de entrada de
 todas as rotas. Registrado para hardening.
+
+### Status (análise do P2.5)
+
+**Status:** OPEN, no escopo do P2.5-T04.
+
+**Evidência ampliada:** não é só formulário. **Confirmado em execução**:
+`GET /api/v1/organizations/{organization}/projects?search=%FF` com token
+válido responde 500 (`InvalidArgumentException`, "Malformed UTF-8
+characters"). A query string não passa pelo `json_decode`, então a API também
+é afetada.
+
+---
+
+## FIND-027 — Limiter do login da API diferencia maiúsculas no e-mail
+
+**Categoria:** Security · **Severidade:** Medium
+
+### Evidence
+
+`RateLimiter::for('login')` usa a chave `login:{email}:{ip}` com o e-mail
+como veio na requisição. A coluna `users.email` é `citext`, então
+`ADMIN@napi.dev` e `admin@napi.dev` são a mesma conta para o login, mas
+contadores diferentes para o limiter. **Confirmado em execução**: 18 senhas
+erradas contra a mesma conta, do mesmo IP, em três grafias do e-mail, e a
+tentativa seguinte (quarta grafia, senha certa) respondeu 200, sem 429.
+
+### Risk
+
+O limite de 6 tentativas a cada 30 minutos por conta não vale: cada grafia
+do e-mail tem cota própria, e um e-mail de `n` letras tem até `2^n` grafias.
+A pré-condição é uma senha fraca o bastante para adivinhação online.
+
+### Recommendation
+
+Normalizar o e-mail na chave (minúsculas, como o login do admin já faz) e
+somar o limite por IP do FIND-016.
+
+### Status (análise do P2.5)
+
+**Status:** OPEN, no escopo do P2.5-T02.
+
+Revisão de 2026-10-30 (ADR-0013, item 2): a normalização é só
+`mb_strtolower`, o mesmo critério da comparação `citext`. O `transliterate`
+que o login do admin usa hoje sai, porque juntaria e-mails distintos num
+mesmo contador.
+
+---
+
+## FIND-028 — Rate limiting não é atômico entre requisições simultâneas
+
+**Categoria:** Security · **Severidade:** Low
+
+### Evidence
+
+Leitura do código:
+
+- `ThrottleRequests::handleRequest()` primeiro lê o contador
+  (`tooManyAttempts`) e só depois incrementa (`hit`). Requisições que chegam
+  no mesmo instante leem o mesmo valor antes de qualquer incremento e passam
+  todas.
+- O login do admin é pior: confere o limite, executa o `attempt` (bcrypt,
+  dezenas de milissegundos) e só registra a falha depois. A janela de
+  corrida é o tempo do hash.
+
+O incremento em si é atômico no cache `database`: `incrementOrDecrement`
+usa `SELECT ... FOR UPDATE` dentro de transação.
+
+### Risk
+
+Uma rajada concorrente ultrapassa a cota até o número de conexões
+simultâneas. Reduz o efeito do limite no login, que é onde ele mais importa.
+
+### Recommendation
+
+Incrementar primeiro e decidir pelo valor que o incremento devolve
+(`hit()` retorna o contador), em vez de ler e depois incrementar. No login
+do admin, reservar a tentativa antes do hash e só limpar a chave da conta
+no sucesso, nunca a do IP.
+
+### Status (análise do P2.5)
+
+**Status:** OPEN, no escopo do P2.5-T02.
+
+Revisão de 2026-10-30 (ADR-0013, itens 4 e 20): o login usa o
+`RateLimiter::increment()` do framework, que a documentação do Laravel 13
+indica para requisições simultâneas, em vez de uma subclasse do
+`ThrottleRequests`. Nas rotas autenticadas fica o `throttle` padrão, e a
+corrida é aceita: a ultrapassagem se limita às requisições simultâneas de um
+usuário já autenticado, que não é superfície de força bruta. O finding fecha
+pelo login, com essa exceção registrada.
+
+---
+
+## FIND-029 — 429 do login sai sem `Retry-After`
+
+**Categoria:** Maintainability · **Severidade:** Low
+
+### Evidence
+
+O limiter `login` define `->response(fn () => response()->json(...))`. O
+`ThrottleRequests` passa os headers calculados (`Retry-After`,
+`X-RateLimit-*`) como argumento do callback, que os ignora. **Confirmado em
+execução**: o sétimo login falho responde 429 com `Retry-After` ausente.
+
+### Risk
+
+O cliente não sabe quando tentar de novo e tende a repetir a requisição,
+gastando a cota.
+
+### Recommendation
+
+Repassar `$headers` na resposta, ou remover o callback e usar o envelope
+padrão do Laravel.
+
+### Status (análise do P2.5)
+
+**Status:** OPEN, no escopo do P2.5-T02.
+
+---
+
+## FIND-030 — Limites por IP dependem de proxies confiáveis não configurados
+
+**Categoria:** Security · **Severidade:** Low
+
+### Evidence
+
+`bootstrap/app.php` não chama `trustProxies()`. O `$request->ip()` é o
+endereço da conexão direta.
+
+### Risk
+
+Latente, porque não há deploy de produção. Atrás de um load balancer ou
+proxy reverso, todos os clientes teriam o IP do proxy: um limite por IP
+vira um limite global, e um atacante bloqueia o login de todos. Se, ao
+contrário, `X-Forwarded-For` for aceito de qualquer origem, o atacante
+escolhe o próprio IP a cada requisição.
+
+### Recommendation
+
+Declarar os proxies confiáveis por ambiente, sem padrão permissivo, e
+documentar o requisito no deploy.
+
+### Status (análise do P2.5)
+
+**Status:** OPEN, no escopo do P2.5-T02 (pré-requisito do limite por IP).
+
+---
+
+## FIND-031 — Listas e senhas sem limite de tamanho na validação
+
+**Categoria:** Security · **Severidade:** Low
+
+### Evidence
+
+- `AssignProfileRequest`: `profile_ids` é `['present', 'array']`, sem `max`,
+  e `profile_ids.*` usa `exists:profiles,id`, que faz uma consulta por item.
+- `TokenStoreRequest`: `abilities` não tem `max`; `abilities.*` usa
+  `distinct`, que compara cada item com os demais.
+- `password` não tem limite superior no login da API, no login do admin nem
+  na criação de usuário. O bcrypt só considera os primeiros 72 bytes.
+
+### Risk
+
+Uma requisição autenticada com milhares de itens dispara milhares de
+consultas ou comparações. Hoje só o `post_max_size` do PHP (8M no ambiente
+de desenvolvimento) limita o tamanho.
+
+### Recommendation
+
+`max:` nas listas, do tamanho do domínio (o catálogo de abilities tem 3
+itens), e um teto em `password`.
+
+### Status (análise do P2.5)
+
+**Status:** OPEN, no escopo do P2.5-T03.
+
+---
+
+## FIND-032 — Tokens por usuário sem teto e listagem sem paginação
+
+**Categoria:** Security · **Severidade:** Low
+
+### Evidence
+
+`POST /api/v1/tokens` não limita quantos tokens ativos um usuário pode ter,
+e `TokenController@index` usa `->get()` sem paginação.
+
+### Risk
+
+A listagem cresce sem limite. E, sem teto, um limiter com o token como chave
+seria contornado criando tokens novos; por isso o limiter das rotas
+autenticadas tem de usar o usuário como chave.
+
+### Recommendation
+
+Paginar a listagem agora. O teto de tokens ativos por usuário fica para
+depois (decisão de 2026-10-30).
+
+### Status (análise do P2.5)
+
+**Status:** OPEN. A paginação está no escopo do P2.5-T03; o teto fica
+`DEFERRED`, e o finding deve fechar como RESOLVED (parcial).
+
+---
+
+## FIND-033 — Login do admin e login da API com orçamentos independentes
+
+**Categoria:** Security · **Severidade:** Medium
+
+### Evidence
+
+Leitura do código (revisão Admin × API de 2026-10-30):
+
+- O login da API usa o limiter `login`, com chave `login:{e-mail}:{ip}` e
+  cota de 6 a cada 30 minutos (`AppServiceProvider`).
+- O login do admin usa `admin-login:{e-mail}|{ip}`, com 5 falhas e janela
+  de 60 segundos (`Web\Admin\Auth\LoginRequest`).
+- Os dois conferem a mesma senha da mesma conta, e nenhum contador é
+  compartilhado.
+
+### Risk
+
+Alternando entre as duas rotas, um mesmo IP soma as duas cotas contra uma
+conta: cerca de 300 tentativas por hora no admin e 12 na API, ou seja ~312
+por hora. Cada adapter novo que confira senha somaria outra cota.
+
+### Recommendation
+
+Um único ponto de controle de tentativas, chamado por toda rota que confere
+senha, com os mesmos contadores e o mesmo nome de chave, sem prefixo por
+adapter. O mecanismo de autenticação continua separado (sessão no admin,
+Sanctum na API).
+
+### Status (análise do P2.5)
+
+**Status:** OPEN, no escopo do P2.5-T02 (ADR-0013, itens 1 a 3).
+
+---
+
+## FIND-034 — Sem contador por identidade independente do IP
+
+**Categoria:** Security · **Severidade:** Medium
+
+### Evidence
+
+Os dois logins limitam por `e-mail + IP`. O ADR-0013 na versão inicial
+acrescentava um contador por IP, mas nenhum por identidade.
+
+### Risk
+
+Um ataque distribuído contra uma conta, trocando de IP a cada poucas
+tentativas, não encontra limite: cada IP novo começa com cota cheia. É o
+cenário típico contra contas privilegiadas conhecidas.
+
+### Recommendation
+
+Contador por identidade normalizada, independente do IP, cumulativo com o
+de IP e o de identidade + IP. O custo é o bloqueio provocado: quem conhece o
+e-mail pode manter a conta bloqueada. Aceito em 2026-10-30, com cota que
+impede um único IP de esgotar o contador da identidade.
+
+### Status (análise do P2.5)
+
+**Status:** OPEN, no escopo do P2.5-T02 (ADR-0013, itens 3 e 9).
+
+---
+
+## FIND-035 — Conta privilegiada troca a senha por token na API
+
+**Categoria:** Security · **Severidade:** Medium
+
+### Evidence
+
+- `POST /api/v1/auth/login` emite, para qualquer conta ativa, um token com
+  todas as abilities (`EnsureTokenAbility::ABILITIES`) e a expiração global
+  de 7 dias (`config/sanctum.php`).
+- A sessão do admin, aberta com a mesma senha, dura 120 minutos
+  (`config/session.php`).
+- Toda operação de IAM do admin (usuários, perfis, matriz de permissões,
+  menus) também existe na API.
+- A Fase 4.2 aceitou isso de propósito: "the same credentials already
+  succeed on POST /api/v1/auth/login" (`Web\Admin\Auth\LoginRequest`).
+
+### Risk
+
+Uma conta privilegiada tem duas entradas por senha, e a da API entrega a
+credencial mais forte: portador de 7 dias com todas as abilities, contra
+uma sessão de 2 horas. Qualquer controle que o admin ganhar (reautenticação,
+MFA) teria um desvio pela API.
+
+### Recommendation
+
+Senha de conta privilegiada só pelo `/admin/login`. Privilegiada é a conta
+que entra na área admin, pela regra que já existe (`AdminNavigation::allows`,
+sem flag nova). O login da API e o `POST /tokens` recusam essa conta. O token
+dela nasce numa sessão do admin com reautenticação recente
+(`password.confirm`), abilities escolhidas, expiração curta, revogação e
+auditoria.
+
+### Status (análise do P2.5)
+
+**Status:** OPEN, no escopo do P2.5-T06 (ADR-0013, itens 10 a 16). A recusa
+na API entra junto com a emissão no admin, para que a API de IAM nunca fique
+sem forma de autenticar.
+
+---
+
+## FIND-036 — Token derivado pode viver mais que o token de origem
+
+**Categoria:** Security · **Severidade:** Low
+
+### Evidence
+
+`TokenStoreRequest` limita as abilities do token novo às do token que o
+pede, mas não a expiração: `TokenController@store` usa
+`now()->addDays(expires_in_days)`, até o teto global de 7 dias, sem olhar o
+`expires_at` do token de origem.
+
+### Risk
+
+Um token de vida curta, inclusive um emitido no admin com expiração
+reduzida, gera um token de 7 dias e estende a própria validade sem
+reautenticação.
+
+### Recommendation
+
+Limitar o `expires_at` do token derivado ao `expires_at` do token que o
+pede.
+
+### Status (análise do P2.5)
+
+**Status:** OPEN, no escopo do P2.5-T06 (ADR-0013, item 15).
