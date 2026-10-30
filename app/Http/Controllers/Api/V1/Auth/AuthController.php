@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Auth;
 
+use App\Domain\IAM\Actions\VerifyLoginCredentials;
 use App\Domain\IAM\AuditContext;
 use App\Events\UserLoggedIn;
 use App\Events\UserLoggedOut;
@@ -9,28 +10,26 @@ use App\Http\Controllers\Controller;
 use App\Http\Middleware\EnsureTokenAbility;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Resources\UserResource;
-use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
     public function login(LoginRequest $request): JsonResponse
     {
-        $user = User::where('email', $request->email)->first();
+        // Same budget as the admin form (ADR-0013); an inactive account gets
+        // the same answer as a wrong password (FIND-018).
+        $user = VerifyLoginCredentials::execute(
+            $request->string('email')->toString(),
+            $request->string('password')->toString(),
+            $request,
+        );
 
-        if (! $user || ! Hash::check($request->password, $user->password)) {
+        if (! $user) {
             throw ValidationException::withMessages([
                 'email' => 'Invalid credentials.',
-            ]);
-        }
-
-        if (! $user->is_active) {
-            throw ValidationException::withMessages([
-                'email' => 'Account is inactive.',
             ]);
         }
 

@@ -75,13 +75,14 @@ class AppServiceProvider extends ServiceProvider
                 && $token->tokenable->is_active,
         );
 
-        RateLimiter::for('login', function (Request $request) {
-            return Limit::perMinutes(30, 6)
-                ->by('login:'.$request->email.':'.$request->ip())
-                ->response(fn () => response()->json(
-                    ['message' => 'Too many login attempts. Try again later.'],
-                    429
-                ));
+        // Logins are limited inside VerifyLoginCredentials, not here: their
+        // counters must be atomic and shared by both adapters (ADR-0013).
+        // Authenticated routes are keyed by user, not token, since a user can
+        // mint tokens. The framework's read-then-increment race is accepted:
+        // it only lets an authenticated user overshoot by their own
+        // concurrent requests (ADR-0013, item 20).
+        RateLimiter::for('authenticated', function (Request $request) {
+            return Limit::perMinute(120)->by('user:'.$request->user()?->getAuthIdentifier());
         });
 
         // Sidebar of the signed-in admin area: only the sections the user's

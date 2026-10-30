@@ -27,11 +27,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
         ->middleware('admin.access')
         ->name('home');
 
+    // Rate limit inside VerifyLoginCredentials, shared with the API login
+    // (ADR-0013).
     Route::post('/login', [LoginController::class, 'store'])
         ->middleware('guest')
         ->name('login');
 
-    Route::middleware('auth')->group(function () {
+    // Mesmo limiter por usuário da API: uma cota por pessoa, não por adapter.
+    Route::middleware(['auth', 'throttle:authenticated'])->group(function () {
         Route::post('/logout', [LoginController::class, 'destroy'])
             ->name('logout');
 

@@ -18,15 +18,16 @@ use App\Http\Controllers\Api\V1\UserStatusController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
-    // Public auth routes (com rate limit)
+    // Public auth route. Its rate limit lives in VerifyLoginCredentials,
+    // shared with the admin login (ADR-0013).
     Route::post('/auth/login', [AuthController::class, 'login'])
-        ->middleware(['throttle:login'])
         ->name('auth.login');
 
     // Camadas (ADR-0008): autenticação (token válido + usuário ativo) →
     // ability do token pelo método HTTP → permissão funcional
     // (`permission:{key}.{action}`) → Policy → invariantes de domínio.
-    Route::middleware(['auth:sanctum', 'token.ability'])->group(function () {
+    // O limiter por usuário vem depois da autenticação: sem token, 401.
+    Route::middleware(['auth:sanctum', 'token.ability', 'throttle:authenticated'])->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout'])
             ->name('auth.logout');
         Route::get('/auth/me', [AuthController::class, 'me'])

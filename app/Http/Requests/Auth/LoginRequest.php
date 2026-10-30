@@ -16,8 +16,11 @@ class LoginRequest extends FormRequest
      */
     public function rules(): array
     {
+        // No `exists:users`: whether an e-mail is registered is only ever
+        // answered by VerifyLoginCredentials, with the same reply as a wrong
+        // password (FIND-018).
         return [
-            'email' => ['required', 'email', 'exists:users'],
+            'email' => ['required', 'email'],
             'password' => ['required', 'string', 'min:6'],
         ];
     }
@@ -28,7 +31,6 @@ class LoginRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'email.exists' => 'Invalid credentials.',
             'password.required' => 'Invalid credentials.',
         ];
     }

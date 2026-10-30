@@ -1,6 +1,7 @@
 <?php
 
 use App\Domain\IAM\Exceptions\LastActiveAdministratorException;
+use App\Domain\IAM\Exceptions\TooManyLoginAttemptsException;
 use App\Domain\Projects\Exceptions\ApplicationLifecycleException;
 use App\Domain\Projects\Exceptions\EnvironmentLifecycleException;
 use App\Domain\Projects\Exceptions\ProjectLifecycleException;
@@ -45,6 +46,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->dontReport(ProjectLifecycleException::class);
         $exceptions->dontReport(ApplicationLifecycleException::class);
         $exceptions->dontReport(EnvironmentLifecycleException::class);
+        // An expected refusal, already signalled by the Lockout event.
+        $exceptions->dontReport(TooManyLoginAttemptsException::class);
 
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),

@@ -2,13 +2,11 @@
 
 namespace App\Http\Requests\Web\Admin\Auth;
 
+use App\Domain\IAM\Actions\VerifyLoginCredentials;
+use App\Domain\IAM\Exceptions\TooManyLoginAttemptsException;
 use App\Http\Admin\AdminNavigation;
-use App\Models\User;
-use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -18,8 +16,6 @@ use Illuminate\Validation\ValidationException;
  */
 class LoginRequest extends FormRequest
 {
-    private const MAX_ATTEMPTS = 5;
-
     public function authorize(): bool
     {
         return true;
@@ -50,66 +46,37 @@ class LoginRequest extends FormRequest
 
     /**
      * Inactive and soft-deleted accounts fail exactly like a wrong password.
+     * The attempt spends the same budget as the API login (ADR-0013).
      *
      * Valid credentials without access to the admin area get no session and
      * a message of their own (Phase 4.2). It reveals nothing new: the same
      * credentials already succeed on POST /api/v1/auth/login.
      *
      * @throws ValidationException
+     * @throws TooManyLoginAttemptsException
      */
     public function authenticate(): void
     {
-        $this->ensureIsNotRateLimited();
+        $user = VerifyLoginCredentials::execute(
+            $this->string('email')->toString(),
+            $this->string('password')->toString(),
+            $this,
+        );
 
-        $credentials = [
-            'email' => $this->string('email')->toString(),
-            'password' => $this->string('password')->toString(),
-            'is_active' => true,
-        ];
-
-        $guard = Auth::guard('web');
-
-        if (! $guard->attempt($credentials)) {
-            RateLimiter::hit($this->throttleKey());
-
+        if (! $user) {
             throw ValidationException::withMessages([
                 'email' => 'Credenciais inválidas.',
             ]);
         }
 
-        RateLimiter::clear($this->throttleKey());
-
-        $user = $guard->user();
-
-        if (! $user instanceof User || ! AdminNavigation::allows($user)) {
-            $guard->logout();
-
+        // Checked before logging in, so a refused account never holds a
+        // session, not even for the rest of this request.
+        if (! AdminNavigation::allows($user)) {
             throw ValidationException::withMessages([
                 'email' => 'Esta conta não tem acesso à área administrativa.',
             ]);
         }
-    }
 
-    /**
-     * @throws ValidationException
-     */
-    private function ensureIsNotRateLimited(): void
-    {
-        if (! RateLimiter::tooManyAttempts($this->throttleKey(), self::MAX_ATTEMPTS)) {
-            return;
-        }
-
-        event(new Lockout($this));
-
-        $seconds = RateLimiter::availableIn($this->throttleKey());
-
-        throw ValidationException::withMessages([
-            'email' => "Muitas tentativas. Tente novamente em {$seconds} segundos.",
-        ]);
-    }
-
-    private function throttleKey(): string
-    {
-        return 'admin-login:'.Str::transliterate(Str::lower($this->string('email')->toString())).'|'.$this->ip();
+        Auth::guard('web')->login($user);
     }
 }
