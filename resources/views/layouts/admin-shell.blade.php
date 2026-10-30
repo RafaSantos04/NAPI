@@ -8,6 +8,9 @@
 
     <div class="header-end">
         <span class="muted">{{ auth()->user()->email }}</span>
+        {{-- Self-service, not a section: AdminNavigation decides who is
+             privileged, so a link everyone sees cannot live there. --}}
+        <a href="{{ route('admin.tokens.index') }}" @if (request()->routeIs('admin.tokens.*')) aria-current="page" @endif>Meus tokens</a>
         <form method="POST" action="{{ route('admin.logout') }}">
             @csrf
             <button type="submit" class="btn">Sair</button>

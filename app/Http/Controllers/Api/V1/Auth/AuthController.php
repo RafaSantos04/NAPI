@@ -13,7 +13,9 @@ use App\Http\Resources\UserResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
@@ -32,6 +34,12 @@ class AuthController extends Controller
                 'email' => 'Invalid credentials.',
             ]);
         }
+
+        // A privileged account gets its tokens in the admin area, after
+        // confirming its password (403, no token). Knowing the password is
+        // right reveals nothing new: /admin/login accepts it under the same
+        // counters (ADR-0013, item 11).
+        Gate::forUser($user)->authorize('issueViaApi', PersonalAccessToken::class);
 
         // A login token carries every ability: its owner's IAM permissions
         // are the real limit. Narrower tokens are minted via POST /tokens.

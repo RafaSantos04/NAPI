@@ -3,21 +3,32 @@
 namespace App\Http\Requests\Auth;
 
 use App\Http\Middleware\EnsureTokenAbility;
+use Illuminate\Auth\Access\Response;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class TokenStoreRequest extends FormRequest
 {
     /**
-     * A token may only mint tokens with a subset of its own abilities;
-     * otherwise a leaked read-only token could issue itself a write token.
+     * A privileged account issues tokens only in the admin area (ADR-0013,
+     * item 12). Otherwise, a token may only mint tokens with a subset of its
+     * own abilities; a leaked read-only token could issue itself a write
+     * token.
      */
-    public function authorize(): bool
+    public function authorize(): bool|Response
     {
         $user = $this->user();
 
         if (! $user) {
             return false;
+        }
+
+        $issuance = Gate::forUser($user)->inspect('issueViaApi', PersonalAccessToken::class);
+
+        if ($issuance->denied()) {
+            return $issuance;
         }
 
         return collect((array) $this->input('abilities', []))

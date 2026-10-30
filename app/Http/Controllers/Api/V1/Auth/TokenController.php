@@ -2,15 +2,13 @@
 
 namespace App\Http\Controllers\Api\V1\Auth;
 
+use App\Domain\IAM\Actions\IssueAccessToken;
+use App\Domain\IAM\Actions\RevokeAccessToken;
 use App\Domain\IAM\AuditContext;
-use App\Events\TokenCreated;
-use App\Events\TokenRevoked;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\TokenStoreRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Laravel\Sanctum\NewAccessToken;
 
 class TokenController extends Controller
 {
@@ -34,20 +32,23 @@ class TokenController extends Controller
         $user = $request->user();
         $validated = $request->validated();
 
-        $token = DB::transaction(function () use ($user, $validated, $request): NewAccessToken {
-            $token = $user->createToken(
-                $validated['name'],
-                $validated['abilities'],
-                now()->addDays($validated['expires_in_days'] ?? TokenStoreRequest::maxLifetimeDays())
-            );
+        // API routes never read the session (RouteCoverageTest), so the
+        // caller is always a personal access token: the derived one is
+        // capped by it (FIND-036).
+        $token = IssueAccessToken::execute(
+            $user,
+            $validated['name'],
+            $validated['abilities'],
+            now()->addDays($validated['expires_in_days'] ?? TokenStoreRequest::maxLifetimeDays()),
+            AuditContext::fromRequest($request),
+            $user->currentAccessToken(),
+        );
 
-            event(new TokenCreated($user, $token->accessToken, AuditContext::fromRequest($request)));
-
-            return $token;
-        });
-
+        // The lifetime may come back shorter than asked (the requesting
+        // token's own expiry), so the client is told the real one.
         return response()->json([
             'token' => $token->plainTextToken,
+            'expires_at' => $token->accessToken->expires_at,
             'message' => 'Token created successfully. Store it safely.',
         ], 201);
     }
@@ -62,11 +63,7 @@ class TokenController extends Controller
             return response()->json(['message' => 'Not found.'], 404);
         }
 
-        DB::transaction(function () use ($user, $accessToken, $request) {
-            $accessToken->delete();
-
-            event(new TokenRevoked($user, $accessToken, AuditContext::fromRequest($request)));
-        });
+        RevokeAccessToken::execute($user, $accessToken, AuditContext::fromRequest($request));
 
         return response()->json(['message' => 'Token revoked.']);
     }

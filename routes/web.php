@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Web\Admin\Auth\ConfirmPasswordController;
 use App\Http\Controllers\Web\Admin\Auth\LoginController;
 use App\Http\Controllers\Web\Admin\HomeController;
 use App\Http\Controllers\Web\Admin\MenuController;
@@ -8,9 +9,11 @@ use App\Http\Controllers\Web\Admin\ProfileController;
 use App\Http\Controllers\Web\Admin\ProfilePermissionController;
 use App\Http\Controllers\Web\Admin\Security\IdorTestController;
 use App\Http\Controllers\Web\Admin\Security\MassAssignmentTestController;
+use App\Http\Controllers\Web\Admin\TokenController;
 use App\Http\Controllers\Web\Admin\UserController;
 use App\Http\Controllers\Web\Admin\UserProfileController;
 use App\Http\Controllers\Web\Admin\UserStatusController;
+use Illuminate\Auth\Middleware\RequirePassword;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -153,6 +156,31 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/mass-assignment/run', [MassAssignmentTestController::class, 'run'])
                 ->middleware('permission:security-lab.create')
                 ->name('mass-assignment.run');
+        });
+
+        // Autoatendimento (P2.5-T06, ADR-0013): os tokens de API do próprio
+        // usuário, sem permissão funcional. Conta privilegiada só obtém token
+        // aqui, e criar exige a senha confirmada nos últimos 5 minutos, não
+        // nas 3 horas do `auth.password_timeout`.
+        Route::middleware('admin.access')->group(function () {
+            Route::get('/confirm-password', [ConfirmPasswordController::class, 'show'])
+                ->name('password.confirm');
+            Route::post('/confirm-password', [ConfirmPasswordController::class, 'store'])
+                ->name('password.confirm.store');
+
+            Route::prefix('tokens')->name('tokens.')->group(function () {
+                Route::get('/', [TokenController::class, 'index'])
+                    ->name('index');
+                Route::middleware(RequirePassword::using('admin.password.confirm', 300))->group(function () {
+                    Route::get('/create', [TokenController::class, 'create'])
+                        ->name('create');
+                    Route::post('/', [TokenController::class, 'store'])
+                        ->name('store');
+                });
+                Route::delete('/{token}', [TokenController::class, 'destroy'])
+                    ->whereNumber('token')
+                    ->name('destroy');
+            });
         });
     });
 });

@@ -19,6 +19,7 @@ use App\Policies\EnvironmentPolicy;
 use App\Policies\MenuPolicy;
 use App\Policies\OrganizationMembershipPolicy;
 use App\Policies\OrganizationPolicy;
+use App\Policies\PersonalAccessTokenPolicy;
 use App\Policies\ProfilePolicy;
 use App\Policies\ProjectPolicy;
 use App\Policies\SecurityLabResourcePolicy;
@@ -65,6 +66,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Environment::class, EnvironmentPolicy::class);
         Gate::policy(SecurityTestRun::class, SecurityTestRunPolicy::class);
         Gate::policy(SecurityLabResource::class, SecurityLabResourcePolicy::class);
+        Gate::policy(PersonalAccessToken::class, PersonalAccessTokenPolicy::class);
 
         // Single enforcement point for deactivated accounts: a token whose
         // owner is inactive does not authenticate, whether or not it was
