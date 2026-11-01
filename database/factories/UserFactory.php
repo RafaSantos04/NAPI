@@ -5,6 +5,7 @@ namespace Database\Factories;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 /**
  * @extends Factory<User>
@@ -17,6 +18,17 @@ class UserFactory extends Factory
     protected static ?string $password;
 
     /**
+     * Plain text of that password: random for each run, so no credential
+     * literal lives in the repository (P2.5-T08). Tests log in with it.
+     */
+    protected static ?string $plainPassword = null;
+
+    public static function password(): string
+    {
+        return static::$plainPassword ??= Str::password();
+    }
+
+    /**
      * Define the model's default state.
      *
      * @return array<string, mixed>
@@ -27,7 +39,7 @@ class UserFactory extends Factory
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
+            'password' => static::$password ??= Hash::make(static::password()),
             'is_active' => true,
         ];
     }

@@ -20,6 +20,13 @@ class UserSeeder extends Seeder
     public const ENVIRONMENTS = ['local', 'testing'];
 
     /**
+     * Published on purpose (docs/modules/iam.md), which is why the accounts
+     * stay in ENVIRONMENTS. Tests that sign in as a seeded user use this
+     * constant instead of repeating the value.
+     */
+    public const DEMO_PASSWORD = 'password';
+
+    /**
      * Seed the application's demo users.
      */
     public function run(): void
@@ -35,7 +42,7 @@ class UserSeeder extends Seeder
         $adminUser = User::create([
             'name' => 'Admin User',
             'email' => 'admin@napi.dev',
-            'password' => Hash::make('password'),
+            'password' => Hash::make(self::DEMO_PASSWORD),
             'is_active' => true,
         ]);
         $adminUser->profiles()->attach($admin->id, ['assigned_by' => $adminUser->id]);
@@ -43,7 +50,7 @@ class UserSeeder extends Seeder
         $devUser = User::create([
             'name' => 'Dev User',
             'email' => 'dev@napi.dev',
-            'password' => Hash::make('password'),
+            'password' => Hash::make(self::DEMO_PASSWORD),
             'is_active' => true,
         ]);
         $devUser->profiles()->attach($dev->id, ['assigned_by' => $adminUser->id]);
@@ -51,7 +58,7 @@ class UserSeeder extends Seeder
         $viewerUser = User::create([
             'name' => 'Viewer User',
             'email' => 'viewer@napi.dev',
-            'password' => Hash::make('password'),
+            'password' => Hash::make(self::DEMO_PASSWORD),
             'is_active' => true,
         ]);
         $viewerUser->profiles()->attach($viewer->id, ['assigned_by' => $adminUser->id]);

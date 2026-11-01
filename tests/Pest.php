@@ -8,6 +8,7 @@ use App\Models\OrganizationMembership;
 use App\Models\Profile;
 use App\Models\Project;
 use App\Models\User;
+use Database\Factories\UserFactory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
@@ -133,7 +134,7 @@ function asToken(User $user, string $method, string $uri, array $data = [], arra
 
 /**
  * Active user holding the seeded admin profile (every functional permission,
- * so every admin area section). Factory password: "password".
+ * so every admin area section). Password: UserFactory::password().
  *
  * @param  array<string, mixed>  $attributes
  */
@@ -148,11 +149,12 @@ function adminUser(array $attributes = []): User
 /**
  * Logs in through the real admin form, so the session holds the login (unlike
  * actingAs(), which only sets the guard in memory). Guards are reset first so
- * the next request reads the user back from the session.
+ * the next request reads the user back from the session. Without a password,
+ * the factory's (UserFactory::password()).
  */
-function adminLogin(User $user, string $password = 'password'): TestResponse
+function adminLogin(User $user, ?string $password = null): TestResponse
 {
-    $response = test()->post('/admin/login', ['email' => $user->email, 'password' => $password]);
+    $response = test()->post('/admin/login', ['email' => $user->email, 'password' => $password ?? UserFactory::password()]);
     app('auth')->forgetGuards();
 
     return $response;
