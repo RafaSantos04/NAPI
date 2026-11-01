@@ -206,7 +206,7 @@ evidência:
 | Conferir o path no middleware próprio | o Laravel 13 já confere (`ValidatePathEncoding`), descoberto pelo teste escrito antes da implementação | removido do middleware |
 | Senha longa ainda custa bcrypt ou contador | `refuses a password over 255 characters before checking it`, com spy no `RateLimiter` | refutada |
 | Lockout provocado de uma conta | ~20 req/h de duas origens mantêm a conta bloqueada | aceito (decisão do usuário), registrado no ADR |
-| Demonstração cria admin com senha conhecida | `UserSeeder` sem guarda de ambiente | **confirmada → FIND-038 (OPEN)**, fora do gate |
+| Demonstração cria admin com senha conhecida | `UserSeeder` sem guarda de ambiente | **confirmada → FIND-038**, fora do gate; resolvido em 2026-11-01 |
 
 Gate adicional do card: **não** há forma demonstrável de aumentar o
 orçamento alternando admin e API, nem de contornar os controles
@@ -240,7 +240,8 @@ privilegiados por uma segunda superfície de login.
   034, 035, 036 e 037.
 - **RESOLVED (parcial):** FIND-032 (paginação; o teto de tokens fica
   `DEFERRED`).
-- **Novos no JUDGE:** FIND-037 (resolvido) e FIND-038 (OPEN).
-- **OPEN fora do P2.5:** FIND-008 e 024 (hardening) e FIND-038.
+- **Novos no JUDGE:** FIND-037 (resolvido) e FIND-038 (resolvido em
+  2026-11-01: seeder de demonstração só em `local` e `testing`).
+- **OPEN fora do P2.5:** FIND-008 e 024 (hardening).
 
 Detalhes em [findings](../../findings/README.md).

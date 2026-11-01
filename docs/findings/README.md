@@ -70,9 +70,12 @@ Nos demais casos, a evidência é a leitura do código citado.
 | [FIND-035](#find-035--conta-privilegiada-troca-a-senha-por-token-na-api) | Conta privilegiada troca a senha por token na API | Security | Medium | — | — (aberto na revisão Admin × API do P2.5, RESOLVED no P2.5-T06) |
 | [FIND-036](#find-036--token-derivado-pode-viver-mais-que-o-token-de-origem) | Token derivado pode viver mais que o token de origem | Security | Low | — | — (aberto na revisão Admin × API do P2.5, RESOLVED no P2.5-T06) |
 | [FIND-037](#find-037--rotas-de-storage-fora-dos-limites-de-entrada) | Rotas de storage fora dos limites de entrada | Security | Low | — | — (aberto e resolvido no JUDGE do P2.5) |
-| [FIND-038](#find-038--seeder-cria-administrador-com-senha-conhecida) | Seeder cria administrador com senha conhecida | Security | Medium | — | — (aberto no JUDGE do P2.5, OPEN) |
+| [FIND-038](#find-038--seeder-cria-administrador-com-senha-conhecida) | Seeder cria administrador com senha conhecida | Security | Medium | — | — (aberto no JUDGE do P2.5, RESOLVED em 2026-11-01) |
 
 Contagem: 1 High · 14 Medium · 19 Low · 4 Improvement. Nenhum Critical.
+
+Em 2026-11-01: FIND-038 **RESOLVED** (seeder de demonstração só em `local` e
+`testing`). Ficam **2 OPEN** (FIND-008 e 024).
 
 Após o JUDGE do P2.5 (2026-10-30): FIND-037 aberto e **RESOLVED**; FIND-038
 **OPEN**, fora do escopo do gate. Ficam **3 OPEN** (FIND-008, 024 e 038).
@@ -1906,3 +1909,27 @@ gate do P2.5, que trata de abuso das rotas.
 ### Status (JUDGE do P2.5)
 
 **Status:** OPEN
+
+### Status (2026-11-01)
+
+**Status:** RESOLVED
+
+**Cause:** a única barreira era a documentação; o `DatabaseSeeder` sempre
+chamava o `UserSeeder`, e o Artisan em produção só pede confirmação, que o
+`--force` dispensa.
+
+**Resolution:** `UserSeeder::ENVIRONMENTS = ['local', 'testing']`. O seeder
+lança `RuntimeException` em qualquer outro ambiente, mesmo chamado direto
+(`db:seed --class=UserSeeder --force`), e o `DatabaseSeeder` só o inclui
+nesses ambientes. Perfis e menus de sistema continuam sendo semeados em
+todos. A lista de ambientes fica num lugar só.
+
+**Follow-up:** um ambiente real ainda não tem como criar a primeira conta
+administrativa. Isso fica para quando houver deploy: um comando próprio que
+pede ou gera a senha. Não foi criado agora porque nenhuma fase o consome
+(Engineering Gate).
+
+**Tests:** `tests/Feature/DatabaseSeederTest.php`: em produção, `db:seed
+--force` cria perfis e menus e nenhuma conta; o `UserSeeder` direto é
+recusado; em `local`, as três contas existem. Duas mutações pegas (seeder
+sem a trava; `DatabaseSeeder` chamando sempre).

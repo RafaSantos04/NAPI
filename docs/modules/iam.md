@@ -101,8 +101,11 @@ API.
 
 > Fase 3.2: o seed deixou de gravar linhas de matriz para `admin`
 > (redundantes com a permissão implícita) e a linha `users.view` do `dev`
-> ([FIND-009](../findings/README.md#find-009--perfil-dev-lista-todos-os-usuários-mas-não-pode-ver-nenhum)). As senhas de demonstração estão no seeder e não devem
-existir fora de ambiente local.
+> ([FIND-009](../findings/README.md#find-009--perfil-dev-lista-todos-os-usuários-mas-não-pode-ver-nenhum)). As senhas de demonstração estão no seeder, que
+só roda em `local` e `testing` (FIND-038): em outro ambiente o `UserSeeder`
+recusa, e o `DatabaseSeeder` semeia só perfis e menus. Desde o P2.5-T06, a
+conta `admin` não obtém token pelo login da API; o token dela é criado em
+`/admin/tokens`.
 
 ## Casos de uso
 
