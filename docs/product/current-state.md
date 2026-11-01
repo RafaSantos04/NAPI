@@ -3,15 +3,15 @@
 [← Produto](README.md) · [Modelo de produto](product-model.md) · [Fases existentes](../phases/README.md)
 
 Auditoria inicial realizada em 25/10/2026 contra o commit `6ff5cdd` e
-atualizada após P1 e após P2 (27/10/2026).
+atualizada após P1, após P2 (27/10/2026) e após o P2.5 (30/10/2026).
 
 ## Baseline verificado
 
 | Evidência | Resultado |
 |---|---|
-| Rotas próprias | 87 (`php artisan route:list --except-vendor`) |
-| Models / migrations / Actions | 14 / 24 / 33 |
-| Testes | 628, 2.667 assertions após P2 |
+| Rotas próprias | 93 (`php artisan route:list --except-vendor`) |
+| Models / migrations / Actions | 14 / 24 / 36 |
+| Testes | 682, 3.659 assertions após o P2.5 (628 após P2) |
 | Formatação | `composer lint` aprovado |
 | Análise estática | `composer analyse` aprovado, sem erros |
 | Stack instalada | Laravel 13.32, PHP 8.4.27, Sanctum 4.3, PostgreSQL, Pest 4.7 |
@@ -30,6 +30,7 @@ atualizada após P1 e após P2 (27/10/2026).
 | Qualidade | Pest, PostgreSQL real, Pint, Larastan e strict mode | baseline forte para evolução |
 | Tenancy P1 | Organization, Membership, contexto por rota, permissions contextuais, invariante de owner | fundação dos agregados comerciais |
 | Árvore P2 | Project, Application, Environment com FK composta, trigger de imutabilidade, arquivamento, papel `manager`, responsável e escopo autorizado | base para inventário OpenAPI e assessments |
+| Security gate P2.5 | proteção de credenciais única admin × API, limiter por usuário, conta privilegiada com token só no admin e senha reconfirmada, corpo até 64 KB, UTF-8, tetos de lista e senha (ADR-0013) | pré-requisito cumprido para o import OpenAPI do P3 |
 
 As Fases 4.3 e 4.4 estão implementadas. O texto original do novo roadmap as
 marcava como planejamento, mas os commits `833e0dd` a `051b2c0`, as rotas,
@@ -79,6 +80,7 @@ exiba CPF. O MVP não precisa usar CPF e não deve ampliar essa superfície.
 O repositório tem um boundary multi-tenant testado e a árvore Project →
 Application → Environment com isolamento garantido pelo banco. Ele ainda não
 é um produto de API security para clientes: não há inventário OpenAPI,
-assessment nem frontend comercial. O P2.5 fecha o rate limiting antes do P3,
+assessment nem frontend comercial. O P2.5 fechou o gate de abuso (credenciais,
+rate limiting, corpo e entrada) antes do P3,
 e os próximos agregados reutilizam a FK composta do ADR-0012.
 

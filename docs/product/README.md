@@ -32,6 +32,8 @@ P1 já implementou Organization, Membership e tenancy; veja o
 [relatório da fase](phases/p1-organizations-tenancy.md). P2 implementou
 Project, Application e Environment com integridade de tenant no PostgreSQL;
 veja o [relatório do P2](phases/p2-projects-applications-environments.md).
+P2.5 fechou o gate de abuso da plataforma antes do P3; veja o
+[relatório do P2.5](phases/p2-5-platform-security-gate.md).
 Os demais agregados comerciais continuam planejados. Antes de cada fase devem ser escritos e
 aceitos os ADRs listados no [roadmap](roadmap.md#decisões-arquiteturais-obrigatórias).
 

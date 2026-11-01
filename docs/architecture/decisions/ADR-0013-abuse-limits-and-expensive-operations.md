@@ -4,10 +4,11 @@
 
 ## Status
 
-Proposed (P2.5-T01). Decisões aprovadas pelo usuário em 2026-10-30, incluindo
-a revisão Admin × API do mesmo dia. Passa a Accepted no JUDGE do P2.5-T05,
-como o ADR-0012 no P2. Implementado até aqui: proteção de credenciais e
-rotas autenticadas (T02) e conta privilegiada (T06).
+Accepted (P2.5). Decisões aprovadas pelo usuário em 2026-10-30, incluindo a
+revisão Admin × API do mesmo dia; implementado nos T02, T06, T03 e T04 e
+validado pelo JUDGE do T05 ([relatório do P2.5](../../product/phases/p2-5-platform-security-gate.md)).
+Os itens 1 a 28 estão em vigor; os itens 29 a 35 (operações caras) valem a
+partir do P3, que fixa os números no próprio ADR.
 
 ## Context
 
@@ -211,10 +212,13 @@ a política de operações caras, mas o código dela entra com a rota do P3.
 ### Entrada
 
 26. **UTF-8 inválido é 400**, por um middleware nos grupos `api` e `web`
-    que roda antes da validação e do route binding. Ele confere o path, as
-    chaves e os valores da query e do corpo de formulário (recursivamente)
-    e o corpo bruto quando ele é JSON. Arquivos enviados ficam de fora. A
-    requisição está malformada, não inválida, por isso 400 e não 422.
+    que roda antes da validação e do route binding. Ele confere as chaves e
+    os valores da query e do corpo de formulário (recursivamente) e o corpo
+    bruto quando ele é JSON. O path não entra: o `ValidatePathEncoding`
+    global do Laravel 13 já responde 400 (`Malformed URL.`), e repetir a
+    checagem duplicaria o framework (constatado no T04). Arquivos enviados
+    ficam de fora. A requisição está malformada, não inválida, por isso 400
+    e não 422.
     Fecha o FIND-026.
 27. **Listas com teto do tamanho do domínio:** `abilities` até o número de
     abilities do catálogo (3), `profile_ids` até 50. **Senhas** com

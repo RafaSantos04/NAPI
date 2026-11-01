@@ -10,6 +10,12 @@ middlewares, já ordenada pela prioridade do Laravel, foi confirmada com
 Authenticate:sanctum → SubstituteBindings → EnsureTokenAbility → CheckPermission:users.view
 ```
 
+Desde o P2.5-T03 e o T04, os grupos `api` e `web` começam por
+`LimitRequestBodySize` (corpo até 64 KB, senão 413) e `RejectInvalidUtf8`
+(query, formulário e JSON em UTF-8, senão 400), antes da sessão, da
+autenticação e do binding (ADR-0013). O path já passa antes pelo
+`ValidatePathEncoding` global do Laravel.
+
 O grupo `api` do Laravel 13 contém apenas `SubstituteBindings`. Não há
 `EnsureFrontendRequestsAreStateful` (o `bootstrap/app.php` não chama
 `statefulApi()`). As rotas autenticadas acrescentam

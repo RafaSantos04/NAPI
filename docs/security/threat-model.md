@@ -80,6 +80,7 @@ Veja [phases](../phases/README.md).
 | Usuário excluído (soft delete) com token | ✅ | O Sanctum não resolve `tokenable` excluído | ✅ `rejects the token of a soft-deleted user` | Linhas de token órfãs permanecem | — |
 | Conta privilegiada troca a senha por token na API | ✅ | `PersonalAccessTokenPolicy::issueViaApi`: login da API e `POST /tokens` recusam quem entra no admin (403); o token nasce em `/admin/tokens` com senha confirmada há ≤ 5 min, validade de até 24 h e exibição única ([FIND-035](../findings/README.md#find-035--conta-privilegiada-troca-a-senha-por-token-na-api)) | ✅ `PrivilegedTokenBoundaryTest`, `Admin/TokenManagementTest` | Conta comum promovida mantém os tokens que já tinha até expirarem (≤ 7 dias); tokens de login anteriores ao T06 expiram no prazo global | P2.5 |
 | Token derivado estende a própria validade | ✅ | `IssueAccessToken` limita o `expires_at` à validade efetiva do token de origem ([FIND-036](../findings/README.md#find-036--token-derivado-pode-viver-mais-que-o-token-de-origem)) | ✅ `PrivilegedTokenBoundaryTest` | — | P2.5 |
+| Credencial de demonstração conhecida fora do ambiente local | ❌ | Só documentação: "não devem existir fora de ambiente local" | ❌ | `db:seed --force` num ambiente exposto cria `admin@napi.dev` com senha `password` ([FIND-038](../findings/README.md#find-038--seeder-cria-administrador-com-senha-conhecida)) | decisão pendente |
 | Enumeração de usuários pelo login | ✅ | Mesma resposta para e-mail inexistente, conta inativa e senha errada; `Timebox` de 200 ms do guard; sem `exists:users` | ✅ `gives the same answer and the same wait…` | O `/admin/login` ainda diz "sem acesso à área" para credenciais válidas sem permissão (não revela nada além do que a senha certa já revela) | P2.5 |
 
 ## Autorização
@@ -137,7 +138,7 @@ Testes transversais em `tests/Feature/Security/ProjectTreeSecurityTest.php`.
 | Escrita sem trilha ou trilha sem escrita | ✅ | evento síncrono dentro da transação da Action | as 12 operações: 1 linha exata e rollback quando a trilha falha | — |
 | Escopo autorizado vazando em logs | ✅ | `environment_updated` registra só nomes de campos | `EnvironmentTest` | — |
 | Escrita concorrente com arquivamento do ancestral | ⚠️ | ancestrais `FOR SHARE` de cima para baixo, linha alterada `FOR UPDATE` | sem teste paralelo (como no P1) | protocolo de lock verificado por revisão, não por teste |
-| Abuso de volume nas rotas novas | ❌ | — | — | FIND-016; tratado no P2.5 antes do P3 |
+| Abuso de volume nas rotas novas | ✅ | `throttle:authenticated` (120 / min por usuário) e corpo até 64 KB em todas as rotas (P2.5-T02 e T03) | `LoginThrottleTest`, `InputLimitsTest`, `RouteCoverageTest` | FIND-016 resolvido no P2.5 |
 
 ## Entrada
 
@@ -145,8 +146,10 @@ Testes transversais em `tests/Feature/Security/ProjectTreeSecurityTest.php`.
 |---|---|---|---|---|---|
 | Campos inesperados | ✅ | Só `validated()` é persistido; `key` `prohibited` na atualização de menu | ✅ parcial | — | — |
 | SQL injection | ✅ | Eloquent com bindings; a coluna `can_{ação}` é lida pelo model a partir de uma lista fechada (`MenuProfile::ACTIONS`) | ❌ | — | — |
+| Rota fora dos limites de entrada | ✅ | `RouteCoverageTest` exige `LimitRequestBodySize` e `RejectInvalidUtf8` antes do binding em toda rota (exceto `/up` e as de desenvolvimento do Boost); `storage/{path}` do esqueleto do Laravel desligado ([FIND-037](../findings/README.md#find-037--rotas-de-storage-fora-dos-limites-de-entrada)) | ✅ `runs the body and UTF-8 limits on every route…` | — | P2.5 |
+| Codificação inválida (bytes fora do UTF-8) | ✅ | `RejectInvalidUtf8` nos grupos `api` e `web`, antes de binding e validação: query, formulário (chaves e valores, recursivo) e JSON bruto → 400; path pelo `ValidatePathEncoding` do Laravel ([FIND-026](../findings/README.md#find-026--bytes-inválidos-em-utf-8-num-formulário-viram-erro-500)) | ✅ `MalformedInputTest`, verificado também com servidor real | Headers e nomes de arquivo enviados não são conferidos; nenhum é persistido hoje | P2.5 |
 | Referências inválidas | ✅ | `exists:` em `profile_ids.*` e `parent_id`; chaves de `permissions` validadas contra `menus`; pai de menu não pode ser o próprio menu nem descendente, e CHECK no banco para o caso direto (Fase 4.4) | ✅ `rejects unknown menu ids…`, `MenuManagementTest › Hierarchy` | Ciclos longos dependem da validação; um CHECK não vê outras linhas ([FIND-019](../findings/README.md#find-019--menu-pode-ser-pai-de-si-mesmo)) | — |
-| Dados excessivos | ⚠️ | `max:` em strings; paginação padrão (15); `permissions` até 200 itens | ❌ | `profile_ids` sem limite de tamanho | Hardening |
+| Dados excessivos | ✅ | Corpo até 64 KB nos grupos `api` e `web`, inclusive sem `Content-Length` (413, `LimitRequestBodySize`); `max:` em strings, e-mails e senhas (255); listas com teto do domínio: `profile_ids` 50, `abilities` 3, `permissions` 200; paginação fixa (15), inclusive `GET /tokens` ([FIND-031](../findings/README.md#find-031--listas-e-senhas-sem-limite-de-tamanho-na-validação), [FIND-032](../findings/README.md#find-032--tokens-por-usuário-sem-teto-e-listagem-sem-paginação)) | ✅ `InputLimitsTest` | Corpo multipart enviado em chunks depende dos limites do PHP e do servidor web; teto de tokens ativos por usuário adiado | P2.5 |
 
 ## API
 

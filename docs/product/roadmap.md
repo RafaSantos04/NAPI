@@ -22,7 +22,7 @@ depois do Release Candidate do backend.
 | P1 | Organizations, Memberships & Tenancy | concluída | isolamento de tenant e autorização contextual testados |
 | P1.1 | IAM × Organization Hardening | concluída | IAM, contexto da API e Sanctum consolidados com Organization |
 | P2 | Projects, Applications & Environments | concluída | hierarquia comercial e escopo de ambiente auditáveis |
-| P2.5 | Platform Security Gate | em andamento | rate limiting geral, limites de payload e política de operações caras antes do P3 |
+| P2.5 | Platform Security Gate | concluída | proteção de credenciais, rate limiting, limites de corpo e de entrada e política de operações caras antes do P3 |
 | P3 | API Inventory / OpenAPI | planejada | import versionado e inventário consultável |
 | P4 | Assessments | planejada | assessment manual autorizado com workflow e checklist |
 | P5 | Findings / Evidence | planejada | finding estruturado e evidência privada com redaction |
@@ -130,6 +130,11 @@ O gate é garantido por FK composta no PostgreSQL, não só por Policy.
 Gate: o P3 não começa com o FIND-016 aberto, nem com qualquer forma de
 somar o orçamento de tentativas alternando entre admin e API.
 
+**Entregue:** gate cumprido (FIND-016 resolvido; orçamento único provado nos
+dois sentidos). Veja o [relatório do P2.5](phases/p2-5-platform-security-gate.md)
+e o [ADR-0013](../architecture/decisions/ADR-0013-abuse-limits-and-expensive-operations.md).
+Ficam para o P3 os números das operações caras (itens 29 a 35 do ADR).
+
 ### P3 — API Inventory / OpenAPI
 
 - começar por upload JSON/YAML; referências remotas ficam desligadas;
@@ -219,7 +224,7 @@ hipótese ainda aberta:
 |---|---|
 | P1 | modelo multi-tenant, contexto de organização e autorização de memberships — ADR-0011 entregue |
 | P2 | integridade de tenant da árvore de projetos, lifecycle e papéis — ADR-0012 entregue |
-| P2.5 | política de abuso e de operações caras (credenciais, rate limit, payload, fila) — ADR-0013 com decisões aprovadas, Accepted no JUDGE |
+| P2.5 | política de abuso e de operações caras (credenciais, rate limit, payload, fila) — ADR-0013 entregue (Accepted) |
 | P3 | armazenamento/versionamento do contrato OpenAPI e política para referências externas |
 | P5 | classificação, criptografia, retenção e acesso a evidências |
 | P7 | snapshots e compartilhamento externo |

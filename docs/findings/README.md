@@ -58,19 +58,31 @@ Nos demais casos, a evidência é a leitura do código citado.
 | [FIND-023](#find-023--análise-estática-ignorava-os-casts-dos-models) | Análise estática ignorava os casts dos models | Maintainability | Improvement | — | — (aberto e resolvido na Fase 5.1) |
 | [FIND-024](#find-024--personas-do-security-lab-são-contas-administráveis) | Personas do Security Lab são contas administráveis | Security | Low | — | — (aberto na Fase 5.2, OPEN deferred) |
 | [FIND-025](#find-025--resultado-da-última-execução-não-era-filtrado-por-teste) | Resultado da última execução não era filtrado por teste | Maintainability | Low | — | — (aberto e resolvido na Fase 5.2) |
-| [FIND-026](#find-026--bytes-inválidos-em-utf-8-num-formulário-viram-erro-500) | Bytes inválidos em UTF-8 num formulário viram erro 500 | Maintainability | Low | — | — (aberto na Fase 4.4, OPEN) |
+| [FIND-026](#find-026--bytes-inválidos-em-utf-8-num-formulário-viram-erro-500) | Bytes inválidos em UTF-8 num formulário viram erro 500 | Maintainability | Low | — | — (aberto na Fase 4.4, RESOLVED no P2.5-T04) |
 | [FIND-027](#find-027--limiter-do-login-da-api-diferencia-maiúsculas-no-e-mail) | Limiter do login da API diferencia maiúsculas no e-mail | Security | Medium | — | — (aberto na análise do P2.5, RESOLVED no P2.5-T02) |
 | [FIND-028](#find-028--rate-limiting-não-é-atômico-entre-requisições-simultâneas) | Rate limiting não é atômico entre requisições simultâneas | Security | Low | — | — (aberto na análise do P2.5, RESOLVED no P2.5-T02) |
 | [FIND-029](#find-029--429-do-login-sai-sem-retry-after) | 429 do login sai sem `Retry-After` | Maintainability | Low | — | — (aberto na análise do P2.5, RESOLVED no P2.5-T02) |
 | [FIND-030](#find-030--limites-por-ip-dependem-de-proxies-confiáveis-não-configurados) | Limites por IP dependem de proxies confiáveis não configurados | Security | Low | — | — (aberto na análise do P2.5, RESOLVED no P2.5-T02) |
-| [FIND-031](#find-031--listas-e-senhas-sem-limite-de-tamanho-na-validação) | Listas e senhas sem limite de tamanho na validação | Security | Low | — | — (aberto na análise do P2.5, OPEN) |
-| [FIND-032](#find-032--tokens-por-usuário-sem-teto-e-listagem-sem-paginação) | Tokens por usuário sem teto e listagem sem paginação | Security | Low | — | — (aberto na análise do P2.5, OPEN) |
+| [FIND-031](#find-031--listas-e-senhas-sem-limite-de-tamanho-na-validação) | Listas e senhas sem limite de tamanho na validação | Security | Low | — | — (aberto na análise do P2.5, RESOLVED no P2.5-T03) |
+| [FIND-032](#find-032--tokens-por-usuário-sem-teto-e-listagem-sem-paginação) | Tokens por usuário sem teto e listagem sem paginação | Security | Low | — | — (aberto na análise do P2.5, RESOLVED parcial no P2.5-T03; teto DEFERRED) |
 | [FIND-033](#find-033--login-do-admin-e-login-da-api-com-orçamentos-independentes) | Login do admin e login da API com orçamentos independentes | Security | Medium | — | — (aberto na revisão Admin × API do P2.5, RESOLVED no P2.5-T02) |
 | [FIND-034](#find-034--sem-contador-por-identidade-independente-do-ip) | Sem contador por identidade independente do IP | Security | Medium | — | — (aberto na revisão Admin × API do P2.5, RESOLVED no P2.5-T02) |
 | [FIND-035](#find-035--conta-privilegiada-troca-a-senha-por-token-na-api) | Conta privilegiada troca a senha por token na API | Security | Medium | — | — (aberto na revisão Admin × API do P2.5, RESOLVED no P2.5-T06) |
 | [FIND-036](#find-036--token-derivado-pode-viver-mais-que-o-token-de-origem) | Token derivado pode viver mais que o token de origem | Security | Low | — | — (aberto na revisão Admin × API do P2.5, RESOLVED no P2.5-T06) |
+| [FIND-037](#find-037--rotas-de-storage-fora-dos-limites-de-entrada) | Rotas de storage fora dos limites de entrada | Security | Low | — | — (aberto e resolvido no JUDGE do P2.5) |
+| [FIND-038](#find-038--seeder-cria-administrador-com-senha-conhecida) | Seeder cria administrador com senha conhecida | Security | Medium | — | — (aberto no JUDGE do P2.5, OPEN) |
 
-Contagem: 1 High · 13 Medium · 18 Low · 4 Improvement. Nenhum Critical.
+Contagem: 1 High · 14 Medium · 19 Low · 4 Improvement. Nenhum Critical.
+
+Após o JUDGE do P2.5 (2026-10-30): FIND-037 aberto e **RESOLVED**; FIND-038
+**OPEN**, fora do escopo do gate. Ficam **3 OPEN** (FIND-008, 024 e 038).
+
+Após o P2.5-T04 (2026-10-30): FIND-026 **RESOLVED**. Ficam **2 OPEN**, ambos
+adiados para hardening (FIND-008 e 024), fora do escopo do P2.5.
+
+Após o P2.5-T03 (2026-10-30): FIND-031 **RESOLVED** e FIND-032 **RESOLVED
+(parcial)**, com o teto de tokens por usuário `DEFERRED`. Ficam **3 OPEN**
+(FIND-008, 024 e 026).
 
 Após o P2.5-T06 (2026-10-30): FIND-035 e 036 **RESOLVED**. Ficam **5 OPEN**
 (FIND-008, 024, 026, 031 e 032).
@@ -1314,6 +1326,27 @@ válido responde 500 (`InvalidArgumentException`, "Malformed UTF-8
 characters"). A query string não passa pelo `json_decode`, então a API também
 é afetada.
 
+### Status (P2.5-T04)
+
+**Status:** RESOLVED (P2.5-T04)
+
+**Cause:** nenhuma camada conferia a codificação da query e do corpo; o
+texto inválido seguia até o `whereLike` ou o `INSERT`, e o PostgreSQL o
+recusava.
+
+**Resolution:** `App\Http\Middleware\RejectInvalidUtf8`, no início dos
+grupos `api` e `web` (antes da sessão, da autenticação, do binding e da
+validação), responde **400**
+`The request contains text that is not valid UTF-8.` quando uma chave ou um
+valor da query ou do formulário, em qualquer nível de array, ou o corpo
+bruto JSON não é UTF-8 válido. Arquivos enviados ficam de fora. O path já
+era conferido pelo `ValidatePathEncoding` global do Laravel 13 (400
+`Malformed URL.`), então o middleware não o repete. Verificado também com
+o servidor real: `?search=%FF` passou de 500 a 400; acento e emoji seguem
+com 200.
+
+**Tests:** `tests/Feature/Security/MalformedInputTest.php`.
+
 ---
 
 ## FIND-027 — Limiter do login da API diferencia maiúsculas no e-mail
@@ -1533,6 +1566,30 @@ itens), e um teto em `password`.
 
 **Status:** OPEN, no escopo do P2.5-T03.
 
+### Status (P2.5-T03)
+
+**Status:** RESOLVED (P2.5-T03)
+
+**Resolution:**
+
+- `profile_ids` aceita no máximo 50 itens (`AssignProfileRequest`, também
+  usado pelo admin); a regra `max` roda antes do `exists` de cada item.
+- `abilities` aceita no máximo o tamanho do catálogo
+  (`count(EnsureTokenAbility::ABILITIES)`, hoje 3), na API e no admin.
+- `password` tem `max:255` no login da API, no login do admin, na
+  confirmação de senha e na criação de usuário. Uma senha recusada aqui
+  não chega à `VerifyLoginCredentials`: nem contador, nem bcrypt. O bcrypt
+  só usa os primeiros 72 bytes; isso fica registrado, sem regra por bytes.
+- Na revisão dos `max:`, os campos `email` (login da API e do admin,
+  criação e edição de usuário) também ganharam `max:255`. Os demais campos
+  de texto já tinham teto, e as listagens usam `per_page` fixo em 15, fora
+  do controle do cliente.
+- Acima de tudo isso, todo corpo dos grupos `api` e `web` tem teto de 64 KB
+  (`LimitRequestBodySize`, 413), medido também quando não há
+  `Content-Length`.
+
+**Tests:** `tests/Feature/Security/InputLimitsTest.php`.
+
 ---
 
 ## FIND-032 — Tokens por usuário sem teto e listagem sem paginação
@@ -1559,6 +1616,20 @@ depois (decisão de 2026-10-30).
 
 **Status:** OPEN. A paginação está no escopo do P2.5-T03; o teto fica
 `DEFERRED`, e o finding deve fechar como RESOLVED (parcial).
+
+### Status (P2.5-T03)
+
+**Status:** RESOLVED (parcial, P2.5-T03). O teto de tokens ativos por
+usuário continua `DEFERRED`.
+
+**Resolution:** `GET /api/v1/tokens` pagina com 15 itens, mais recentes
+primeiro, por `PersonalAccessTokenResource::collection()`, no mesmo envelope
+(`data`, `links`, `meta`) das demais listagens. A tela `/admin/tokens`
+(P2.5-T06) também pagina. Sem o teto, o limiter das rotas autenticadas
+continua por usuário, não por token (ADR-0013, item 19).
+
+**Tests:** `tests/Feature/Security/InputLimitsTest.php`
+(`paginates the caller's tokens…`).
 
 ---
 
@@ -1764,3 +1835,74 @@ qualquer conta. O 201 devolve o `expires_at` real.
 **Tests:** `tests/Feature/Security/PrivilegedTokenBoundaryTest.php`
 (token de origem com `expires_at`, token de login sem `expires_at` e
 pedido menor que a origem).
+
+---
+
+## FIND-037 — Rotas de storage fora dos limites de entrada
+
+**Categoria:** Security · **Severidade:** Low
+
+### Evidence
+
+Encontrado no JUDGE do P2.5 com `php artisan route:list`. O disco `local`
+de `config/filesystems.php` vinha do esqueleto do Laravel com
+`'serve' => true`, o que registra `GET` e `PUT /storage/{path}`
+(`storage.local` e `storage.local.upload`) **fora** dos grupos `api` e
+`web`. Essas rotas não passam por `LimitRequestBodySize` nem por
+`RejectInvalidUtf8`. O `PUT` grava `$request->getContent()` no disco.
+
+### Risk
+
+Baixo: as duas rotas exigem URL assinada com a `APP_KEY`, e nenhum código do
+NAPI assina essas URLs. Mesmo assim, são superfície sem consumidor e fora do
+gate, o que contraria o item 24 do ADR-0013 (rota fora dos limites só com
+consumidor).
+
+### Status (JUDGE do P2.5)
+
+**Status:** RESOLVED (P2.5-T05)
+
+**Resolution:** `'serve' => false` no disco `local`, com comentário. O
+`RouteCoverageTest` ganhou a regra "toda rota, exceto `/up` e as de
+desenvolvimento do Boost, roda `LimitRequestBodySize` e `RejectInvalidUtf8`
+antes do binding". Uma rota nova fora dos grupos falha ali; a mutação
+`'serve' => true` derruba o teste com `storage/{path} has no body limit`.
+
+**Tests:** `tests/Feature/Security/RouteCoverageTest.php`
+(`runs the body and UTF-8 limits on every route…`).
+
+---
+
+## FIND-038 — Seeder cria administrador com senha conhecida
+
+**Categoria:** Security · **Severidade:** Medium
+
+### Evidence
+
+`database/seeders/UserSeeder.php`, chamado pelo `DatabaseSeeder`, cria
+`admin@napi.dev` com o perfil `admin` e a senha `password`, e também
+`dev@napi.dev` e `viewer@napi.dev` com a mesma senha. Nada impede rodar o
+seeder fora do ambiente local: em produção o Artisan só pede confirmação, e
+`--force` a dispensa (`migrate --seed --force` num deploy, por exemplo). Os
+docs já dizem que essas senhas "não devem existir fora de ambiente local",
+mas o código não garante isso.
+
+### Risk
+
+Um único `db:seed` num ambiente exposto cria um administrador com
+credencial pública. A proteção de credenciais do P2.5 não ajuda: a primeira
+tentativa já acerta. Pré-condição relevante (rodar o seeder fora do local),
+por isso Medium.
+
+### Recommendation
+
+Garantir no código que contas de demonstração só existam onde podem existir:
+o `UserSeeder` roda só em `local` e `testing`
+(`app()->environment(['local', 'testing'])`) e falha em qualquer outro
+ambiente. A conta inicial de um ambiente real deve vir de um comando próprio
+que gera ou pede a senha. Decisão pendente do usuário; fora do escopo do
+gate do P2.5, que trata de abuso das rotas.
+
+### Status (JUDGE do P2.5)
+
+**Status:** OPEN

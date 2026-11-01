@@ -130,6 +130,7 @@ dela nasce na sessão do admin, com a senha reconfirmada ([FIND-035](../findings
 | Emissão no admin (`/admin/tokens`) | conta privilegiada, com senha confirmada há no máximo 5 minutos; 1, 8 ou 24 horas ([conta privilegiada](#conta-privilegiada)) |
 | Expiração global | 7 dias a partir de `created_at` (`config/sanctum.php`). `expires_in_days` não aceita valores acima disso ([FIND-015](../findings/README.md#find-015--expiração-de-token-aceita-valores-que-nunca-terão-efeito)) |
 | Abilities | **aplicadas** pelo método HTTP (`EnsureTokenAbility`): GET→`read`, POST/PUT/PATCH→`write`, DELETE→`delete`. Ausência → 403 |
+| Listagem | `GET /tokens` e `/admin/tokens`, paginadas (15), sem o segredo. Não há teto de tokens ativos por usuário (adiado, [FIND-032](../findings/README.md#find-032--tokens-por-usuário-sem-teto-e-listagem-sem-paginação)) |
 | Revogação individual | `DELETE /tokens/{id}` ou `/admin/tokens`, só entre os tokens do próprio usuário. Token inexistente ou alheio → 404 |
 | Logout | apaga **todos** os tokens do usuário (logout global) e audita `logout` com a quantidade revogada |
 | Auditoria | `token_created` e `token_revoked` com id, nome e abilities (nunca o segredo) |
