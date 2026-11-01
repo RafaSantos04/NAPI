@@ -27,6 +27,7 @@ trait AdminValidationMessages
             'password.min' => 'A senha deve ter ao menos :min caracteres.',
             'password.confirmed' => 'A confirmação da senha não confere.',
             'profile_ids.array' => 'Seleção de perfis inválida.',
+            'profile_ids.max' => 'Selecione no máximo :max perfis.',
             'profile_ids.*.exists' => 'Perfil inválido.',
             'key.regex' => 'Use letras minúsculas, números e hífens, como em relatorios-financeiros.',
             'key.prohibited' => 'A chave de um menu não pode ser alterada.',

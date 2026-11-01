@@ -43,7 +43,7 @@ class TokenStoreRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:100'],
-            'abilities' => ['required', 'array', 'min:1'],
+            'abilities' => ['required', 'array', 'min:1', 'max:'.count(EnsureTokenAbility::ABILITIES)],
             'abilities.*' => ['distinct', Rule::in(EnsureTokenAbility::ABILITIES)],
             'expires_in_days' => ['nullable', 'integer', 'min:1', 'max:'.self::maxLifetimeDays()],
         ];

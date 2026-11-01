@@ -30,7 +30,7 @@ class StoreTokenRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:100'],
-            'abilities' => ['required', 'array', 'min:1'],
+            'abilities' => ['required', 'array', 'min:1', 'max:'.count(EnsureTokenAbility::ABILITIES)],
             'abilities.*' => ['distinct', Rule::in(EnsureTokenAbility::ABILITIES)],
             'lifetime_hours' => ['required', 'integer', Rule::in(self::LIFETIME_HOURS)],
         ];
@@ -48,6 +48,7 @@ class StoreTokenRequest extends FormRequest
             'abilities.required' => 'Escolha ao menos uma permissão.',
             'abilities.array' => 'Escolha ao menos uma permissão.',
             'abilities.min' => 'Escolha ao menos uma permissão.',
+            'abilities.max' => 'Escolha no máximo :max permissões.',
             'abilities.*.distinct' => 'Permissão repetida.',
             'abilities.*.in' => 'Permissão inválida.',
             'lifetime_hours.required' => 'Escolha a validade.',

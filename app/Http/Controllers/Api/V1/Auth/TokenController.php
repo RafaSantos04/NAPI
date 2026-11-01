@@ -7,24 +7,20 @@ use App\Domain\IAM\Actions\RevokeAccessToken;
 use App\Domain\IAM\AuditContext;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\TokenStoreRequest;
+use App\Http\Resources\PersonalAccessTokenResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class TokenController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function index(Request $request): AnonymousResourceCollection
     {
-        $tokens = $request->user()->tokens()->get();
+        // Paginated like every other listing; nothing caps how many tokens a
+        // user holds yet (FIND-032, deferred).
+        $tokens = $request->user()->tokens()->latest()->paginate(15);
 
-        return response()->json([
-            'data' => $tokens->map(fn ($token) => [
-                'id' => $token->id,
-                'name' => $token->name,
-                'abilities' => $token->abilities,
-                'created_at' => $token->created_at,
-                'expires_at' => $token->expires_at,
-            ]),
-        ]);
+        return PersonalAccessTokenResource::collection($tokens);
     }
 
     public function store(TokenStoreRequest $request): JsonResponse

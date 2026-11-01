@@ -11,6 +11,8 @@ use App\Http\Middleware\EnsureSecurityLabEnabled;
 use App\Http\Middleware\EnsureTokenAbility;
 use App\Http\Middleware\EnsureUserCanAccessAdmin;
 use App\Http\Middleware\EnsureUserIsActive;
+use App\Http\Middleware\LimitRequestBodySize;
+use App\Http\Middleware\RejectInvalidUtf8;
 use App\Http\Middleware\ResolveOrganizationContext;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -33,9 +35,15 @@ return Application::configure(basePath: dirname(__DIR__))
             'organization.context' => ResolveOrganizationContext::class,
         ]);
 
+        // Input limits run first in both groups, before the session,
+        // authentication and route binding (ADR-0013): body size, then
+        // UTF-8 (which may read the body).
+        $inputLimits = [LimitRequestBodySize::class, RejectInvalidUtf8::class];
+        $middleware->api(prepend: $inputLimits);
+
         // Session (admin area): deactivated users lose the session, and
         // `auth`/`guest` redirect within the admin shell.
-        $middleware->web(append: [EnsureUserIsActive::class]);
+        $middleware->web(prepend: $inputLimits, append: [EnsureUserIsActive::class]);
         $middleware->redirectGuestsTo(fn () => route('admin.home'));
         $middleware->redirectUsersTo(fn () => route('admin.home'));
     })

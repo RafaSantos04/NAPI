@@ -20,8 +20,8 @@ class LoginRequest extends FormRequest
         // answered by VerifyLoginCredentials, with the same reply as a wrong
         // password (FIND-018).
         return [
-            'email' => ['required', 'email'],
-            'password' => ['required', 'string', 'min:6'],
+            'email' => ['required', 'email', 'max:255'],
+            'password' => ['required', 'string', 'min:6', 'max:255'],
         ];
     }
 

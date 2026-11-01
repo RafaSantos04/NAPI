@@ -20,7 +20,7 @@ class AssignProfileRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'profile_ids' => ['present', 'array'],
+            'profile_ids' => ['present', 'array', 'max:50'],
             'profile_ids.*' => ['exists:profiles,id'],
         ];
     }
