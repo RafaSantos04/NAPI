@@ -247,4 +247,18 @@ describe('Per-user limit on authenticated routes', function () {
 
         asToken($other, 'GET', '/api/v1/auth/me')->assertOk();
     });
+
+    it('shares one quota between the API and the admin session (429)', function () {
+        $this->freezeTime();
+        $admin = adminUser();
+        $token = tokenFor($admin);
+
+        foreach (range(1, 120) as $_) {
+            app('auth')->forgetGuards();
+            $this->withToken($token)->getJson('/api/v1/auth/me')->assertOk();
+        }
+
+        app('auth')->forgetGuards();
+        $this->actingAs($admin)->get('/admin/tokens')->assertTooManyRequests();
+    });
 });

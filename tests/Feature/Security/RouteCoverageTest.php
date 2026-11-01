@@ -1,7 +1,10 @@
 <?php
 
+use App\Http\Middleware\LimitRequestBodySize;
+use App\Http\Middleware\RejectInvalidUtf8;
 use App\Models\Menu;
 use App\Models\Profile;
+use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Route;
@@ -26,6 +29,29 @@ function hasPermissionMiddleware(RoutingRoute $route): bool
 {
     return collect($route->gatherMiddleware())->contains(fn ($m) => is_string($m) && str_starts_with($m, 'permission:'));
 }
+
+// P2.5 gate: no route takes input outside the body and UTF-8 limits. Only
+// the health check (no input) and Boost's dev tooling (require-dev) are
+// outside the api and web groups.
+describe('Input limits coverage', function () {
+    it('runs the body and UTF-8 limits on every route, before route binding', function () {
+        $routes = collect(Route::getRoutes()->getRoutes())
+            ->reject(fn (RoutingRoute $route) => $route->uri() === 'up' || Str::startsWith($route->uri(), '_boost/'));
+
+        expect($routes)->not->toBeEmpty();
+
+        foreach ($routes as $route) {
+            $middleware = array_values(app('router')->gatherRouteMiddleware($route));
+            $bodyLimit = array_search(LimitRequestBodySize::class, $middleware, true);
+            $utf8 = array_search(RejectInvalidUtf8::class, $middleware, true);
+            $binding = array_search(SubstituteBindings::class, $middleware, true);
+
+            expect($bodyLimit)->toBeInt("{$route->uri()} has no body limit")
+                ->and($utf8)->toBeGreaterThan($bodyLimit, "{$route->uri()} checks UTF-8 out of order")
+                ->and($binding)->toBeGreaterThan($utf8, "{$route->uri()} binds before checking UTF-8");
+        }
+    });
+});
 
 describe('API route coverage', function () {
     // Self-service routes: their scope is the caller's own account.
