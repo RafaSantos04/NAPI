@@ -33,7 +33,10 @@ return [
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
-            'serve' => true,
+            // Off: serving registers GET and PUT /storage/{path} outside the
+            // api and web groups, so outside the input limits, and nothing
+            // in the app signs those URLs (P2.5-T05, ADR-0013 item 24).
+            'serve' => false,
             'throw' => false,
             'report' => false,
         ],
