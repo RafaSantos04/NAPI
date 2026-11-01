@@ -32,4 +32,14 @@ class Organization extends Model
     {
         return $this->hasMany(Project::class);
     }
+
+    /**
+     * Also scopes the shallow {apiSpecification} route binding to this organization (ADR-0014).
+     *
+     * @return HasMany<ApiSpecification, $this>
+     */
+    public function apiSpecifications(): HasMany
+    {
+        return $this->hasMany(ApiSpecification::class);
+    }
 }

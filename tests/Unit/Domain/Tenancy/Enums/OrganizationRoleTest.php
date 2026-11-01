@@ -24,6 +24,12 @@ dataset('organization permission matrix', [
     'environments.update' => [OrganizationPermission::UpdateEnvironments, true, true, true],
     'environments.archive' => [OrganizationPermission::ArchiveEnvironments, true, true, false],
     'environments.archive_own' => [OrganizationPermission::ArchiveOwnEnvironments, true, true, true],
+    'api_specifications.view' => [OrganizationPermission::ViewApiSpecifications, true, true, true],
+    'api_specifications.create' => [OrganizationPermission::CreateApiSpecifications, true, true, true],
+    'api_specifications.update' => [OrganizationPermission::UpdateApiSpecifications, true, true, true],
+    'api_specifications.import' => [OrganizationPermission::ImportApiSpecifications, true, true, true],
+    'api_specifications.archive' => [OrganizationPermission::ArchiveApiSpecifications, true, true, false],
+    'api_specifications.archive_own' => [OrganizationPermission::ArchiveOwnApiSpecifications, true, true, true],
 ]);
 
 test('each role grants exactly its share of the permission catalog', function (
@@ -46,5 +52,6 @@ test('the matrix covers every permission in the catalog', function () {
             'projects.view', 'projects.create', 'projects.update', 'projects.archive', 'projects.archive_own',
             'applications.view', 'applications.create', 'applications.update', 'applications.archive', 'applications.archive_own',
             'environments.view', 'environments.create', 'environments.update', 'environments.archive', 'environments.archive_own',
+            'api_specifications.view', 'api_specifications.create', 'api_specifications.update', 'api_specifications.import', 'api_specifications.archive', 'api_specifications.archive_own',
         ]);
 });

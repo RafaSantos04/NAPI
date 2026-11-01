@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Models\Application;
 use App\Models\Organization;
 use App\Models\Project;
+use App\Rules\Slug;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -39,7 +40,7 @@ class ApplicationStoreRequest extends FormRequest
                 'required',
                 'string',
                 'max:100',
-                'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
+                new Slug,
                 Rule::unique('applications', 'slug')->where('project_id', $project instanceof Project ? $project->id : null),
             ],
             'description' => ['nullable', 'string', 'max:2000'],

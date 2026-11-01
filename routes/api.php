@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\V1\ApiSpecificationController;
+use App\Http\Controllers\Api\V1\ApiSpecificationStatusController;
 use App\Http\Controllers\Api\V1\ApplicationController;
 use App\Http\Controllers\Api\V1\ApplicationStatusController;
 use App\Http\Controllers\Api\V1\Auth\AuthController;
@@ -135,6 +137,33 @@ Route::prefix('v1')->group(function () {
                             ->name('archive');
                         Route::post('/{environment}/restore', [EnvironmentStatusController::class, 'restore'])
                             ->middleware('permission:environments.archive_own')
+                            ->name('restore');
+                    });
+
+                // API specifications (P3, ADR-0014): listing and creating
+                // need the parent application; the rest is shallow, with
+                // {apiSpecification} scoped to the organization.
+                Route::get('/projects/{project}/applications/{application}/api-specifications', [ApiSpecificationController::class, 'index'])
+                    ->middleware('permission:api_specifications.view')
+                    ->name('organizations.projects.applications.api-specifications.index');
+                Route::post('/projects/{project}/applications/{application}/api-specifications', [ApiSpecificationController::class, 'store'])
+                    ->middleware('permission:api_specifications.create')
+                    ->name('organizations.projects.applications.api-specifications.store');
+
+                Route::prefix('/api-specifications/{apiSpecification}')
+                    ->name('organizations.api-specifications.')
+                    ->group(function () {
+                        Route::get('/', [ApiSpecificationController::class, 'show'])
+                            ->middleware('permission:api_specifications.view')
+                            ->name('show');
+                        Route::patch('/', [ApiSpecificationController::class, 'update'])
+                            ->middleware('permission:api_specifications.update')
+                            ->name('update');
+                        Route::post('/archive', [ApiSpecificationStatusController::class, 'archive'])
+                            ->middleware('permission:api_specifications.archive_own')
+                            ->name('archive');
+                        Route::post('/restore', [ApiSpecificationStatusController::class, 'restore'])
+                            ->middleware('permission:api_specifications.archive_own')
                             ->name('restore');
                     });
             });

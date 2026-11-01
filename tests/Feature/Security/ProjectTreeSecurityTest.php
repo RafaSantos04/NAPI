@@ -1,6 +1,7 @@
 <?php
 
 use App\Domain\Tenancy\Enums\OrganizationRole;
+use App\Models\ApiSpecification;
 use App\Models\Application;
 use App\Models\AuditLog;
 use App\Models\Environment;
@@ -20,7 +21,7 @@ use Illuminate\Support\Str;
 /**
  * A full tree in a fresh organization, created by $creator with $role.
  *
- * @return array{organization: Organization, project: Project, application: Application, environment: Environment}
+ * @return array{organization: Organization, project: Project, application: Application, environment: Environment, apiSpecification: ApiSpecification}
  */
 function projectTreeFor(User $creator, OrganizationRole $role = OrganizationRole::Owner): array
 {
@@ -28,12 +29,13 @@ function projectTreeFor(User $creator, OrganizationRole $role = OrganizationRole
     $project = projectCreatedBy($creator, $organization);
     $application = Application::factory()->for($project)->create();
     $environment = Environment::factory()->for($application)->create();
+    $apiSpecification = ApiSpecification::factory()->for($application)->create();
 
-    return compact('organization', 'project', 'application', 'environment');
+    return compact('organization', 'project', 'application', 'environment', 'apiSpecification');
 }
 
 /**
- * @param  array{organization: Organization, project: Project, application: Application, environment: Environment}  $tree
+ * @param  array{organization: Organization, project: Project, application: Application, environment: Environment, apiSpecification: ApiSpecification}  $tree
  */
 function treeUri(array $tree, string $template): string
 {
@@ -42,6 +44,7 @@ function treeUri(array $tree, string $template): string
         '{project}' => $tree['project']->id,
         '{application}' => $tree['application']->id,
         '{environment}' => $tree['environment']->id,
+        '{apiSpecification}' => $tree['apiSpecification']->id,
     ]);
 }
 
@@ -52,7 +55,7 @@ function treeUri(array $tree, string $template): string
  */
 function projectTreeSnapshot(): array
 {
-    return collect(['projects', 'applications', 'environments'])
+    return collect(['projects', 'applications', 'environments', 'api_specifications', 'api_specification_versions'])
         ->mapWithKeys(fn (string $table) => [$table => DB::table($table)->orderBy('id')->get()->toJson()])
         ->all();
 }
@@ -63,7 +66,7 @@ function projectTreeSnapshot(): array
 function projectTreeRoutes(): array
 {
     return collect(Route::getRoutes()->getRoutes())
-        ->filter(fn (RoutingRoute $route) => Str::startsWith((string) $route->getName(), 'organizations.projects.'))
+        ->filter(fn (RoutingRoute $route) => Str::startsWith((string) $route->getName(), ['organizations.projects.', 'organizations.api-specifications.']))
         ->values()
         ->all();
 }
@@ -78,6 +81,8 @@ function projectTreeOperation(string $operation): array
     $project = 'api/v1/organizations/{organization}/projects';
     $application = "{$project}/{project}/applications";
     $environment = "{$application}/{application}/environments";
+    $specifications = "{$application}/{application}/api-specifications";
+    $specification = 'api/v1/organizations/{organization}/api-specifications/{apiSpecification}';
 
     return match ($operation) {
         'project.create' => ['POST', $project, ['name' => 'New project', 'slug' => 'new-project'], 'project_created', null],
@@ -97,13 +102,17 @@ function projectTreeOperation(string $operation): array
         'environment.update' => ['PATCH', "{$environment}/{environment}", ['name' => 'Renamed'], 'environment_updated', 'environment'],
         'environment.archive' => ['POST', "{$environment}/{environment}/archive", [], 'environment_archived', 'environment'],
         'environment.restore' => ['POST', "{$environment}/{environment}/restore", [], 'environment_restored', 'environment'],
+        'apiSpecification.create' => ['POST', $specifications, ['name' => 'New specification', 'slug' => 'new-specification'], 'api_specification_created', null],
+        'apiSpecification.update' => ['PATCH', $specification, ['name' => 'Renamed'], 'api_specification_updated', 'apiSpecification'],
+        'apiSpecification.archive' => ['POST', "{$specification}/archive", [], 'api_specification_archived', 'apiSpecification'],
+        'apiSpecification.restore' => ['POST', "{$specification}/restore", [], 'api_specification_restored', 'apiSpecification'],
     };
 }
 
 /**
  * Restoring needs an archived target; every other operation an active tree.
  *
- * @param  array{organization: Organization, project: Project, application: Application, environment: Environment}  $tree
+ * @param  array{organization: Organization, project: Project, application: Application, environment: Environment, apiSpecification: ApiSpecification}  $tree
  */
 function prepareProjectTreeOperation(string $operation, array $tree): void
 {
@@ -117,6 +126,7 @@ dataset('project tree write operations', [
     'project.create', 'project.update', 'project.archive', 'project.restore',
     'application.create', 'application.update', 'application.archive', 'application.restore',
     'environment.create', 'environment.update', 'environment.archive', 'environment.restore',
+    'apiSpecification.create', 'apiSpecification.update', 'apiSpecification.archive', 'apiSpecification.restore',
 ]);
 
 describe('Project tree audit trail', function () {
@@ -177,7 +187,7 @@ describe('Project tree isolation', function () {
         }
 
         // Guards against a vacuous loop if the route names ever change.
-        expect(count($routes))->toBeGreaterThanOrEqual(18);
+        expect(count($routes))->toBeGreaterThanOrEqual(24);
         expect(projectTreeSnapshot())->toBe($snapshot)
             ->and(AuditLog::count())->toBe($auditCount);
     })->with(['outsider', 'member of another organization', 'disabled member', 'global admin']);
@@ -203,6 +213,8 @@ describe('Project tree isolation', function () {
         'foreign project, own application' => ['api/v1/organizations/{organization}/projects/{project}/applications'],
         'foreign application' => ['api/v1/organizations/{organization}/projects/{project}/applications/{application}/archive'],
         'foreign environment' => ['api/v1/organizations/{organization}/projects/{project}/applications/{application}/environments/{environment}/archive'],
+        'foreign application, own specification list' => ['api/v1/organizations/{organization}/projects/{project}/applications/{application}/api-specifications'],
+        'foreign api specification' => ['api/v1/organizations/{organization}/api-specifications/{apiSpecification}/archive'],
     ]);
 
     it('applies the role of the organization in the URL, not the strongest one', function (string $level) {
@@ -216,21 +228,24 @@ describe('Project tree isolation', function () {
             'project' => 'api/v1/organizations/{organization}/projects/{project}/archive',
             'application' => 'api/v1/organizations/{organization}/projects/{project}/applications/{application}/archive',
             'environment' => 'api/v1/organizations/{organization}/projects/{project}/applications/{application}/environments/{environment}/archive',
+            'apiSpecification' => 'api/v1/organizations/{organization}/api-specifications/{apiSpecification}/archive',
         };
 
         asToken($user, 'POST', treeUri($tree, $template))->assertForbidden();
 
         expect($tree[$level]->fresh()->isArchived())->toBeFalse();
-    })->with(['project', 'application', 'environment']);
+    })->with(['project', 'application', 'environment', 'apiSpecification']);
 
     it('returns 404 for malformed or unknown ids at every level', function (string $level, string $id) {
         $owner = User::factory()->create();
         $tree = projectTreeFor($owner);
-        $template = 'api/v1/organizations/{organization}/projects/{project}/applications/{application}/environments/{environment}';
+        $template = $level === 'apiSpecification'
+            ? 'api/v1/organizations/{organization}/api-specifications/{apiSpecification}'
+            : 'api/v1/organizations/{organization}/projects/{project}/applications/{application}/environments/{environment}';
         $uri = str_replace(rawurlencode($tree[$level]->id), rawurlencode($id), treeUri($tree, $template));
 
         asToken($owner, 'GET', $uri)->assertNotFound();
-    })->with(['project', 'application', 'environment'])->with([
+    })->with(['project', 'application', 'environment', 'apiSpecification'])->with([
         'sql fragment' => ["abc' OR '1'='1"],
         'oversized' => [str_repeat('A', 40)],
         'unknown ulid' => ['01ARZ3NDEKTSV4RRFFQ69G5FAV'],
@@ -246,6 +261,7 @@ describe('Project tree mass assignment', function () {
             'project' => OrganizationMembership::factory()->for($tree['organization'])->create(),
             'application' => projectCreatedBy($owner, $tree['organization']),
             'environment' => Application::factory()->for($tree['project'])->create(),
+            'apiSpecification' => Application::factory()->for($tree['project'])->create(),
         };
         $value = match ($field) {
             'organization_id' => $otherTree['organization']->id,
@@ -256,6 +272,7 @@ describe('Project tree mass assignment', function () {
             'project' => 'api/v1/organizations/{organization}/projects/{project}',
             'application' => 'api/v1/organizations/{organization}/projects/{project}/applications/{application}',
             'environment' => 'api/v1/organizations/{organization}/projects/{project}/applications/{application}/environments/{environment}',
+            'apiSpecification' => 'api/v1/organizations/{organization}/api-specifications/{apiSpecification}',
         };
         $original = $tree[$level]->getRawOriginal($field);
 
@@ -274,5 +291,8 @@ describe('Project tree mass assignment', function () {
         'environment tenant' => ['environment', 'organization_id'],
         'environment parent' => ['environment', 'application_id'],
         'environment lifecycle' => ['environment', 'archived_at'],
+        'api specification tenant' => ['apiSpecification', 'organization_id'],
+        'api specification parent' => ['apiSpecification', 'application_id'],
+        'api specification lifecycle' => ['apiSpecification', 'archived_at'],
     ]);
 });

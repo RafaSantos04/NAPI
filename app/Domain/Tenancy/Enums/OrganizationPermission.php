@@ -29,4 +29,13 @@ enum OrganizationPermission: string
     case UpdateEnvironments = 'environments.update';
     case ArchiveEnvironments = 'environments.archive';
     case ArchiveOwnEnvironments = 'environments.archive_own';
+
+    // API specifications (P3, ADR-0014). `import` is apart from `update`
+    // because importing is the expensive operation.
+    case ViewApiSpecifications = 'api_specifications.view';
+    case CreateApiSpecifications = 'api_specifications.create';
+    case UpdateApiSpecifications = 'api_specifications.update';
+    case ImportApiSpecifications = 'api_specifications.import';
+    case ArchiveApiSpecifications = 'api_specifications.archive';
+    case ArchiveOwnApiSpecifications = 'api_specifications.archive_own';
 }

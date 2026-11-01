@@ -110,7 +110,12 @@ describe('API route coverage', function () {
     });
 
     it('never deletes records of the project tree', function () {
-        foreach (routesUnder('api/v1/organizations/{organization}/projects*') as $route) {
+        $routes = [
+            ...routesUnder('api/v1/organizations/{organization}/projects*'),
+            ...routesUnder('api/v1/organizations/{organization}/api-specifications*'),
+        ];
+
+        foreach ($routes as $route) {
             expect($route->methods())->not->toContain('DELETE');
         }
     });

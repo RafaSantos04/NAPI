@@ -26,6 +26,7 @@ enum OrganizationRole: string
                 OrganizationPermission::ArchiveProjects,
                 OrganizationPermission::ArchiveApplications,
                 OrganizationPermission::ArchiveEnvironments,
+                OrganizationPermission::ArchiveApiSpecifications,
             ], true),
         };
     }
