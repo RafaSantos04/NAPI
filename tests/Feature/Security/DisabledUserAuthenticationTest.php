@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use Database\Factories\UserFactory;
 
 // FIND-003: a deactivated account must lose API access immediately, even if a
 // previously issued token is still technically valid.
@@ -55,7 +56,7 @@ describe('Disabled user authentication', function () {
 
         $this->postJson('/api/v1/auth/login', [
             'email' => 'inactive@napi.dev',
-            'password' => 'password',
+            'password' => UserFactory::password(),
         ])->assertUnprocessable()->assertJsonMissingPath('token');
     });
 });

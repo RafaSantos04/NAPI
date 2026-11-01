@@ -3,6 +3,7 @@
 use App\Models\Menu;
 use App\Models\Profile;
 use App\Models\User;
+use Illuminate\Support\Str;
 
 // FIND-004, FIND-005, FIND-007, FIND-009: the profile x menu matrix is the
 // single source of functional permissions; Policies only add contextual rules.
@@ -58,8 +59,10 @@ describe('Authorization matrix over HTTP', function () {
     it('does not turn a view permission into a write permission', function () {
         $reader = userWithPermissions(['users' => ['view']]);
 
+        $password = Str::password();
+
         asToken($reader, 'POST', '/api/v1/users', [
-            'name' => 'X', 'email' => 'x@napi.dev', 'password' => 'password123', 'password_confirmation' => 'password123',
+            'name' => 'X', 'email' => 'x@napi.dev', 'password' => $password, 'password_confirmation' => $password,
         ])->assertNotFound();
     });
 

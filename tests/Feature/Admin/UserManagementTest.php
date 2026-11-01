@@ -7,8 +7,10 @@ use App\Models\AuditLog;
 use App\Models\Profile;
 use App\Models\User;
 use App\Models\UserDetails;
+use Database\Seeders\UserSeeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 // Phase 4.2: user administration in the Blade admin area. Same Policies,
 // Actions, invariants and audit as the API; only the adapter differs.
@@ -18,7 +20,7 @@ describe('Admin area access', function () {
         $user = seededUser($slug);
 
         $this->from('/admin')
-            ->post('/admin/login', ['email' => $user->email, 'password' => 'password'])
+            ->post('/admin/login', ['email' => $user->email, 'password' => UserSeeder::DEMO_PASSWORD])
             ->assertRedirect('/admin')
             ->assertSessionHasErrors(['email' => 'Esta conta não tem acesso à área administrativa.']);
 
@@ -172,12 +174,13 @@ describe('User detail', function () {
 describe('Create user', function () {
     it('creates an active user without profiles, hashing the password', function () {
         $admin = seededUser('admin');
+        $password = Str::password();
 
         $response = $this->actingAs($admin)->post('/admin/users', [
             'name' => 'New Person',
             'email' => 'new@napi.dev',
-            'password' => 'a-strong-password',
-            'password_confirmation' => 'a-strong-password',
+            'password' => $password,
+            'password_confirmation' => $password,
         ]);
 
         $user = User::where('email', 'new@napi.dev')->firstOrFail();
@@ -185,20 +188,22 @@ describe('Create user', function () {
 
         expect($user->is_active)->toBeTrue()
             ->and($user->profiles()->count())->toBe(0)
-            ->and($user->password)->not->toBe('a-strong-password')
-            ->and(Hash::check('a-strong-password', $user->password))->toBeTrue();
+            ->and($user->password)->not->toBe($password)
+            ->and(Hash::check($password, $user->password))->toBeTrue();
 
         $audit = AuditLog::where('action', 'user_created')->where('subject_id', $user->id)->sole();
         expect($audit->user_id)->toBe($admin->id)
-            ->and(json_encode($audit->toArray()))->not->toContain('a-strong-password');
+            ->and(json_encode($audit->toArray()))->not->toContain($password);
     });
 
     it('ignores privileged fields in the payload', function () {
+        $password = Str::password();
+
         $this->actingAs(seededUser('admin'))->post('/admin/users', [
             'name' => 'Sneaky',
             'email' => 'sneaky@napi.dev',
-            'password' => 'a-strong-password',
-            'password_confirmation' => 'a-strong-password',
+            'password' => $password,
+            'password_confirmation' => $password,
             'is_active' => false,
             'is_admin' => true,
             'profile_ids' => [Profile::where('slug', 'admin')->value('id')],
@@ -229,12 +234,14 @@ describe('Create user', function () {
     });
 
     it('requires users.create', function () {
+        $password = Str::password();
+
         $this->actingAs(userWithPermissions(['users' => ['view', 'update']]))
             ->post('/admin/users', [
                 'name' => 'X',
                 'email' => 'x@napi.dev',
-                'password' => 'a-strong-password',
-                'password_confirmation' => 'a-strong-password',
+                'password' => $password,
+                'password_confirmation' => $password,
             ])
             ->assertNotFound();
 
@@ -276,7 +283,7 @@ describe('Update user', function () {
             'name' => 'Dev',
             'email' => 'dev@napi.dev',
             'is_active' => false,
-            'password' => 'changed-password',
+            'password' => Str::password(),
             'profile_ids' => [Profile::where('slug', 'admin')->value('id')],
         ]);
 
@@ -565,11 +572,13 @@ describe('Same rules through the API and the admin area', function () {
     });
 
     it('creates users through the API with the shared Action', function () {
+        $password = Str::password();
+
         asToken(seededUser('admin'), 'POST', '/api/v1/users', [
             'name' => 'Api User',
             'email' => 'api-user@napi.dev',
-            'password' => 'a-strong-password',
-            'password_confirmation' => 'a-strong-password',
+            'password' => $password,
+            'password_confirmation' => $password,
             'is_active' => false,
         ])->assertCreated();
 

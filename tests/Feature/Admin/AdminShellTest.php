@@ -2,6 +2,8 @@
 
 use App\Models\AuditLog;
 use App\Models\User;
+use Database\Factories\UserFactory;
+use Illuminate\Support\Str;
 
 describe('Admin shell', function () {
     it('renders the landing for guests with the login panel', function () {
@@ -29,11 +31,11 @@ describe('Admin shell', function () {
 
 describe('Admin session login', function () {
     it('logs in with valid credentials and regenerates the session', function () {
-        $user = adminUser(['password' => 'secret-password']);
+        $user = adminUser();
         $this->startSession();
         $before = session()->getId();
 
-        $this->post('/admin/login', ['email' => $user->email, 'password' => 'secret-password'])
+        $this->post('/admin/login', ['email' => $user->email, 'password' => UserFactory::password()])
             ->assertRedirect(route('admin.home'))
             ->assertSessionHasNoErrors();
 
@@ -43,19 +45,19 @@ describe('Admin session login', function () {
     });
 
     it('does not issue an API token on web login', function () {
-        $user = adminUser(['password' => 'secret-password']);
+        $user = adminUser();
 
-        $this->post('/admin/login', ['email' => $user->email, 'password' => 'secret-password']);
+        $this->post('/admin/login', ['email' => $user->email, 'password' => UserFactory::password()]);
 
         $this->assertAuthenticatedAs($user, 'web');
         expect($user->tokens()->count())->toBe(0);
     });
 
     it('rejects a wrong password with a generic message', function () {
-        $user = User::factory()->create(['password' => 'secret-password']);
+        $user = User::factory()->create();
 
         $this->from('/admin')
-            ->post('/admin/login', ['email' => $user->email, 'password' => 'wrong-password'])
+            ->post('/admin/login', ['email' => $user->email, 'password' => Str::password()])
             ->assertRedirect('/admin')
             ->assertSessionHasErrors(['email' => 'Credenciais inválidas.'])
             ->assertSessionHasInput('email', $user->email)
@@ -66,17 +68,17 @@ describe('Admin session login', function () {
 
     it('gives an unknown e-mail the same answer as a wrong password', function () {
         $this->from('/admin')
-            ->post('/admin/login', ['email' => 'nobody@napi.dev', 'password' => 'whatever'])
+            ->post('/admin/login', ['email' => 'nobody@napi.dev', 'password' => Str::password()])
             ->assertSessionHasErrors(['email' => 'Credenciais inválidas.']);
 
         $this->assertGuest('web');
     });
 
     it('does not let an inactive user in, nor reveal that it is inactive', function () {
-        $user = User::factory()->create(['password' => 'secret-password', 'is_active' => false]);
+        $user = User::factory()->inactive()->create();
 
         $this->from('/admin')
-            ->post('/admin/login', ['email' => $user->email, 'password' => 'secret-password'])
+            ->post('/admin/login', ['email' => $user->email, 'password' => UserFactory::password()])
             ->assertSessionHasErrors(['email' => 'Credenciais inválidas.']);
 
         $this->assertGuest('web');
@@ -97,33 +99,33 @@ describe('Admin session login', function () {
     it('shows the error inside the reopened panel', function () {
         $this->from('/admin')
             ->followingRedirects()
-            ->post('/admin/login', ['email' => 'nobody@napi.dev', 'password' => 'whatever'])
+            ->post('/admin/login', ['email' => 'nobody@napi.dev', 'password' => Str::password()])
             ->assertOk()
             ->assertSee('Credenciais inválidas.')
             ->assertSee('id="login-panel" open', false);
     });
 
     it('locks out after too many failed attempts', function () {
-        $user = User::factory()->create(['password' => 'secret-password']);
+        $user = User::factory()->create();
 
         foreach (range(1, 5) as $_) {
-            $this->post('/admin/login', ['email' => $user->email, 'password' => 'wrong']);
+            $this->post('/admin/login', ['email' => $user->email, 'password' => Str::password()]);
         }
 
-        $this->post('/admin/login', ['email' => $user->email, 'password' => 'secret-password'])
+        $this->post('/admin/login', ['email' => $user->email, 'password' => UserFactory::password()])
             ->assertSessionHasErrors('email');
 
         $this->assertGuest('web');
     });
 
     it('requires a CSRF token', function () {
-        $user = User::factory()->create(['password' => 'secret-password']);
+        $user = User::factory()->create();
 
         // CSRF verification is skipped in the testing environment, so the
         // request runs as a local one.
         $this->app['env'] = 'local';
 
-        $this->post('/admin/login', ['email' => $user->email, 'password' => 'secret-password'])
+        $this->post('/admin/login', ['email' => $user->email, 'password' => UserFactory::password()])
             ->assertStatus(419);
 
         $this->assertGuest('web');
@@ -132,8 +134,8 @@ describe('Admin session login', function () {
 
 describe('Admin session logout', function () {
     it('logs out, invalidates the session and rotates the CSRF token', function () {
-        $user = adminUser(['password' => 'secret-password']);
-        $this->post('/admin/login', ['email' => $user->email, 'password' => 'secret-password']);
+        $user = adminUser();
+        $this->post('/admin/login', ['email' => $user->email, 'password' => UserFactory::password()]);
         session()->put('marker', 'value');
         $token = session()->token();
 
@@ -175,8 +177,8 @@ describe('Admin access control', function () {
     });
 
     it('ends the session of a user deactivated after logging in', function () {
-        $user = adminUser(['password' => 'secret-password']);
-        $this->post('/admin/login', ['email' => $user->email, 'password' => 'secret-password']);
+        $user = adminUser();
+        $this->post('/admin/login', ['email' => $user->email, 'password' => UserFactory::password()]);
         $this->assertAuthenticatedAs($user, 'web');
 
         // Query-builder update skips model events; the fresh guard re-reads
