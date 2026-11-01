@@ -34,6 +34,8 @@ Project, Application e Environment com integridade de tenant no PostgreSQL;
 veja o [relatório do P2](phases/p2-projects-applications-environments.md).
 P2.5 fechou o gate de abuso da plataforma antes do P3; veja o
 [relatório do P2.5](phases/p2-5-platform-security-gate.md).
+P3 está em andamento: especificações OpenAPI por Application com versões
+imutáveis; veja o [relatório do P3](phases/p3-api-inventory-openapi.md).
 Os demais agregados comerciais continuam planejados. Antes de cada fase devem ser escritos e
 aceitos os ADRs listados no [roadmap](roadmap.md#decisões-arquiteturais-obrigatórias).
 

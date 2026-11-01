@@ -39,7 +39,11 @@ app/
 │   ├── Actions/               {Create,Update,Archive,Restore}{Project,Application,Environment}:
 │   │                          ancestrais FOR SHARE de cima para baixo, linha FOR UPDATE
 │   ├── Enums/                 EnvironmentClassification
-│   └── Exceptions/            {Project,Application,Environment}LifecycleException (409)
+│   ├── Exceptions/            {Project,Application,Environment}LifecycleException (409)
+│   └── ProjectTreeLock.php    Ordem de locks da árvore: ancestrais FOR SHARE, arquivado → 409 (P3)
+├── Domain/ApiInventory/       Especificações OpenAPI (P3, ADR-0014)
+│   ├── Actions/               {Create,Update,Archive,Restore}ApiSpecification
+│   └── Exceptions/            ApiSpecificationLifecycleException (409)
 ├── DTOs/                      Dados validados HTTP → Action
 │   ├── AssignProfilesToUserDto.php
 │   ├── CreateUserDto.php, UpdateUserDto.php              (Fase 4.2)
@@ -51,6 +55,7 @@ app/
 │   ├── {Create,Update}OrganizationDto, AddOrganizationMemberDto,
 │   │   UpdateOrganizationMembershipDto                   (P1)
 │   ├── {Create,Update}{Project,Application,Environment}Dto   (P2)
+│   ├── {Create,Update}ApiSpecificationDto                (P3)
 │   └── SyncMenuPermissionsDto.php
 ├── Events/                    Fatos de domínio (síncronos)
 │   ├── Contracts/Auditable.php
@@ -63,6 +68,7 @@ app/
 │   ├── SecurityTestExecuted.php                          (Fase 5.1)
 │   ├── Organization{Created,Updated}, OrganizationMembership{Created,Updated,Removed}   (P1)
 │   ├── {Project,Application,Environment}{Created,Updated,Archived,Restored}            (P2)
+│   ├── ApiSpecification{Created,Updated,Archived,Restored}                              (P3)
 │   └── TokenCreated.php, TokenRevoked.php
 ├── Listeners/                 Reações; hoje, apenas auditoria
 │   └── RecordAuditLog.php     Uma linha por evento Auditable
@@ -74,6 +80,7 @@ app/
 │   │   ├── Organization{,Membership}Controller.php       (P1)
 │   │   ├── {Project,Application,Environment}Controller.php        (P2)
 │   │   ├── {Project,Application,Environment}StatusController.php  archive/restore (P2)
+│   │   ├── ApiSpecification{,Status}Controller.php                rotas rasas (P3)
 │   │   ├── ProfileController.php
 │   │   ├── UserController.php
 │   │   ├── UserProfileController.php
@@ -96,17 +103,21 @@ app/
 │   │   └── Web/Admin/         Login web e requests de usuários, perfis e menus, que estendem os da API;
 │   │                          Concerns/ com mensagens em português e SendsEveryField
 │   └── Resources/             User, Profile, Menu, Organization, OrganizationMembership,
-│                              Project, Application, EnvironmentResource
+│                              Project, Application, Environment, ApiSpecificationResource
 ├── Exceptions/                LastActiveOrganizationOwnerException (409, P1)
 ├── Models/                    User, UserDetails, Profile, Menu, AuditLog,
 │                              SecurityLabResource, SecurityTestRun,
 │                              Organization, OrganizationMembership (P1),
 │                              Project, Application, Environment (P2)
+│                              ApiSpecification, ApiSpecificationVersion (P3)
 │                              + pivots UserProfile, MenuProfile
+│   └── Concerns/              Archivable, SearchableByName: scopes de listagem da árvore (P3)
 ├── Policies/                  UserPolicy, ProfilePolicy, MenuPolicy,
 │                              SecurityTestRunPolicy, SecurityLabResourcePolicy,
 │                              Organization{,Membership}Policy (P1),
 │                              {Project,Application,Environment}Policy (P2)
+│                              ApiSpecificationPolicy (P3)
+├── Rules/Slug.php             Formato de slug de organizações e da árvore (P3)
 └── Providers/AppServiceProvider.php
 bootstrap/app.php              Rotas, alias de middleware, exceções JSON
 config/sanctum.php             Expiração (7 dias) e prefixo de token (napi_)
@@ -114,8 +125,10 @@ config/security.php            Feature flag do Security Lab (desligada por padr�
 database/
 ├── migrations/                citext, users, tokens, IAM, audit_logs, tenancy (P1),
 │                              árvore de projetos com FK composta e triggers (P2)
+│                              especificações e versões append-only (P3)
 ├── factories/                 User, UserDetails, Profile, Menu, Organization,
-│                              OrganizationMembership, Project, Application, Environment
+│                              OrganizationMembership, Project, Application, Environment,
+│                              ApiSpecification, ApiSpecificationVersion
 └── seeders/                   Perfis, menus de sistema, usuários de demonstração
 routes/api.php                 Todas as rotas /api/v1
 routes/web.php                 Área administrativa /admin
@@ -176,7 +189,7 @@ ou hierarquia sem um problema concreto que eles resolvam.
   com subnamespace só para autenticação (`Requests\Auth`). A Fase 3 manteve a
   convenção da Fase 2 em vez de criar subpastas por model, para não haver
   duas classes `UserStoreRequest` em namespaces diferentes.
-- **Actions sob `app/Domain/{IAM,Security,Tenancy,Projects}`**, DTOs em `app/DTOs`. Actions expõem um
+- **Actions sob `app/Domain/{IAM,Security,Tenancy,Projects,ApiInventory}`**, DTOs em `app/DTOs`. Actions expõem um
   método estático `execute()`. Não são resolvidas pelo container, portanto
   não recebem dependências injetadas.
 - **Models com atributos PHP 8** (`#[Fillable]`, `#[Hidden]`) em vez de

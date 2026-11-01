@@ -85,15 +85,18 @@ uma membership ativa concede o catálogo fechado de capacidades do papel
 administrador global sem membership é negado no tenant, e o perfil global
 `admin` não concede nada dentro de uma organização.
 
-| Papel | Organização e membros | Árvore de projetos (P2) |
+| Papel | Organização e membros | Árvore de projetos (P2) e especificações de API (P3) |
 |---|---|---|
 | `owner` | ver, alterar, gerir membros | tudo, inclusive arquivar qualquer item |
 | `manager` | ver | tudo, inclusive arquivar qualquer item |
 | `member` | ver | ver, criar, alterar; arquivar só a árvore de um Project que criou (`*.archive_own`, regra da Policy) |
 
-A matriz completa das 19 permissions está em
+A matriz completa das 25 permissions está em
 `tests/Unit/Domain/Tenancy/Enums/OrganizationRoleTest.php` e no
-[ADR-0012](../architecture/decisions/ADR-0012-project-tree-tenant-integrity.md).
+[ADR-0012](../architecture/decisions/ADR-0012-project-tree-tenant-integrity.md). No P3 entram
+`api_specifications.*` (ADR-0014), com `import` separado de `update`. O
+catálogo é fixo em código (`OrganizationRole::grants()`, ADR-0011): o owner
+escolhe o papel de cada membro, não permissões individuais.
 
 - **Admin**: o perfil de sistema `admin` detém todas as permissões
   funcionais, inclusive de chaves criadas depois do seed. A matriz dele não
@@ -132,6 +135,8 @@ A matriz completa das 19 permissions está em
 | `POST .../applications/{application}/archive`, `.../restore` (P2) | `applications.archive_own` contextual; a Policy decide o alcance |
 | `GET`, `POST`, `PATCH .../applications/{application}/environments[/{environment}]` (P2) | `environments.view`, `environments.create`, `environments.update` contextuais |
 | `POST .../environments/{environment}/archive`, `.../restore` (P2) | `environments.archive_own` contextual; a Policy decide o alcance |
+| `GET`, `POST .../applications/{application}/api-specifications`; `GET`, `PATCH .../api-specifications/{apiSpecification}` (P3) | `api_specifications.view`, `api_specifications.create`, `api_specifications.update` contextuais |
+| `POST .../api-specifications/{apiSpecification}/archive`, `.../restore` (P3) | `api_specifications.archive_own` contextual; a Policy decide o alcance |
 
 Perfis padrão:
 
@@ -165,6 +170,7 @@ apenas o que depende da instância ou do ator:
 | `ProjectPolicy` (P2) | project da Organization da rota; `archive`/`restore`: `projects.archive` alcança qualquer project, `projects.archive_own` só o criado pela membership do usuário (403 nos demais) |
 | `ApplicationPolicy` (P2) | reconfirma a cadeia application → project → Organization sem depender do binding; `archive`/`restore`: `applications.archive` alcança qualquer application, `applications.archive_own` só as de um project criado pela membership do usuário |
 | `EnvironmentPolicy` (P2) | reconfirma environment → application → project → Organization; `archive`/`restore` como em applications, pelo criador do project ancestral; ser o responsável do environment não concede arquivamento |
+| `ApiSpecificationPolicy` (P3) | listar e criar reconfirmam application → project → Organization; nas rotas rasas, a especificação pertence à Organization da rota; `archive`/`restore` pelo criador do project ancestral, como no P2 |
 
 ## Contexto organizacional (P1)
 
