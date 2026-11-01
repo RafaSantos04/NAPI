@@ -173,9 +173,13 @@ aplica. Nenhum código vulnerável foi criado.
 
 **2. O que merece abstração** (na próxima fase que tocar essas áreas):
 
-- **Helper de teste** `userWithPassword()` em `tests/Pest.php`, que devolve
-  o usuário e a senha gerada. É o maior volume de repetição, e os testes
-  que ainda usam senha literal migrariam para ele.
+- **Senha conhecida dos testes.** Proposta como um helper
+  `userWithPassword()`. Na validação (P2.5-T08, 2026-11-01), a decisão foi
+  outra: a `UserFactory` já era dona da senha conhecida (`Hash::make('password')`,
+  usada por 14 pontos via `adminLogin()`). Um helper seria uma segunda fonte.
+  A senha passou a ser `UserFactory::password()`, aleatória por execução, e
+  um teste de convenção (`TestCredentialsTest`) impede que literais voltem.
+  Ver [credenciais nos testes](../../testing/security-tests.md#credenciais-nos-testes-p25-t08).
 - **Regras de token** compartilhadas pelas duas requests (`abilities` com
   teto e catálogo), como o admin já faz ao estender requests da API.
 

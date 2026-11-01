@@ -20,6 +20,31 @@ que passa em qualquer ability.
 | `asToken($user, $method, $uri, $data, $abilities)` | envia a requisição com um token novo, depois de `forgetGuards()` (o app de teste mantém o usuário resolvido entre requisições) |
 | `seededUser('admin'\|'dev'\|'viewer')` | usuários do seed |
 | `profileWithPermissions([...])`, `userWithPermissions([...])` | perfil customizado com exatamente as flags pedidas, por exemplo `['users' => ['view', 'update']]` |
+| `adminUser()`, `adminLogin($user, $password = null)` | usuário com o perfil `admin`; login pelo formulário real, com a senha da factory quando nenhuma é passada |
+
+### Credenciais nos testes (P2.5-T08)
+
+O GitHub apontou uma senha literal num teste (`'secret-password'`). Desde
+então, nenhum teste nem factory traz senha literal:
+
+| Situação | Fonte da senha |
+|---|---|
+| Usuário criado pela factory (inclusive `adminUser()`) | `UserFactory::password()`: aleatória a cada execução, gerada com `Str::password()` e calculada uma vez |
+| Usuário semeado (`seededUser()`) | `UserSeeder::DEMO_PASSWORD`, publicada de propósito e restrita a `local` e `testing` (FIND-038) |
+| Senha errada, senha nova ou senha própria de um teste | `Str::password()` |
+| Valor que é o próprio assunto de uma validação | literal curto (menos de 6 caracteres, como `'short'`) |
+
+`tests/Unit/TestCredentialsTest.php` varre `tests/` e `database/factories`.
+Ele falha, com arquivo e linha, quando encontra:
+
+- a chave `password` ou `password_confirmation` com um literal de 6 ou mais
+  caracteres sem espaço;
+- um literal assim como senha de um helper de login;
+- um `Hash::make()` de literal.
+
+Mensagens de erro (que têm espaço) e o seeder de demonstração ficam fora.
+Um alerta antigo que ainda esteja no histórico do git deve ser fechado no
+GitHub como "used in tests", porque não era credencial real.
 
 Cada arquivo começou **falhando** contra o código da Fase 3.1 (80 testes: 14
 passavam, 28 falhavam e 38 davam erro por esquema ausente), e só passou com a
