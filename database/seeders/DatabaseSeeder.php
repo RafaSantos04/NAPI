@@ -14,11 +14,13 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->call([
+        // System profiles and menus belong to every environment; the demo
+        // users only to local and testing (UserSeeder refuses the rest).
+        $this->call(array_values(array_filter([
             ProfileSeeder::class,
             MenuSeeder::class,
-            UserSeeder::class,
+            app()->environment(UserSeeder::ENVIRONMENTS) ? UserSeeder::class : null,
             SecurityLabSeeder::class,
-        ]);
+        ])));
     }
 }
