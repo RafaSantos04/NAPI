@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Archivable;
+use App\Models\Concerns\SearchableByName;
 use Database\Factories\ProjectFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -16,7 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Project extends Model
 {
     /** @use HasFactory<ProjectFactory> */
-    use HasFactory, HasUlids;
+    use Archivable, HasFactory, HasUlids, SearchableByName;
 
     protected function casts(): array
     {
@@ -49,10 +51,5 @@ class Project extends Model
     public function applications(): HasMany
     {
         return $this->hasMany(Application::class);
-    }
-
-    public function isArchived(): bool
-    {
-        return $this->archived_at !== null;
     }
 }

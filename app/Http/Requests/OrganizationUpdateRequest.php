@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Organization;
+use App\Rules\Slug;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -34,7 +35,7 @@ class OrganizationUpdateRequest extends FormRequest
                 'required',
                 'string',
                 'max:100',
-                'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
+                new Slug,
                 Rule::unique('organizations', 'slug')->ignore($this->route('organization')),
             ],
         ];

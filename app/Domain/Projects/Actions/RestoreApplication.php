@@ -4,7 +4,7 @@ namespace App\Domain\Projects\Actions;
 
 use App\Domain\IAM\AuditContext;
 use App\Domain\Projects\Exceptions\ApplicationLifecycleException;
-use App\Domain\Projects\Exceptions\ProjectLifecycleException;
+use App\Domain\Projects\ProjectTreeLock;
 use App\Events\ApplicationRestored;
 use App\Models\Application;
 use App\Models\Organization;
@@ -16,16 +16,7 @@ class RestoreApplication
     public static function execute(Organization $organization, Project $project, Application $application, AuditContext $context): void
     {
         DB::transaction(function () use ($organization, $project, $application, $context) {
-            $lockedProject = Project::query()
-                ->whereKey($project->id)
-                ->whereBelongsTo($organization)
-                ->sharedLock()
-                ->firstOrFail();
-
-            // The project has to be restored first.
-            if ($lockedProject->isArchived()) {
-                throw ProjectLifecycleException::archived($lockedProject);
-            }
+            $lockedProject = ProjectTreeLock::activeProject($organization, $project->id);
 
             $locked = Application::query()
                 ->whereKey($application->id)

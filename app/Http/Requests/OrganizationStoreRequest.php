@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Organization;
+use App\Rules\Slug;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -25,7 +26,7 @@ class OrganizationStoreRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:100'],
-            'slug' => ['required', 'string', 'max:100', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', 'unique:organizations,slug'],
+            'slug' => ['required', 'string', 'max:100', new Slug, 'unique:organizations,slug'],
         ];
     }
 }

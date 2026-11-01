@@ -110,7 +110,6 @@ describe('Creating environments', function () {
 
         expect(fn () => CreateEnvironment::execute(
             $organization,
-            $application->project,
             $application,
             new CreateEnvironmentDto('Staging', 'staging', EnvironmentClassification::Staging, 'staging.example.test', null, $responsible->id),
             $owner,

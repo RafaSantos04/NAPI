@@ -4,7 +4,7 @@ namespace App\Domain\Projects\Actions;
 
 use App\Domain\IAM\AuditContext;
 use App\Domain\Projects\Exceptions\ApplicationLifecycleException;
-use App\Domain\Projects\Exceptions\ProjectLifecycleException;
+use App\Domain\Projects\ProjectTreeLock;
 use App\DTOs\UpdateApplicationDto;
 use App\Events\ApplicationUpdated;
 use App\Models\Application;
@@ -22,17 +22,7 @@ class UpdateApplication
         AuditContext $context,
     ): void {
         DB::transaction(function () use ($organization, $project, $application, $dto, $context) {
-            // Ancestor first, then the row: the same order in every write of
-            // the tree, so a concurrent archive cannot deadlock with it.
-            $lockedProject = Project::query()
-                ->whereKey($project->id)
-                ->whereBelongsTo($organization)
-                ->sharedLock()
-                ->firstOrFail();
-
-            if ($lockedProject->isArchived()) {
-                throw ProjectLifecycleException::archived($lockedProject);
-            }
+            $lockedProject = ProjectTreeLock::activeProject($organization, $project->id);
 
             $locked = Application::query()
                 ->whereKey($application->id)

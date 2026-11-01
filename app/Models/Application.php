@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Archivable;
+use App\Models\Concerns\SearchableByName;
 use Database\Factories\ApplicationFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -16,7 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Application extends Model
 {
     /** @use HasFactory<ApplicationFactory> */
-    use HasFactory, HasUlids;
+    use Archivable, HasFactory, HasUlids, SearchableByName;
 
     protected function casts(): array
     {
@@ -51,8 +53,13 @@ class Application extends Model
         return $this->hasMany(Environment::class);
     }
 
-    public function isArchived(): bool
+    /**
+     * The contracts of this application (ADR-0014).
+     *
+     * @return HasMany<ApiSpecification, $this>
+     */
+    public function apiSpecifications(): HasMany
     {
-        return $this->archived_at !== null;
+        return $this->hasMany(ApiSpecification::class);
     }
 }

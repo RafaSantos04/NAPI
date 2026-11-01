@@ -34,14 +34,9 @@ class EnvironmentController extends Controller
         $classification = $request->validated('classification');
 
         $environments = $application->environments()
-            ->when($status === 'active', fn ($query) => $query->whereNull('archived_at'))
-            ->when($status === 'archived', fn ($query) => $query->whereNotNull('archived_at'))
+            ->withStatus($status)
             ->when($classification !== null, fn ($query) => $query->where('classification', $classification))
-            // Wildcards typed by the client are matched literally.
-            ->when($search !== null, fn ($query) => $query->whereLike(
-                'name',
-                '%'.addcslashes($search, '\\%_').'%',
-            ))
+            ->nameContains($search)
             ->orderBy('name')
             ->orderBy('id')
             ->paginate(15);
@@ -67,7 +62,6 @@ class EnvironmentController extends Controller
     ): JsonResponse {
         $environment = CreateEnvironment::execute(
             $organization,
-            $project,
             $application,
             CreateEnvironmentDto::from($request),
             $request->user(),
@@ -103,7 +97,6 @@ class EnvironmentController extends Controller
     ): EnvironmentResource {
         UpdateEnvironment::execute(
             $organization,
-            $project,
             $application,
             $environment,
             UpdateEnvironmentDto::from($request),

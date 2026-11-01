@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Models\Organization;
 use App\Models\Project;
+use App\Rules\Slug;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -39,7 +40,7 @@ class ProjectUpdateRequest extends FormRequest
                 'required',
                 'string',
                 'max:100',
-                'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
+                new Slug,
                 Rule::unique('projects', 'slug')
                     ->where('organization_id', $project instanceof Project ? $project->organization_id : null)
                     ->ignore($project),

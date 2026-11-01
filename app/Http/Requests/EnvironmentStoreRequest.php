@@ -8,6 +8,7 @@ use App\Models\Application;
 use App\Models\Environment;
 use App\Models\Organization;
 use App\Models\Project;
+use App\Rules\Slug;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -44,7 +45,7 @@ class EnvironmentStoreRequest extends FormRequest
                 'required',
                 'string',
                 'max:100',
-                'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
+                new Slug,
                 Rule::unique('environments', 'slug')->where('application_id', $application instanceof Application ? $application->id : null),
             ],
             'classification' => ['required', Rule::enum(EnvironmentClassification::class)],

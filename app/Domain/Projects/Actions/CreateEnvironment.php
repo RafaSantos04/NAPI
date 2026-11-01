@@ -3,8 +3,7 @@
 namespace App\Domain\Projects\Actions;
 
 use App\Domain\IAM\AuditContext;
-use App\Domain\Projects\Exceptions\ApplicationLifecycleException;
-use App\Domain\Projects\Exceptions\ProjectLifecycleException;
+use App\Domain\Projects\ProjectTreeLock;
 use App\Domain\Tenancy\Enums\OrganizationMembershipStatus;
 use App\DTOs\CreateEnvironmentDto;
 use App\Events\EnvironmentCreated;
@@ -12,7 +11,6 @@ use App\Models\Application;
 use App\Models\Environment;
 use App\Models\Organization;
 use App\Models\OrganizationMembership;
-use App\Models\Project;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -21,33 +19,13 @@ class CreateEnvironment
 {
     public static function execute(
         Organization $organization,
-        Project $project,
         Application $application,
         CreateEnvironmentDto $dto,
         User $actor,
         AuditContext $context,
     ): Environment {
-        return DB::transaction(function () use ($organization, $project, $application, $dto, $actor, $context) {
-            // Ancestors top-down with shared locks, as in every write of the tree.
-            $lockedProject = Project::query()
-                ->whereKey($project->id)
-                ->whereBelongsTo($organization)
-                ->sharedLock()
-                ->firstOrFail();
-
-            if ($lockedProject->isArchived()) {
-                throw ProjectLifecycleException::archived($lockedProject);
-            }
-
-            $lockedApplication = Application::query()
-                ->whereKey($application->id)
-                ->whereBelongsTo($lockedProject)
-                ->sharedLock()
-                ->firstOrFail();
-
-            if ($lockedApplication->isArchived()) {
-                throw ApplicationLifecycleException::archived($lockedApplication);
-            }
+        return DB::transaction(function () use ($organization, $application, $dto, $actor, $context) {
+            $lockedApplication = ProjectTreeLock::activeApplication($organization, $application);
 
             $responsibleId = $dto->responsibleMembershipId
                 ?? $actor->organizationMemberships()->whereBelongsTo($organization)->value('id');

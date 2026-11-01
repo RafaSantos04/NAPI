@@ -29,7 +29,7 @@ class EnvironmentStatusController extends Controller
     ): JsonResponse {
         $this->authorize('archive', [$environment, $application, $project, $organization]);
 
-        ArchiveEnvironment::execute($organization, $project, $application, $environment, AuditContext::fromRequest($request));
+        ArchiveEnvironment::execute($organization, $application, $environment, AuditContext::fromRequest($request));
 
         return response()->json([
             'message' => 'Environment archived.',
@@ -46,7 +46,7 @@ class EnvironmentStatusController extends Controller
     ): JsonResponse {
         $this->authorize('restore', [$environment, $application, $project, $organization]);
 
-        RestoreEnvironment::execute($organization, $project, $application, $environment, AuditContext::fromRequest($request));
+        RestoreEnvironment::execute($organization, $application, $environment, AuditContext::fromRequest($request));
 
         return response()->json([
             'message' => 'Environment restored.',

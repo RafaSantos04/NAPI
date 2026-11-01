@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Domain\Projects\Enums\EnvironmentClassification;
+use App\Models\Concerns\Archivable;
+use App\Models\Concerns\SearchableByName;
 use Database\Factories\EnvironmentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -16,7 +18,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Environment extends Model
 {
     /** @use HasFactory<EnvironmentFactory> */
-    use HasFactory, HasUlids;
+    use Archivable, HasFactory, HasUlids, SearchableByName;
 
     protected function casts(): array
     {
@@ -48,10 +50,5 @@ class Environment extends Model
     public function responsible(): BelongsTo
     {
         return $this->belongsTo(OrganizationMembership::class, 'responsible_membership_id');
-    }
-
-    public function isArchived(): bool
-    {
-        return $this->archived_at !== null;
     }
 }

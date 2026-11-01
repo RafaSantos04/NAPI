@@ -27,13 +27,8 @@ class ProjectController extends Controller
         $search = $request->validated('search');
 
         $projects = $organization->projects()
-            ->when($status === 'active', fn ($query) => $query->whereNull('archived_at'))
-            ->when($status === 'archived', fn ($query) => $query->whereNotNull('archived_at'))
-            // Wildcards typed by the client are matched literally.
-            ->when($search !== null, fn ($query) => $query->whereLike(
-                'name',
-                '%'.addcslashes($search, '\\%_').'%',
-            ))
+            ->withStatus($status)
+            ->nameContains($search)
             ->orderBy('name')
             ->orderBy('id')
             ->paginate(15);

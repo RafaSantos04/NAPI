@@ -3,7 +3,7 @@
 namespace App\Domain\Projects\Actions;
 
 use App\Domain\IAM\AuditContext;
-use App\Domain\Projects\Exceptions\ProjectLifecycleException;
+use App\Domain\Projects\ProjectTreeLock;
 use App\DTOs\CreateApplicationDto;
 use App\Events\ApplicationCreated;
 use App\Models\Application;
@@ -16,17 +16,7 @@ class CreateApplication
     public static function execute(Organization $organization, Project $project, CreateApplicationDto $dto, AuditContext $context): Application
     {
         return DB::transaction(function () use ($organization, $project, $dto, $context) {
-            // A shared lock lets writes under the same project run together
-            // while a concurrent ArchiveProject (FOR UPDATE) waits for them.
-            $lockedProject = Project::query()
-                ->whereKey($project->id)
-                ->whereBelongsTo($organization)
-                ->sharedLock()
-                ->firstOrFail();
-
-            if ($lockedProject->isArchived()) {
-                throw ProjectLifecycleException::archived($lockedProject);
-            }
+            $lockedProject = ProjectTreeLock::activeProject($organization, $project->id);
 
             $application = $lockedProject->applications()->make([
                 'name' => $dto->name,
