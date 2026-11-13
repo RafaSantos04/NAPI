@@ -16,8 +16,9 @@ itens só podem ser fechados na VM e por um teste de fora da rede.
 | Segredos | `.env` ignorado e não rastreado; exemplos só têm placeholders | aprovado; rotacionar o segredo exposto na conversa |
 | Conta inicial | demo recusada em produção; `napi:bootstrap-admin` idempotente e testado | aprovado |
 | Banco | sem `ports`, rede Docker interna, SCRAM e volume dedicado | aprovado no manifesto; validar na VM |
+| Porta da aplicação | `APP_PORT` publica 8006 para o NPM | restringir no firewall ao IP do NPM |
 | Aplicação | `APP_DEBUG=false`, cookies secure/httpOnly, sessão criptografada, Lab desligado | aprovado no manifesto |
-| Proxy | `TRUSTED_PROXIES` obrigatório e específico | depende do CIDR real do NPM |
+| Proxy | `TRUSTED_PROXIES` obrigatório e específico | depende do IP de origem visto pela aplicação |
 | Runtime | filesystem read-only, `no-new-privileges`, limites de PID, healthchecks | aprovado no manifesto |
 | Scheduler | `schedule:work` supervisionado junto do Apache | aprovado; necessário para poda do Sanctum |
 | HTTP | headers de proteção, limite de 10 MB no Apache e limite de 64 KB nas rotas atuais | aprovado; CSP ainda aceita inline nas telas legadas |
@@ -27,8 +28,8 @@ itens só podem ser fechados na VM e por um teste de fora da rede.
 - Rotacionar a senha mostrada na conversa e nunca reutilizá-la no stack.
 - Usar `APP_KEY`, senha de banco e senha inicial de admin diferentes, fortes e
   exclusivos desse ambiente.
-- Deixar públicos somente 80/443; restringir Portainer 9443, NPM admin 81 e
-  SSH por firewall/VPN/allowlist. O aviso **Não seguro** visto no acesso por IP
+- Deixar públicos somente 80/443; restringir a porta 8006 ao IP do NPM e
+  restringir Portainer 9443, NPM admin 81 e SSH por firewall/VPN/allowlist. O aviso **Não seguro** visto no acesso por IP
   ao Portainer deve ser eliminado para qualquer acesso administrativo.
 - Emitir certificado confiável no NPM, forçar HTTPS e testar cookies, redirect,
   host e IP real nos logs. Não usar `TRUSTED_PROXIES=*`.

@@ -34,22 +34,20 @@ services:
       SESSION_DRIVER: database
       SESSION_LIFETIME: "120"
       SESSION_ENCRYPT: "true"
-      SESSION_SECURE_COOKIE: "true"
+      SESSION_SECURE_COOKIE: "${SESSION_SECURE_COOKIE:-true}"
       SESSION_HTTP_ONLY: "true"
       SESSION_SAME_SITE: lax
       SESSION_COOKIE: napi_session
-      TRUSTED_PROXIES: ${TRUSTED_PROXIES:?Set the Nginx Proxy Manager network CIDR}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:?Set the exact Nginx Proxy Manager source IP}
       SECURITY_LAB_ENABLED: "false"
       NAPI_BOOTSTRAP_ADMIN_NAME: ${NAPI_BOOTSTRAP_ADMIN_NAME:-NAPI Administrator}
       NAPI_BOOTSTRAP_ADMIN_EMAIL: ${NAPI_BOOTSTRAP_ADMIN_EMAIL:-}
       NAPI_BOOTSTRAP_ADMIN_PASSWORD: ${NAPI_BOOTSTRAP_ADMIN_PASSWORD:-}
-    expose:
-      - "80"
+    ports:
+      - "${APP_PORT:-8006}:80"
     networks:
       internal:
-      proxy:
-        aliases:
-          - napi-app
+      public:
     volumes:
       - napi_storage:/var/www/html/storage
     read_only: true
@@ -94,9 +92,8 @@ services:
 networks:
   internal:
     internal: true
-  proxy:
-    external: true
-    name: ${PROXY_NETWORK:-npm_default}
+  public:
+    driver: bridge
 
 volumes:
   napi_storage:
