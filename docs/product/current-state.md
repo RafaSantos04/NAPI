@@ -31,6 +31,7 @@ atualizada após P1, após P2 (27/10/2026) e após o P2.5 (30/10/2026).
 | Tenancy P1 | Organization, Membership, contexto por rota, permissions contextuais, invariante de owner | fundação dos agregados comerciais |
 | Árvore P2 | Project, Application, Environment com FK composta, trigger de imutabilidade, arquivamento, papel `manager`, responsável e escopo autorizado | base para inventário OpenAPI e assessments |
 | Security gate P2.5 | proteção de credenciais única admin × API, limiter por usuário, conta privilegiada com token só no admin e senha reconfirmada, corpo até 64 KB, UTF-8, tetos de lista e senha (ADR-0013) | pré-requisito cumprido para o import OpenAPI do P3 |
+| Visual foundation P2.6 | tokens Cyber Zinc & Emerald, marca local e evolução inicial do shell, landing e home do admin | trilha em andamento; preserva o Blade como backoffice e o Vue para o P13 |
 
 As Fases 4.3 e 4.4 estão implementadas. O texto original do novo roadmap as
 marcava como planejamento, mas os commits `833e0dd` a `051b2c0`, as rotas,

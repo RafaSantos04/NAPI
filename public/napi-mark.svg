@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-labelledby="title">
+  <title id="title">NAPI</title>
+  <path fill="#4edea3" d="M24 3 41 9v12c0 11.2-6.8 20.7-17 24C13.8 41.7 7 32.2 7 21V9l17-6Z"/>
+  <path fill="#0d0e14" d="M24 9.2 35 13v8c0 7.5-4.2 14-11 17-6.8-3-11-9.5-11-17v-8l11-3.8Zm0 5.3-5.8 2v4.7c0 4.6 2.2 8.8 5.8 11.3 3.6-2.5 5.8-6.7 5.8-11.3v-4.7l-5.8-2Z"/>
+  <circle cx="24" cy="22" r="3" fill="#4edea3"/>
+</svg>

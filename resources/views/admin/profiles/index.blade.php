@@ -45,10 +45,23 @@
                             <td>{{ $profile->users_count }}</td>
                             <td>{{ $profile->isAdministrator() ? 'todas (implícito)' : $profile->permissions_count }}</td>
                             <td class="actions">
-                                <a href="{{ route('admin.profiles.show', $profile) }}">Ver<span class="sr-only"> {{ $profile->name }}</span></a>
-                                @can('update', $profile)
-                                    <a href="{{ route('admin.profiles.edit', $profile) }}">Editar<span class="sr-only"> {{ $profile->name }}</span></a>
-                                @endcan
+                                <div class="action-icons">
+                                    <x-admin.action-icon
+                                        :href="route('admin.profiles.show', $profile)"
+                                        icon="view"
+                                        :label="'Ver '.$profile->name"
+                                        tooltip="Ver"
+                                    />
+
+                                    @can('update', $profile)
+                                        <x-admin.action-icon
+                                            :href="route('admin.profiles.edit', $profile)"
+                                            icon="edit"
+                                            :label="'Editar '.$profile->name"
+                                            tooltip="Editar"
+                                        />
+                                    @endcan
+                                </div>
                             </td>
                         </tr>
                     @endforeach

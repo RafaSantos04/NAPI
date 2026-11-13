@@ -23,7 +23,8 @@ depois do Release Candidate do backend.
 | P1.1 | IAM × Organization Hardening | concluída | IAM, contexto da API e Sanctum consolidados com Organization |
 | P2 | Projects, Applications & Environments | concluída | hierarquia comercial e escopo de ambiente auditáveis |
 | P2.5 | Platform Security Gate | concluída | proteção de credenciais, rate limiting, limites de corpo e de entrada e política de operações caras antes do P3 |
-| P3 | API Inventory / OpenAPI | planejada | import versionado e inventário consultável |
+| P2.6 | Visual Foundation / Admin Design System | em andamento, paralelo ao P3 | identidade e componentes do backoffice sem misturar Blade com o futuro cliente Vue |
+| P3 | API Inventory / OpenAPI | em andamento (T01 concluído) | import versionado e inventário consultável |
 | P4 | Assessments | planejada | assessment manual autorizado com workflow e checklist |
 | P5 | Findings / Evidence | planejada | finding estruturado e evidência privada com redaction |
 | P6 | Retests | planejada | ciclo before/after, autoria e decisão rastreáveis |
@@ -134,6 +135,18 @@ somar o orçamento de tentativas alternando entre admin e API.
 dois sentidos). Veja o [relatório do P2.5](phases/p2-5-platform-security-gate.md)
 e o [ADR-0013](../architecture/decisions/ADR-0013-abuse-limits-and-expensive-operations.md).
 Ficam para o P3 os números das operações caras (itens 29 a 35 do ADR).
+
+### P2.6 — Visual Foundation / Admin Design System
+
+- oficializar Cyber Zinc & Emerald Vault como identidade dark-first;
+- criar tokens semânticos, marca local, componentes e estados reutilizáveis;
+- evoluir o shell e migrar o backoffice Blade sem duplicar autorização;
+- manter assets locais e separar telemetria real de conteúdo ilustrativo;
+- preparar a linguagem visual que o Vue poderá reutilizar no P13, sem
+  compartilhar markup ou regra de domínio.
+
+Esta é uma trilha paralela ao P3: ela não muda a ordem backend-first nem
+antecipa o frontend do cliente. Veja o [relatório vivo do P2.6](phases/p2-6-visual-foundation.md).
 
 ### P3 — API Inventory / OpenAPI
 

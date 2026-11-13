@@ -48,10 +48,23 @@
                             <td>@include('admin.users.partials.status', ['active' => $menu->is_active])</td>
                             <td>@include('admin.menus.partials.kind', ['menu' => $menu])</td>
                             <td class="actions">
-                                <a href="{{ route('admin.menus.show', $menu) }}">Ver<span class="sr-only"> {{ $menu->label }}</span></a>
-                                @can('update', $menu)
-                                    <a href="{{ route('admin.menus.edit', $menu) }}">Editar<span class="sr-only"> {{ $menu->label }}</span></a>
-                                @endcan
+                                <div class="action-icons">
+                                    <x-admin.action-icon
+                                        :href="route('admin.menus.show', $menu)"
+                                        icon="view"
+                                        :label="'Ver '.$menu->label"
+                                        tooltip="Ver"
+                                    />
+
+                                    @can('update', $menu)
+                                        <x-admin.action-icon
+                                            :href="route('admin.menus.edit', $menu)"
+                                            icon="edit"
+                                            :label="'Editar '.$menu->label"
+                                            tooltip="Editar"
+                                        />
+                                    @endcan
+                                </div>
                             </td>
                         </tr>
                     @endforeach

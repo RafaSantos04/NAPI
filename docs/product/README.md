@@ -34,6 +34,9 @@ Project, Application e Environment com integridade de tenant no PostgreSQL;
 veja o [relatório do P2](phases/p2-projects-applications-environments.md).
 P2.5 fechou o gate de abuso da plataforma antes do P3; veja o
 [relatório do P2.5](phases/p2-5-platform-security-gate.md).
+P2.6 está em andamento, em paralelo ao P3, para estabelecer a identidade e
+os componentes do backoffice Blade sem antecipar o cliente Vue; veja o
+[relatório do P2.6](phases/p2-6-visual-foundation.md).
 P3 está em andamento: especificações OpenAPI por Application com versões
 imutáveis; veja o [relatório do P3](phases/p3-api-inventory-openapi.md).
 Os demais agregados comerciais continuam planejados. Antes de cada fase devem ser escritos e

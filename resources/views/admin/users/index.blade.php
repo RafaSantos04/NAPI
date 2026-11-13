@@ -55,18 +55,38 @@
                                 <time datetime="{{ $user->created_at->toIso8601String() }}">{{ $user->created_at->format('d/m/Y') }}</time>
                             </td>
                             <td class="actions">
-                                @can('delete', $user)
-                                    <form method="POST" action="{{ route('admin.users.destroy', $user) }}"
-                                          data-confirm="Excluir {{ $user->name }}? A conta será removida da listagem e perderá o acesso. O histórico será preservado.">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-danger">Excluir<span class="sr-only"> {{ $user->name }}</span></button>
-                                    </form>
-                                @endcan
-                                <a href="{{ route('admin.users.show', $user) }}">Ver<span class="sr-only"> {{ $user->name }}</span></a>
-                                @can('update', $user)
-                                    <a href="{{ route('admin.users.edit', $user) }}">Editar<span class="sr-only"> {{ $user->name }}</span></a>
-                                @endcan
+                                <div class="action-icons">
+                                    <x-admin.action-icon
+                                        :href="route('admin.users.show', $user)"
+                                        icon="view"
+                                        :label="'Ver '.$user->name"
+                                        tooltip="Ver"
+                                    />
+
+                                    @can('update', $user)
+                                        <x-admin.action-icon
+                                            :href="route('admin.users.edit', $user)"
+                                            icon="edit"
+                                            :label="'Editar '.$user->name"
+                                            tooltip="Editar"
+                                        />
+                                    @endcan
+
+                                    @can('delete', $user)
+                                        <form method="POST" action="{{ route('admin.users.destroy', $user) }}"
+                                              data-confirm="Excluir {{ $user->name }}? A conta será removida da listagem e perderá o acesso. O histórico será preservado.">
+                                            @csrf
+                                            @method('DELETE')
+                                            <x-admin.action-icon
+                                                type="submit"
+                                                icon="delete"
+                                                variant="danger"
+                                                :label="'Excluir '.$user->name"
+                                                tooltip="Excluir"
+                                            />
+                                        </form>
+                                    @endcan
+                                </div>
                             </td>
                         </tr>
                     @endforeach

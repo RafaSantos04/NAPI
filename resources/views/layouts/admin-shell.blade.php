@@ -4,10 +4,18 @@
 @extends('layouts.admin')
 
 @section('header')
-    <a class="brand" href="{{ route('admin.home') }}">{{ config('app.name', 'NAPI') }} <span>Admin</span></a>
+    @include('admin.partials.brand')
+
+    <div class="adapter-status" aria-label="Adapter de autenticação atual">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span>Sessão web</span>
+    </div>
 
     <div class="header-end">
-        <span class="muted">{{ auth()->user()->email }}</span>
+        <span class="actor">
+            <span class="actor-label">Operador autenticado</span>
+            <span class="actor-email">{{ auth()->user()->email }}</span>
+        </span>
         {{-- Self-service, not a section: AdminNavigation decides who is
              privileged, so a link everyone sees cannot live there. --}}
         <a href="{{ route('admin.tokens.index') }}" @if (request()->routeIs('admin.tokens.*')) aria-current="page" @endif>Meus tokens</a>
@@ -19,13 +27,26 @@
 @endsection
 
 @section('sidebar')
+    <div class="sidebar-heading">
+        <span>Áreas autorizadas</span>
+        <span class="badge badge-active">{{ count($adminNavigation) }}</span>
+    </div>
+
     <ul>
         @foreach ($adminNavigation as $item)
             <li>
-                <a href="{{ route($item['route']) }}" @if (request()->routeIs($item['active'])) aria-current="page" @endif>{{ $item['label'] }}</a>
+                <a href="{{ route($item['route']) }}" @if (request()->routeIs($item['active'])) aria-current="page" @endif>
+                    <span class="nav-index" aria-hidden="true">{{ str_pad((string) $loop->iteration, 2, '0', STR_PAD_LEFT) }}</span>
+                    <span>{{ $item['label'] }}</span>
+                </a>
             </li>
         @endforeach
     </ul>
+
+    <div class="sidebar-foot">
+        <span>Autorização em camadas</span>
+        <span class="mono">ADR-0008</span>
+    </div>
 @endsection
 
 @push('scripts')

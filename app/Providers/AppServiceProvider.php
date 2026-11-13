@@ -89,7 +89,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Sidebar of the signed-in admin area: only the sections the user's
         // Policies allow (AdminNavigation). Hiding a link is not authorization.
-        View::composer('layouts.admin-shell', function ($view) {
+        View::composer(['layouts.admin-shell', 'admin.home'], function ($view) {
             $actor = auth()->user();
 
             $view->with('adminNavigation', $actor instanceof User ? AdminNavigation::for($actor) : []);

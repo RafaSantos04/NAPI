@@ -1,7 +1,7 @@
 {{-- Dropdown anchored to the top-right button. <details> gives the toggle and
      keyboard support without JS; the script below only adds focus, Escape
      and click-outside. Opens by itself when the last attempt failed. --}}
-<details class="login" id="login-panel" {{ $errors->any() ? 'open' : '' }}>
+<details class="login" id="login-panel" {{ $errors->any() || ($expanded ?? false) ? 'open' : '' }}>
     <summary class="btn">Entrar</summary>
 
     <div class="login-panel">
