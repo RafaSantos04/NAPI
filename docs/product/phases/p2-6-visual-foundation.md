@@ -54,6 +54,8 @@ como referências visuais não executáveis.
 - header identifica corretamente o adapter como **sessão web**;
 - sidebar mantém a lista produzida por `AdminNavigation`;
 - landing de login e home administrativa adotam a nova identidade;
+- landing pública apresenta o produto, seu estágio real e os caminhos de
+  contato e acesso administrativo;
 - telas existentes herdam campos, botões, tabelas, badges, mensagens e foco
   pelos estilos compartilhados.
 
@@ -69,6 +71,7 @@ como referências visuais não executáveis.
 | P2.6-T06 | autenticação, confirmação de senha e tokens |
 | P2.6-T07 | IAM e Security Lab |
 | P2.6-T08 | acessibilidade, QA visual, documentação e JUDGE |
+| P2.6-T09 | landing institucional pública e canal de contato |
 
 ## Gates
 

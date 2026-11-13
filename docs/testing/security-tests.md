@@ -30,7 +30,7 @@ então, nenhum teste nem factory traz senha literal:
 | Situação | Fonte da senha |
 |---|---|
 | Usuário criado pela factory (inclusive `adminUser()`) | `UserFactory::password()`: aleatória a cada execução, gerada com `Str::password()` e calculada uma vez |
-| Usuário semeado (`seededUser()`) | `UserSeeder::DEMO_PASSWORD`, publicada de propósito e restrita a `local` e `testing` (FIND-038) |
+| Usuário semeado (`seededUser()`) | `UserFactory::password()` injetada em `security.seed.user_password` antes do `DatabaseSeeder`; produção usa `NAPI_SEED_USER_PASSWORD` apenas em `local`/`testing` (FIND-038) |
 | Senha errada, senha nova ou senha própria de um teste | `Str::password()` |
 | Valor que é o próprio assunto de uma validação | literal curto (menos de 6 caracteres, como `'short'`) |
 

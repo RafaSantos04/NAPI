@@ -14,7 +14,7 @@ atualizada após P1, após P2 (27/10/2026) e após o P2.5 (30/10/2026).
 | Testes | 682, 3.659 assertions após o P2.5 (628 após P2) |
 | Formatação | `composer lint` aprovado |
 | Análise estática | `composer analyse` aprovado, sem erros |
-| Stack instalada | Laravel 13.32, PHP 8.4.27, Sanctum 4.3, PostgreSQL, Pest 4.7 |
+| Stack instalada | Laravel 13.42, PHP 8.4.27, Sanctum 4.3, PostgreSQL, Pest 4.7 |
 
 ## Entregue no código
 
@@ -31,7 +31,7 @@ atualizada após P1, após P2 (27/10/2026) e após o P2.5 (30/10/2026).
 | Tenancy P1 | Organization, Membership, contexto por rota, permissions contextuais, invariante de owner | fundação dos agregados comerciais |
 | Árvore P2 | Project, Application, Environment com FK composta, trigger de imutabilidade, arquivamento, papel `manager`, responsável e escopo autorizado | base para inventário OpenAPI e assessments |
 | Security gate P2.5 | proteção de credenciais única admin × API, limiter por usuário, conta privilegiada com token só no admin e senha reconfirmada, corpo até 64 KB, UTF-8, tetos de lista e senha (ADR-0013) | pré-requisito cumprido para o import OpenAPI do P3 |
-| Visual foundation P2.6 | tokens Cyber Zinc & Emerald, marca local e evolução inicial do shell, landing e home do admin | trilha em andamento; preserva o Blade como backoffice e o Vue para o P13 |
+| Visual foundation P2.6 | tokens Cyber Zinc & Emerald, marca local, evolução do shell, home do admin e landing institucional pública | trilha em andamento; preserva o Blade como backoffice e o Vue para o P13 |
 
 As Fases 4.3 e 4.4 estão implementadas. O texto original do novo roadmap as
 marcava como planejamento, mas os commits `833e0dd` a `051b2c0`, as rotas,
@@ -63,15 +63,16 @@ As ocorrências de “finding” existentes pertencem ao Reality Check interno e
 
 ## Dívidas que viram gates do produto
 
-Os findings atuais continuam válidos. Antes de exposição pública ou dados de
-clientes, o roadmap deve endereçar pelo menos:
+Os gates de abuso FIND-016, FIND-018 e FIND-026 foram resolvidos no P2.5. A
+exposição pública agora segue a
+[revisão de deploy](../security/public-deployment-review.md), inclusive proxy
+confiável específico, TLS, isolamento de portas, backup e bootstrap do admin.
+Continuam relevantes:
 
-- FIND-016: rate limiting além do login;
-- FIND-018: sinais de enumeração no login;
-- FIND-024: personas do Lab administráveis como usuários comuns;
-- FIND-026: bytes UTF-8 inválidos resultam em 500;
-- parcelas abertas de FIND-012, 013, 015 e 020, conforme o recurso que as
-  acionar.
+- FIND-024 enquanto o Security Lab existir (ele permanece desligado em
+  produção);
+- parcelas abertas de FIND-012, 015 e 020, conforme o recurso que as acionar;
+- os riscos operacionais e de MFA registrados na revisão de deploy.
 
 FIND-008 é bloqueador antes de qualquer funcionalidade que leia, pesquise ou
 exiba CPF. O MVP não precisa usar CPF e não deve ampliar essa superfície.

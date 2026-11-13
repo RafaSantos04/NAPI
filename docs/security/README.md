@@ -11,6 +11,7 @@ Controles de segurança **existentes** no NAPI e seus limites.
 | [security-policies.md](security-policies.md) | Least privilege, deny by default e o catálogo de invariantes, com local de aplicação e teste |
 | [audit.md](audit.md) | O que é auditado, como e com quais limitações |
 | [threat-model.md](threat-model.md) | Ameaças por superfície, mitigação existente e risco residual |
+| [public-deployment-review.md](public-deployment-review.md) | Gate de código e infraestrutura antes de publicar a aplicação |
 | [idor.md](idor.md) | IDOR/BOLA: a falha, a Policy que a fecha e o teste do [Security Lab](../modules/security.md) |
 | [mass-assignment.md](mass-assignment.md) | Mass Assignment: propriedade permitida × protegida, o papel de `$fillable` e do contrato da operação, e o teste do Security Lab |
 

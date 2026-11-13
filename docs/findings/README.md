@@ -1933,3 +1933,29 @@ pede ou gera a senha. Não foi criado agora porque nenhuma fase o consome
 --force` cria perfis e menus e nenhuma conta; o `UserSeeder` direto é
 recusado; em `local`, as três contas existem. Duas mutações pegas (seeder
 sem a trava; `DatabaseSeeder` chamando sempre).
+
+### Hardening (2026-11-13)
+
+A senha publicada foi removida do `UserSeeder`. Em `local` e `testing`, a
+criação dos três usuários demo agora exige `NAPI_SEED_USER_PASSWORD`, lida por
+`config/security.php`, sem fallback, com ao menos 12 caracteres e no máximo
+72 bytes. O valor é hasheado
+antes da persistência e o seeder aborta sem criar usuários quando a variável
+está ausente ou fora do intervalo. `TestCredentialsTest` passou a varrer
+também `database/seeders`, impedindo a reintrodução de credenciais literais.
+
+### Deploy (2026-11-13)
+
+O follow-up foi entregue por `napi:bootstrap-admin`. O comando lê nome, e-mail
+e senha da configuração, exige senha com ao menos 12 caracteres e no máximo
+72 bytes, cria a conta com o perfil de sistema `admin` e registra os eventos
+do domínio. Um lock no perfil serializa primeiras inicializações concorrentes.
+Se já existe administrador ativo, o comando não exige os segredos, não cria
+outra conta e não troca a senha existente. Também recusa elevar uma conta
+comum que já use o e-mail configurado. O entrypoint de produção executa o
+comando após migrations e seed estrutural; o segredo inicial deve ser
+removido do ambiente depois do primeiro login.
+
+**Tests:** `tests/Feature/BootstrapAdministratorCommandTest.php`.
+O seeder também passou a atualizar as contas demo existentes, permitindo
+rotacionar imediatamente um hash criado antes deste hardening.

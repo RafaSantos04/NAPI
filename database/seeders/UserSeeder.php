@@ -11,20 +11,18 @@ use RuntimeException;
 class UserSeeder extends Seeder
 {
     /**
-     * Where accounts with a published password may exist. Anywhere else,
-     * one `db:seed --force` would create an administrator anyone can log in
-     * as (FIND-038).
+     * Demo accounts are local fixtures. Anywhere else, one `db:seed --force`
+     * must never create an administrator (FIND-038).
      *
      * @var list<string>
      */
     public const ENVIRONMENTS = ['local', 'testing'];
 
-    /**
-     * Published on purpose (docs/modules/iam.md), which is why the accounts
-     * stay in ENVIRONMENTS. Tests that sign in as a seeded user use this
-     * constant instead of repeating the value.
-     */
-    public const DEMO_PASSWORD = 'password';
+    private const PASSWORD_MIN_CHARACTERS = 12;
+
+    // Bcrypt ignores bytes after the 72nd; refusing them avoids two different
+    // configured values authenticating as the same password.
+    private const PASSWORD_MAX_BYTES = 72;
 
     /**
      * Seed the application's demo users.
@@ -32,35 +30,60 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         if (! app()->environment(self::ENVIRONMENTS)) {
-            throw new RuntimeException('Demo users have a published password and are only seeded in local and testing.');
+            throw new RuntimeException('Demo users are only seeded in local and testing.');
         }
 
+        $password = $this->password();
         $admin = Profile::where('slug', 'admin')->firstOrFail();
         $dev = Profile::where('slug', 'dev')->firstOrFail();
         $viewer = Profile::where('slug', 'viewer')->firstOrFail();
 
-        $adminUser = User::create([
-            'name' => 'Admin User',
-            'email' => 'admin@napi.dev',
-            'password' => Hash::make(self::DEMO_PASSWORD),
-            'is_active' => true,
-        ]);
-        $adminUser->profiles()->attach($admin->id, ['assigned_by' => $adminUser->id]);
+        $adminUser = User::updateOrCreate(
+            ['email' => 'admin@napi.dev'],
+            [
+                'name' => 'Admin User',
+                'password' => Hash::make($password),
+                'is_active' => true,
+            ],
+        );
+        $adminUser->profiles()->sync([$admin->id => ['assigned_by' => $adminUser->id]]);
 
-        $devUser = User::create([
-            'name' => 'Dev User',
-            'email' => 'dev@napi.dev',
-            'password' => Hash::make(self::DEMO_PASSWORD),
-            'is_active' => true,
-        ]);
-        $devUser->profiles()->attach($dev->id, ['assigned_by' => $adminUser->id]);
+        $devUser = User::updateOrCreate(
+            ['email' => 'dev@napi.dev'],
+            [
+                'name' => 'Dev User',
+                'password' => Hash::make($password),
+                'is_active' => true,
+            ],
+        );
+        $devUser->profiles()->sync([$dev->id => ['assigned_by' => $adminUser->id]]);
 
-        $viewerUser = User::create([
-            'name' => 'Viewer User',
-            'email' => 'viewer@napi.dev',
-            'password' => Hash::make(self::DEMO_PASSWORD),
-            'is_active' => true,
-        ]);
-        $viewerUser->profiles()->attach($viewer->id, ['assigned_by' => $adminUser->id]);
+        $viewerUser = User::updateOrCreate(
+            ['email' => 'viewer@napi.dev'],
+            [
+                'name' => 'Viewer User',
+                'password' => Hash::make($password),
+                'is_active' => true,
+            ],
+        );
+        $viewerUser->profiles()->sync([$viewer->id => ['assigned_by' => $adminUser->id]]);
+    }
+
+    private function password(): string
+    {
+        $password = config('security.seed.user_password');
+
+        if (! is_string($password) || trim($password) === '') {
+            throw new RuntimeException('NAPI_SEED_USER_PASSWORD must be set before seeding demo users.');
+        }
+
+        $characters = mb_strlen($password);
+        $bytes = strlen($password);
+
+        if ($characters < self::PASSWORD_MIN_CHARACTERS || $bytes > self::PASSWORD_MAX_BYTES) {
+            throw new RuntimeException('NAPI_SEED_USER_PASSWORD must contain at least 12 characters and at most 72 bytes.');
+        }
+
+        return $password;
     }
 }

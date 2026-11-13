@@ -22,6 +22,12 @@ Os testes usam `RefreshDatabase`, e os testes em `tests/Feature/IAM` rodam
 
 `DatabaseSeeder` → `ProfileSeeder` → `MenuSeeder` → `UserSeeder`. A ordem
 importa: menus e usuários buscam perfis por slug com `firstOrFail()`. Os
-usuários criados são de **demonstração**, com senha fraca definida no
-seeder, e não devem ser semeados em produção. Conteúdo semeado em
+usuários criados são de **demonstração**, restritos a `local` e `testing`.
+A senha vem de `NAPI_SEED_USER_PASSWORD`, precisa ter ao menos 12 caracteres
+e no máximo 72 bytes e não tem fallback; ausente ou fora desse intervalo, o
+seeder aborta antes de criar
+qualquer usuário. O valor preenchido fica apenas no `.env`, nunca no Git.
+O `UserSeeder` é idempotente: executá-lo novamente rotaciona o hash e restaura
+o perfil esperado das três contas, sem duplicá-las.
+Conteúdo semeado em
 [iam.md](../modules/iam.md#estado-semeado-demonstração).

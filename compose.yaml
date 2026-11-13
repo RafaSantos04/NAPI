@@ -1,0 +1,104 @@
+name: napi
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: napi-app:${NAPI_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    init: true
+    depends_on:
+      db:
+        condition: service_healthy
+        restart: true
+    environment:
+      APP_NAME: NAPI
+      APP_ENV: production
+      APP_KEY: ${APP_KEY:?Set a unique APP_KEY}
+      APP_DEBUG: "false"
+      APP_URL: ${APP_URL:?Set the public HTTPS URL}
+      APP_LOCALE: pt_BR
+      APP_FALLBACK_LOCALE: pt_BR
+      LOG_CHANNEL: stderr
+      LOG_LEVEL: warning
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_DATABASE: ${DB_DATABASE:-napi}
+      DB_USERNAME: ${DB_USERNAME:-napi}
+      DB_PASSWORD: ${DB_PASSWORD:?Set a strong database password}
+      DB_SSLMODE: prefer
+      CACHE_STORE: database
+      QUEUE_CONNECTION: sync
+      SESSION_DRIVER: database
+      SESSION_LIFETIME: "120"
+      SESSION_ENCRYPT: "true"
+      SESSION_SECURE_COOKIE: "true"
+      SESSION_HTTP_ONLY: "true"
+      SESSION_SAME_SITE: lax
+      SESSION_COOKIE: napi_session
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:?Set the Nginx Proxy Manager network CIDR}
+      SECURITY_LAB_ENABLED: "false"
+      NAPI_BOOTSTRAP_ADMIN_NAME: ${NAPI_BOOTSTRAP_ADMIN_NAME:-NAPI Administrator}
+      NAPI_BOOTSTRAP_ADMIN_EMAIL: ${NAPI_BOOTSTRAP_ADMIN_EMAIL:-}
+      NAPI_BOOTSTRAP_ADMIN_PASSWORD: ${NAPI_BOOTSTRAP_ADMIN_PASSWORD:-}
+    expose:
+      - "80"
+    networks:
+      internal:
+      proxy:
+        aliases:
+          - napi-app
+    volumes:
+      - napi_storage:/var/www/html/storage
+    read_only: true
+    tmpfs:
+      - /var/www/html/bootstrap/cache:rw,noexec,nosuid,size=16m
+      - /tmp:rw,noexec,nosuid,size=64m
+      - /run:rw,nosuid,size=16m
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "php", "-r", "$$body = @file_get_contents('http://127.0.0.1/up'); exit($$body === false ? 1 : 0);"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+  db:
+    image: postgres:16.16-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-napi}
+      POSTGRES_USER: ${DB_USERNAME:-napi}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set a strong database password}
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256 --data-checksums
+    networks:
+      - internal
+    volumes:
+      - napi_postgres_data:/var/lib/postgresql/data
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    stop_grace_period: 60s
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+networks:
+  internal:
+    internal: true
+  proxy:
+    external: true
+    name: ${PROXY_NETWORK:-npm_default}
+
+volumes:
+  napi_storage:
+  napi_postgres_data:
+

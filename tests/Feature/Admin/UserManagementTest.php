@@ -7,7 +7,7 @@ use App\Models\AuditLog;
 use App\Models\Profile;
 use App\Models\User;
 use App\Models\UserDetails;
-use Database\Seeders\UserSeeder;
+use Database\Factories\UserFactory;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -20,7 +20,7 @@ describe('Admin area access', function () {
         $user = seededUser($slug);
 
         $this->from('/admin')
-            ->post('/admin/login', ['email' => $user->email, 'password' => UserSeeder::DEMO_PASSWORD])
+            ->post('/admin/login', ['email' => $user->email, 'password' => UserFactory::password()])
             ->assertRedirect('/admin')
             ->assertSessionHasErrors(['email' => 'Esta conta não tem acesso à área administrativa.']);
 

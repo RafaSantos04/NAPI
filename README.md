@@ -26,6 +26,14 @@ NAPI é um projeto de portfólio: uma "API Page" com duas grandes áreas — **I
     php artisan key:generate
     ```
 
+    Para semear os usuários de demonstração, defina também uma senha privada
+    com ao menos 12 caracteres e no máximo 72 bytes em
+    `NAPI_SEED_USER_PASSWORD`. Coloque valores com caracteres especiais entre
+    aspas no `.env`. O seeder aborta se ela não estiver configurada e o valor
+    preenchido não deve ser commitado. Depois
+    de alterar essa variável, rode `php artisan db:seed --class=UserSeeder`
+    para rotacionar a senha das contas demo existentes.
+
 3. Crie os bancos `napi` (desenvolvimento) e `napi_test` (testes) no PostgreSQL, então rode as migrations:
 
     ```bash
@@ -46,6 +54,18 @@ composer test      # Pest
 composer lint       # Laravel Pint (--test)
 composer analyse    # PHPStan / Larastan
 ```
+
+## Deploy com Docker e Portainer
+
+O [`compose.yaml`](compose.yaml) sobe somente a aplicação e o PostgreSQL. O
+banco fica numa rede interna sem porta publicada; a aplicação entra também na
+rede externa do Nginx Proxy Manager. Migrações, dados estruturais, bootstrap
+do primeiro administrador e scheduler rodam no contêiner da aplicação.
+
+O passo a passo, as variáveis obrigatórias, o primeiro acesso e o checklist do
+proxy estão em [`docs/deployment-portainer.md`](docs/deployment-portainer.md).
+A avaliação que deve ser concluída antes da exposição pública está em
+[`docs/security/public-deployment-review.md`](docs/security/public-deployment-review.md).
 
 ## Áreas do projeto
 

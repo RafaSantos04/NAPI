@@ -3,14 +3,13 @@
 use Symfony\Component\Finder\Finder;
 
 // P2.5-T08: GitHub's secret scanning flagged a password literal in a test
-// ('secret-password'). Test credentials come from UserFactory::password(),
-// UserSeeder::DEMO_PASSWORD or Str::password(), so a literal that looks like
-// a credential fails here, before it reaches a push.
+// ('secret-password'). Test credentials come from UserFactory::password() or
+// Str::password(), and demo seeder credentials come from configuration. A
+// literal that looks like a credential fails here, before it reaches a push.
 //
 // Still allowed: values that are the subject of a validation, shorter than
 // 6 characters (the smallest password any rule accepts), and messages,
-// which contain spaces. The demo seeder is out of scope: its password is
-// published on purpose and the accounts exist only in local and testing.
+// which contain spaces.
 
 /**
  * @return list<string> "file:line" of each credential literal found
@@ -27,7 +26,11 @@ function credentialLiterals(): array
         "/Hash::make\(\s*'[^']+'\s*\)/",
     ];
 
-    $files = Finder::create()->files()->name('*.php')->in([$root.'/tests', $root.'/database/factories']);
+    $files = Finder::create()->files()->name('*.php')->in([
+        $root.'/tests',
+        $root.'/database/factories',
+        $root.'/database/seeders',
+    ]);
     $found = [];
 
     foreach ($files as $file) {
@@ -43,6 +46,6 @@ function credentialLiterals(): array
     return $found;
 }
 
-it('keeps credential literals out of the tests and the factories', function () {
+it('keeps credential literals out of tests, factories and seeders', function () {
     expect(credentialLiterals())->toBe([]);
 });

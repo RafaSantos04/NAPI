@@ -28,10 +28,12 @@ pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
     ->in('Feature');
 
-// IAM tests rely on the demo users/profiles/menu permissions from
-// DatabaseSeeder. Scoped to this directory (not globally) so it doesn't
-// collide with other Feature tests that create their own 'admin'-slug
-// profiles via factories.
+// Any Feature test may invoke DatabaseSeeder explicitly. Keep its credential
+// random and owned by the test process, never by phpunit.xml or the repository.
+uses()->beforeEach(fn () => config(['security.seed.user_password' => UserFactory::password()]))->in('Feature');
+
+// IAM tests rely on demo users/profiles/menu permissions from DatabaseSeeder.
+// Seed only these directories so other tests can own their fixture graph.
 uses()->beforeEach(fn () => $this->seed())->in('Feature/IAM', 'Feature/Security', 'Feature/Admin', 'Feature/SecurityLab');
 
 // The Security Lab is off by default (config/security.php). Its own tests turn

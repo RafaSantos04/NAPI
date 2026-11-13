@@ -23,7 +23,7 @@ uma plataforma de validação de segurança de APIs para equipes de
 desenvolvimento e software houses. A definição, o confronto com o código e o
 roadmap P0–P14 estão em [Produto](product/README.md).
 
-Stack confirmada no repositório: Laravel 13.32, PHP 8.4.27 (constraint `^8.4.27`, plataforma do Composer fixada em `8.4.27`),
+Stack confirmada no repositório: Laravel 13.42, PHP 8.4.27 (constraint `^8.4.27`, plataforma do Composer fixada em `8.4.27`),
 PostgreSQL, Sanctum 4, Pest 4, Larastan (nível 6) e Pint (preset `laravel`).
 
 ## Arquitetura
@@ -47,6 +47,7 @@ PostgreSQL, Sanctum 4, Pest 4, Larastan (nível 6) e Pint (preset `laravel`).
 - [Políticas e invariantes de segurança](security/security-policies.md)
 - [Auditoria](security/audit.md)
 - [Threat model](security/threat-model.md)
+- [Revisão para exposição pública](security/public-deployment-review.md)
 - [IDOR / BOLA](security/idor.md) (Security Lab)
 - [Mass Assignment](security/mass-assignment.md) (Security Lab)
 
@@ -59,6 +60,10 @@ PostgreSQL, Sanctum 4, Pest 4, Larastan (nível 6) e Pint (preset `laravel`).
 
 - [Índice do banco](database/README.md)
 - [Schema](database/schema.md)
+
+## Operação
+
+- [Deploy com Docker Compose, Portainer e Nginx Proxy Manager](deployment-portainer.md)
 
 ## Testes
 
