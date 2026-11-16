@@ -1,73 +1,79 @@
 name: napi
 
 services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: napi:${NAPI_IMAGE_TAG:-latest}
-    restart: unless-stopped
-    init: true
-    environment:
-      APP_NAME: NAPI
-      APP_ENV: production
-      APP_KEY: ${APP_KEY:?Set a unique APP_KEY}
-      APP_DEBUG: "false"
-      APP_URL: ${APP_URL:?Set the public HTTPS URL}
-      APP_LOCALE: pt_BR
-      APP_FALLBACK_LOCALE: pt_BR
-      LOG_CHANNEL: stderr
-      LOG_LEVEL: warning
-      DB_CONNECTION: pgsql
-      DB_HOST: ${DB_HOST:?Set the external PostgreSQL host}
-      DB_PORT: ${DB_PORT:-5432}
-      DB_DATABASE: ${DB_DATABASE:-napi}
-      DB_USERNAME: ${DB_USERNAME:-napi}
-      DB_PASSWORD: ${DB_PASSWORD:?Set the external PostgreSQL password}
-      DB_SSLMODE: ${DB_SSLMODE:-prefer}
-      CACHE_STORE: database
-      QUEUE_CONNECTION: sync
-      SESSION_DRIVER: database
-      SESSION_LIFETIME: "120"
-      SESSION_ENCRYPT: "true"
-      SESSION_SECURE_COOKIE: "${SESSION_SECURE_COOKIE:-true}"
-      SESSION_HTTP_ONLY: "true"
-      SESSION_SAME_SITE: lax
-      SESSION_COOKIE: napi_session
-      TRUSTED_PROXIES: ${TRUSTED_PROXIES:?Set the exact Nginx Proxy Manager source IP}
-      SECURITY_LAB_ENABLED: "false"
-      NAPI_BOOTSTRAP_ADMIN_NAME: ${NAPI_BOOTSTRAP_ADMIN_NAME:-NAPI Administrator}
-      NAPI_BOOTSTRAP_ADMIN_EMAIL: ${NAPI_BOOTSTRAP_ADMIN_EMAIL:-}
-      NAPI_BOOTSTRAP_ADMIN_PASSWORD: ${NAPI_BOOTSTRAP_ADMIN_PASSWORD:-}
-    ports:
-      - "${APP_PORT:-8006}:80"
-    networks:
-      - default
-      - database
-    volumes:
-      - napi_storage:/var/www/html/storage
-    read_only: true
-    tmpfs:
-      - /var/www/html/bootstrap/cache:rw,noexec,nosuid,size=16m
-      - /tmp:rw,noexec,nosuid,size=64m
-      - /run:rw,nosuid,size=16m
-    security_opt:
-      - no-new-privileges:true
-    pids_limit: 256
-    stop_grace_period: 30s
-    healthcheck:
-      test: ["CMD", "php", "-r", "$$body = @file_get_contents('http://127.0.0.1/up'); exit($$body === false ? 1 : 0);"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 60s
+    app:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        image: napi:${NAPI_IMAGE_TAG:-latest}
+        restart: unless-stopped
+        init: true
+        environment:
+            APP_NAME: NAPI
+            APP_ENV: production
+            APP_KEY: ${APP_KEY:?Set a unique APP_KEY}
+            APP_DEBUG: "false"
+            APP_URL: ${APP_URL:?Set the public HTTPS URL}
+            APP_LOCALE: pt_BR
+            APP_FALLBACK_LOCALE: pt_BR
+            LOG_CHANNEL: stderr
+            LOG_LEVEL: warning
+            DB_CONNECTION: pgsql
+            DB_HOST: ${DB_HOST:?Set the external PostgreSQL host}
+            DB_PORT: ${DB_PORT:-5432}
+            DB_DATABASE: ${DB_DATABASE:-napi}
+            DB_USERNAME: ${DB_USERNAME:-napi}
+            DB_PASSWORD: ${DB_PASSWORD:?Set the external PostgreSQL password}
+            DB_SSLMODE: ${DB_SSLMODE:-prefer}
+            CACHE_STORE: database
+            QUEUE_CONNECTION: sync
+            SESSION_DRIVER: database
+            SESSION_LIFETIME: "120"
+            SESSION_ENCRYPT: "true"
+            SESSION_SECURE_COOKIE: "${SESSION_SECURE_COOKIE:-true}"
+            SESSION_HTTP_ONLY: "true"
+            SESSION_SAME_SITE: lax
+            SESSION_COOKIE: napi_session
+            TRUSTED_PROXIES: ${TRUSTED_PROXIES:?Set the exact Nginx Proxy Manager source IP}
+            SECURITY_LAB_ENABLED: "false"
+            NAPI_BOOTSTRAP_ADMIN_NAME: ${NAPI_BOOTSTRAP_ADMIN_NAME:-NAPI Administrator}
+            NAPI_BOOTSTRAP_ADMIN_EMAIL: ${NAPI_BOOTSTRAP_ADMIN_EMAIL:-}
+            NAPI_BOOTSTRAP_ADMIN_PASSWORD: ${NAPI_BOOTSTRAP_ADMIN_PASSWORD:-}
+        ports:
+            - "${APP_PORT:-8006}:80"
+        networks:
+            - default
+            - database
+        volumes:
+            - napi_storage:/var/www/html/storage
+        read_only: true
+        tmpfs:
+            - /var/www/html/bootstrap/cache:rw,noexec,nosuid,size=16m
+            - /tmp:rw,noexec,nosuid,size=64m
+            - /run:rw,nosuid,size=16m
+        security_opt:
+            - no-new-privileges:true
+        pids_limit: 256
+        stop_grace_period: 30s
+        healthcheck:
+            test:
+                [
+                    "CMD",
+                    "php",
+                    "-r",
+                    "$$body = @file_get_contents('http://127.0.0.1/up'); exit($$body === false ? 1 : 0);",
+                ]
+            interval: 30s
+            timeout: 5s
+            retries: 3
+            start_period: 60s
 
 networks:
-  # Existing network of the separately managed PostgreSQL stack. Joining it
-  # lets the app reach the database by container name without publishing 5432.
-  database:
-    external: true
-    name: ${DB_NETWORK:-psql_default}
+    # Existing network of the separately managed PostgreSQL stack. Joining it
+    # lets the app reach the database by container name without publishing 5432.
+    database:
+        external: true
+        name: ${DB_NETWORK:-shared_network}
 
 volumes:
-  napi_storage:
+    napi_storage:
