@@ -15,7 +15,7 @@ itens só podem ser fechados na VM e por um teste de fora da rede.
 | Dependências | `composer audit --locked` após Laravel 13.42, CommonMark 2.10.7 e Symfony corrigido | sem advisories conhecidos |
 | Segredos | `.env` ignorado e não rastreado; exemplos só têm placeholders | aprovado; rotacionar o segredo exposto na conversa |
 | Conta inicial | demo recusada em produção; `napi:bootstrap-admin` idempotente e testado | aprovado |
-| Banco | sem `ports`, rede Docker interna, SCRAM e volume dedicado | aprovado no manifesto; validar na VM |
+| Banco | PostgreSQL fora do stack, conexão por `DB_*` obrigatórios e `DB_SSLMODE` configurável | depende do banco externo: sem `5432` público, SCRAM, `pg_hba` restrito à origem do `app` e TLS se estiver em outra máquina |
 | Porta da aplicação | `APP_PORT` publica 8006 para o NPM | restringir no firewall ao IP do NPM |
 | Aplicação | `APP_DEBUG=false`, cookies secure/httpOnly, sessão criptografada, Lab desligado | aprovado no manifesto |
 | Proxy | `TRUSTED_PROXIES` obrigatório e específico | depende do IP de origem visto pela aplicação |
@@ -37,7 +37,10 @@ itens só podem ser fechados na VM e por um teste de fora da rede.
 - Restringir `/admin` por VPN ou allowlist enquanto MFA não existir. Se o admin
   permanecer público, registrar formalmente esse risco residual e monitorar
   lockouts e autenticações.
-- Automatizar backup externo do PostgreSQL e executar ao menos uma restauração.
+- Confirmar que o PostgreSQL externo não expõe `5432` publicamente, aceita só
+  a origem do contêiner `app` e, fora da mesma máquina, exige TLS.
+- Automatizar backup externo do PostgreSQL e executar ao menos uma restauração
+  (responsabilidade de quem opera o banco, agora fora deste stack).
 - Rodar build e smoke test na mesma arquitetura da VM antes da abertura.
 
 ## Riscos residuais conhecidos

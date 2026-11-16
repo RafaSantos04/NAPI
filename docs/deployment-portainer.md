@@ -2,10 +2,10 @@
 
 [← Documentação](README.md) · [Revisão de segurança](security/public-deployment-review.md)
 
-O `compose.yaml` mantém o stack em dois serviços: `app` e `db`. O PostgreSQL
-fica somente na rede `internal`; `app` entra também numa bridge normal criada
-pelo próprio Compose e publica `APP_PORT` (8006 por padrão) no host. O Nginx
-Proxy Manager (NPM) deve encaminhar para
+O `compose.yaml` tem um único serviço: `app`. O PostgreSQL não faz parte do
+stack — ele é provisionado, atualizado e copiado (backup) separadamente, e a
+aplicação o acessa por `DB_HOST`/`DB_PORT`. `app` publica `APP_PORT` (8006 por
+padrão) no host. O Nginx Proxy Manager (NPM) deve encaminhar para
 `http://IP_DA_VM:8006`.
 
 ## Pré-requisitos
@@ -14,9 +14,23 @@ Proxy Manager (NPM) deve encaminhar para
 2. Somente `80/tcp` e `443/tcp` devem ficar públicos. Restrinja `8006` ao IP
    de origem do NPM; restrinja também `81` (NPM admin), `9443` (Portainer) e
    SSH a VPN ou IPs administrativos. Nunca publique `5432`.
-3. Confirme qual endereço de origem aparece no access log da aplicação quando
+3. PostgreSQL externo pronto antes do deploy:
+   - banco e role criados, com a role como **dona** do banco (as migrations
+     criam tabelas e triggers no schema `public`):
+     `CREATE ROLE napi LOGIN PASSWORD '...';` e
+     `CREATE DATABASE napi OWNER napi;`;
+   - `pg_hba.conf` aceitando a origem do contêiner `app` com `scram-sha-256`;
+   - o `app` entra na rede Docker do stack do banco, declarada como externa
+     (`DB_NETWORK`, padrão `psql_default`), e usa o nome do contêiner em
+     `DB_HOST` (padrão do exemplo: `psql`). Confira o nome real em
+     **Networks** no Portainer ou com `docker network ls`; se ela não existir,
+     o deploy falha antes de criar o contêiner. A porta `5432` não precisa ser
+     publicada. `localhost` e `127.0.0.1` apontam para o próprio contêiner e
+     não funcionam;
+   - se o banco estiver em outra máquina, `DB_SSLMODE=require` (ou mais estrito).
+4. Confirme qual endereço de origem aparece no access log da aplicação quando
    o NPM faz uma requisição. Esse endereço exato entra em `TRUSTED_PROXIES`.
-4. Gere valores únicos para `APP_KEY`, senha do banco e senha inicial do
+5. Gere valores únicos para `APP_KEY`, senha do banco e senha inicial do
    administrador. A senha que apareceu na conversa deve ser considerada
    comprometida e não pode ser reutilizada.
 
@@ -33,8 +47,10 @@ nunca `*`.
 3. Faça o deploy. O entrypoint executa, em ordem:
    `migrate --force`, seed de perfis/menus, `napi:bootstrap-admin`, cache de
    produção e, então, Apache + scheduler.
-4. Acompanhe os logs. O serviço só inicia se o banco estiver saudável e o
-   primeiro administrador puder existir com segurança.
+4. Acompanhe os logs. Se o banco externo estiver inacessível, o `migrate`
+   falha, o contêiner encerra e o Docker o reinicia (`restart: unless-stopped`)
+   até a conexão funcionar; corrija `DB_*` em vez de esperar. O serviço também
+   não inicia se o primeiro administrador não puder existir com segurança.
 5. No NPM, crie o Proxy Host com scheme `http`, hostname igual ao IP da VM e
    porta `8006`. Solicite certificado válido, habilite Force SSL e HTTP/2. HSTS só
    deve ser ligado depois que HTTPS estiver confirmado em todo o domínio.
@@ -47,9 +63,8 @@ Para um teste temporário sem TLS em `http://IP_DA_VM:8006`, use esse endereço
 em `APP_URL` e `SESSION_SECURE_COOKIE=false`. Antes de passar pelo NPM, volte
 `APP_URL` para o domínio HTTPS e `SESSION_SECURE_COOKIE=true`.
 
-Não mude apenas `DB_PASSWORD` depois que o volume já foi inicializado: o
-PostgreSQL aplica `POSTGRES_PASSWORD` na criação do cluster. Uma rotação exige
-alterar a senha do role no banco e a variável da aplicação na mesma janela.
+Para rotacionar a senha do banco, altere a senha da role no PostgreSQL e
+`DB_PASSWORD` no stack na mesma janela, depois redeploye.
 
 ## Verificação na VM
 
@@ -60,7 +75,7 @@ docker compose config --quiet
 docker compose build --pull
 docker compose up -d
 docker compose ps
-docker compose logs --tail=200 app db
+docker compose logs --tail=200 app
 ```
 
 Confirme também, de uma origem que não seja o NPM, que `8006` está bloqueada e
@@ -71,9 +86,15 @@ imagem precisam ser executados na VM.
 
 ## Persistência e recuperação
 
-Os volumes `napi_postgres_data` e `napi_storage` são persistentes; caches de
-bootstrap são recriados em memória a cada início. O volume de banco precisa de backup automatizado, criptografado
-e externo à VM, com teste de restauração. Não trate volume Docker como backup.
-Antes de atualizar a imagem, gere backup e valide `composer audit --no-dev`, a
-suíte e as migrations em staging.
+O stack mantém apenas o volume `napi_storage`; caches de bootstrap são
+recriados em memória a cada início. Os dados ficam no PostgreSQL externo, cujo
+backup automatizado, criptografado e fora da VM, com teste de restauração, é
+responsabilidade de quem opera o banco. Antes de atualizar a imagem, gere
+backup e valide `composer audit --no-dev`, a suíte e as migrations em staging —
+o entrypoint roda `migrate --force` no banco externo a cada início.
+
+Se uma versão anterior deste stack chegou a subir com o serviço `db`, o
+contêiner e o volume `napi_postgres_data` ficam órfãos no host: migre os dados
+que existirem (`pg_dump`/`pg_restore`) para o banco externo e só então
+remova-os.
 

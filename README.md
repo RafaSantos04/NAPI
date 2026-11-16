@@ -57,11 +57,13 @@ composer analyse    # PHPStan / Larastan
 
 ## Deploy com Docker e Portainer
 
-O [`compose.yaml`](compose.yaml) sobe somente a aplicação e o PostgreSQL. O
-banco fica numa rede interna sem porta publicada; a aplicação publica a porta
-configurável `APP_PORT` (8006 por padrão) para o Nginx Proxy Manager.
-Migrações, dados estruturais, bootstrap do primeiro administrador e scheduler
-rodam no contêiner da aplicação.
+O [`compose.yaml`](compose.yaml) sobe somente a aplicação. O PostgreSQL é
+provisionado e operado separadamente; o stack recebe a conexão por `DB_HOST`,
+`DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` e `DB_SSLMODE`. A
+aplicação publica a porta configurável `APP_PORT` (8006 por padrão) para o
+Nginx Proxy Manager. Migrações, dados estruturais, bootstrap do primeiro
+administrador e scheduler rodam no contêiner da aplicação, contra o banco
+externo.
 
 O passo a passo, as variáveis obrigatórias, o primeiro acesso e o checklist do
 proxy estão em [`docs/deployment-portainer.md`](docs/deployment-portainer.md).
