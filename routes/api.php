@@ -1,6 +1,7 @@
 <?php
 
 use App\Domain\ApiInventory\OpenApiParser;
+use App\Http\Controllers\Api\V1\ApiEndpointController;
 use App\Http\Controllers\Api\V1\ApiSpecificationController;
 use App\Http\Controllers\Api\V1\ApiSpecificationStatusController;
 use App\Http\Controllers\Api\V1\ApiSpecificationVersionController;
@@ -189,6 +190,9 @@ Route::prefix('v1')->group(function () {
                         Route::get('/versions/{version}', [ApiSpecificationVersionController::class, 'show'])
                             ->middleware('permission:api_specifications.view')
                             ->name('versions.show');
+                        Route::get('/versions/{version}/endpoints', [ApiEndpointController::class, 'index'])
+                            ->middleware('permission:api_specifications.view')
+                            ->name('versions.endpoints.index');
                     });
             });
 
