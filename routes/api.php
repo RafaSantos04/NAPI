@@ -1,7 +1,9 @@
 <?php
 
+use App\Domain\ApiInventory\OpenApiParser;
 use App\Http\Controllers\Api\V1\ApiSpecificationController;
 use App\Http\Controllers\Api\V1\ApiSpecificationStatusController;
+use App\Http\Controllers\Api\V1\ApiSpecificationVersionController;
 use App\Http\Controllers\Api\V1\ApplicationController;
 use App\Http\Controllers\Api\V1\ApplicationStatusController;
 use App\Http\Controllers\Api\V1\Auth\AuthController;
@@ -17,6 +19,8 @@ use App\Http\Controllers\Api\V1\ProjectStatusController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\UserProfileController;
 use App\Http\Controllers\Api\V1\UserStatusController;
+use App\Http\Middleware\LimitRequestBodySize;
+use App\Http\Middleware\RejectInvalidUtf8;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -165,6 +169,26 @@ Route::prefix('v1')->group(function () {
                         Route::post('/restore', [ApiSpecificationStatusController::class, 'restore'])
                             ->middleware('permission:api_specifications.archive_own')
                             ->name('restore');
+
+                        Route::get('/versions', [ApiSpecificationVersionController::class, 'index'])
+                            ->middleware('permission:api_specifications.view')
+                            ->name('versions.index');
+                        // Import (ADR-0014, decisions 10 to 14): the 64 KB
+                        // limit that runs before authentication gives way to
+                        // 2 MB after the token, the permission and the
+                        // import quotas. The body is the document itself, so
+                        // its UTF-8 check is the parser's (422, audited).
+                        Route::post('/versions', [ApiSpecificationVersionController::class, 'store'])
+                            ->withoutMiddleware([LimitRequestBodySize::class.':'.LimitRequestBodySize::MAX_BYTES, RejectInvalidUtf8::class])
+                            ->middleware([
+                                'permission:api_specifications.import',
+                                'throttle:api-imports',
+                                LimitRequestBodySize::class.':'.OpenApiParser::MAX_BYTES,
+                            ])
+                            ->name('versions.store');
+                        Route::get('/versions/{version}', [ApiSpecificationVersionController::class, 'show'])
+                            ->middleware('permission:api_specifications.view')
+                            ->name('versions.show');
                     });
             });
 

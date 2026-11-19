@@ -1,5 +1,6 @@
 <?php
 
+use App\Domain\ApiInventory\OpenApiParser;
 use App\Http\Middleware\LimitRequestBodySize;
 use App\Http\Middleware\RejectInvalidUtf8;
 use App\Models\Menu;
@@ -40,9 +41,11 @@ describe('Input limits coverage', function () {
 
         expect($routes)->not->toBeEmpty();
 
-        foreach ($routes as $route) {
+        $defaultLimit = LimitRequestBodySize::class.':'.LimitRequestBodySize::MAX_BYTES;
+
+        foreach ($routes->reject(fn (RoutingRoute $route) => $route->getName() === 'organizations.api-specifications.versions.store') as $route) {
             $middleware = array_values(app('router')->gatherRouteMiddleware($route));
-            $bodyLimit = array_search(LimitRequestBodySize::class, $middleware, true);
+            $bodyLimit = array_search($defaultLimit, $middleware, true);
             $utf8 = array_search(RejectInvalidUtf8::class, $middleware, true);
             $binding = array_search(SubstituteBindings::class, $middleware, true);
 
@@ -50,6 +53,23 @@ describe('Input limits coverage', function () {
                 ->and($utf8)->toBeGreaterThan($bodyLimit, "{$route->uri()} checks UTF-8 out of order")
                 ->and($binding)->toBeGreaterThan($utf8, "{$route->uri()} binds before checking UTF-8");
         }
+    });
+
+    // The one exception (ADR-0014, decisions 11 to 14): the OpenAPI import
+    // reads its 2 MB body only after the token, the permission and both
+    // import quotas, and the body is the document, checked by the parser.
+    it('limits the OpenAPI import body to 2 MB after authentication, permission and quotas', function () {
+        $route = Route::getRoutes()->getByName('organizations.api-specifications.versions.store');
+        $middleware = array_values(app('router')->gatherRouteMiddleware($route));
+        $bodyLimit = array_search(LimitRequestBodySize::class.':'.OpenApiParser::MAX_BYTES, $middleware, true);
+
+        expect($bodyLimit)->toBe(count($middleware) - 1)
+            ->and($middleware)->not->toContain(LimitRequestBodySize::class.':'.LimitRequestBodySize::MAX_BYTES)
+            ->and(array_slice($middleware, 0, $bodyLimit))->toContain(
+                'Illuminate\Auth\Middleware\Authenticate:sanctum',
+                'Illuminate\Routing\Middleware\ThrottleRequests:api-imports',
+                'App\Http\Middleware\CheckPermission:api_specifications.import',
+            );
     });
 });
 

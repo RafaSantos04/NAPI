@@ -14,33 +14,35 @@ use Symfony\Component\HttpFoundation\Response;
  * post_max_size, so a chunked body (no Content-Length) passes it; this one
  * also measures the body itself, reading at most one byte past the limit.
  *
- * A route that needs more (the P3 import) states its own limit; none does
- * yet. Multipart bodies are parsed by PHP before this runs, so they rely on
+ * A route that needs more states its own limit as a parameter
+ * (`LimitRequestBodySize:<bytes>`), placed after authentication and its
+ * quotas: the OpenAPI import takes 2 MB (ADR-0014, decisions 11 and 13).
+ * Multipart bodies are parsed by PHP before this runs, so they rely on
  * Content-Length and the server limits.
  */
 class LimitRequestBodySize
 {
     public const MAX_BYTES = 64 * 1024;
 
-    public function handle(Request $request, Closure $next): Response
+    public function handle(Request $request, Closure $next, ?string $maxBytes = null): Response
     {
-        if ($this->exceedsLimit($request)) {
+        if ($this->exceedsLimit($request, $maxBytes === null ? self::MAX_BYTES : (int) $maxBytes)) {
             throw new PostTooLargeException('The request body is too large.');
         }
 
         return $next($request);
     }
 
-    private function exceedsLimit(Request $request): bool
+    private function exceedsLimit(Request $request, int $maxBytes): bool
     {
         $declared = $request->server('CONTENT_LENGTH');
 
         if (is_numeric($declared)) {
-            return (int) $declared > self::MAX_BYTES;
+            return (int) $declared > $maxBytes;
         }
 
         $body = $request->getContent(true);
 
-        return strlen((string) stream_get_contents($body, self::MAX_BYTES + 1)) > self::MAX_BYTES;
+        return strlen((string) stream_get_contents($body, $maxBytes + 1)) > $maxBytes;
     }
 }

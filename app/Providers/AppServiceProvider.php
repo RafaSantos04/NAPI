@@ -87,6 +87,24 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(120)->by('user:'.$request->user()?->getAuthIdentifier());
         });
 
+        // OpenAPI import, the first expensive operation (ADR-0014, decision
+        // 10): every attempt counts, rejected ones included. Throttling runs
+        // before route binding and the permission layer, so the
+        // organization's quota is spent only by someone who may import there;
+        // anyone else gets 404 later without draining another tenant's quota.
+        RateLimiter::for('api-imports', function (Request $request) {
+            $user = $request->user();
+            $limits = [Limit::perHour(10)->by('api-imports:user:'.$user?->getAuthIdentifier())];
+            $organization = $request->route('organization');
+            $organization = $organization instanceof Organization ? $organization : Organization::find($organization);
+
+            if ($user instanceof User && $organization !== null && $user->hasPermission('api_specifications.import', $organization)) {
+                $limits[] = Limit::perHour(30)->by('api-imports:organization:'.$organization->id);
+            }
+
+            return $limits;
+        });
+
         // Sidebar of the signed-in admin area: only the sections the user's
         // Policies allow (AdminNavigation). Hiding a link is not authorization.
         View::composer(['layouts.admin-shell', 'admin.home'], function ($view) {

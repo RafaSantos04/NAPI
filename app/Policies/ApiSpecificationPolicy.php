@@ -40,6 +40,16 @@ class ApiSpecificationPolicy
     }
 
     /**
+     * Separate from `update`: importing is the expensive operation, so a
+     * future configurable matrix can withhold it alone (ADR-0014, decision 19).
+     */
+    public function import(User $user, ApiSpecification $specification, Organization $organization): bool
+    {
+        return $specification->organization_id === $organization->id
+            && $user->hasPermission('api_specifications.import', $organization);
+    }
+
+    /**
      * `api_specifications.archive` reaches any specification of the
      * organization; `api_specifications.archive_own` only those under a
      * project the user's membership created: the project's creator governs

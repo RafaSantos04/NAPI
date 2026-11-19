@@ -1,5 +1,8 @@
 <?php
 
+use App\Domain\ApiInventory\Exceptions\ApiImportInProgressException;
+use App\Domain\ApiInventory\Exceptions\ApiSpecificationLifecycleException;
+use App\Domain\ApiInventory\Exceptions\OpenApiParseException;
 use App\Domain\IAM\Exceptions\LastActiveAdministratorException;
 use App\Domain\IAM\Exceptions\TooManyLoginAttemptsException;
 use App\Domain\Projects\Exceptions\ApplicationLifecycleException;
@@ -37,8 +40,11 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Input limits run first in both groups, before the session,
         // authentication and route binding (ADR-0013): body size, then
-        // UTF-8 (which may read the body).
-        $inputLimits = [LimitRequestBodySize::class, RejectInvalidUtf8::class];
+        // UTF-8 (which may read the body). The limit is named with its
+        // parameter so a route can exclude exactly this one and state its
+        // own (ADR-0014, decision 13): Laravel excludes a bare class name
+        // with every parameter.
+        $inputLimits = [LimitRequestBodySize::class.':'.LimitRequestBodySize::MAX_BYTES, RejectInvalidUtf8::class];
         $middleware->api(prepend: $inputLimits);
 
         // Session (admin area): deactivated users lose the session, and
@@ -54,6 +60,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->dontReport(ProjectLifecycleException::class);
         $exceptions->dontReport(ApplicationLifecycleException::class);
         $exceptions->dontReport(EnvironmentLifecycleException::class);
+        $exceptions->dontReport(ApiSpecificationLifecycleException::class);
+        $exceptions->dontReport(ApiImportInProgressException::class);
+        // A refused document (422), already in the audit trail.
+        $exceptions->dontReport(OpenApiParseException::class);
         // An expected refusal, already signalled by the Lockout event.
         $exceptions->dontReport(TooManyLoginAttemptsException::class);
 
