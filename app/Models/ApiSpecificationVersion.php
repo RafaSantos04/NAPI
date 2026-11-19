@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * One successful import, append-only in the database (ADR-0014): assessments
@@ -58,5 +59,13 @@ class ApiSpecificationVersion extends Model
     public function importedBy(): BelongsTo
     {
         return $this->belongsTo(OrganizationMembership::class, 'imported_by_membership_id');
+    }
+
+    /**
+     * @return HasMany<ApiEndpoint, $this>
+     */
+    public function endpoints(): HasMany
+    {
+        return $this->hasMany(ApiEndpoint::class);
     }
 }

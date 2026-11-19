@@ -55,7 +55,7 @@ function treeUri(array $tree, string $template): string
  */
 function projectTreeSnapshot(): array
 {
-    return collect(['projects', 'applications', 'environments', 'api_specifications', 'api_specification_versions'])
+    return collect(['projects', 'applications', 'environments', 'api_specifications', 'api_specification_versions', 'api_endpoints'])
         ->mapWithKeys(fn (string $table) => [$table => DB::table($table)->orderBy('id')->get()->toJson()])
         ->all();
 }

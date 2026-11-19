@@ -66,11 +66,19 @@ final class OpenApiParser
         $this->validateTree($decoded, '', 0, []);
 
         $endpoints = [];
+        $templates = [];
         foreach ($paths as $path => $pathItem) {
             $pathPointer = '/paths/'.$this->escape((string) $path);
             if (! is_string($path) || ! str_starts_with($path, '/') || str_contains($path, '?') || str_contains($path, '#')) {
                 throw $this->error('malformed', $pathPointer, 'A path must start with / and contain no query or fragment.');
             }
+            // OpenAPI treats /pets/{id} and /pets/{petId} as the same path;
+            // the api_endpoints_identity_unique index applies the same rule.
+            $template = (string) preg_replace('/\{[^}]*\}/', '{}', $path);
+            if (isset($templates[$template])) {
+                throw $this->error('malformed', $pathPointer, 'Paths that differ only in parameter names are identical.');
+            }
+            $templates[$template] = true;
             if (! is_array($pathItem) || ($pathItem !== [] && array_is_list($pathItem))) {
                 throw $this->error('malformed', $pathPointer, 'A path item must be an object.');
             }

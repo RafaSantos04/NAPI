@@ -92,6 +92,10 @@ it('rejects malformed input without exposing its contents', function (string $bo
     'external reference' => [openApiJson(['components' => ['schemas' => ['Order' => ['$ref' => 'https://example.com/schema']]]]), 'json', 'external_ref', '/components/schemas/Order/$ref'],
     'missing reference' => [openApiJson(['components' => ['schemas' => ['Order' => ['$ref' => '#/components/schemas/Missing']]]]), 'json', 'malformed', '/components/schemas/Order/$ref'],
     'reference cycle' => [openApiJson(['components' => ['schemas' => ['Order' => ['$ref' => '#/components/schemas/Order']]]]), 'json', 'ref_cycle', '#/components/schemas/Order/$ref'],
+    'paths differing only in parameter names' => [openApiJson(['paths' => [
+        '/orders/{id}' => ['get' => ['responses' => ['200' => ['description' => 'OK']]]],
+        '/orders/{orderId}' => ['delete' => ['responses' => ['204' => ['description' => 'Deleted']]]],
+    ]]), 'json', 'malformed', '/paths/~1orders~1{orderId}'],
     'invalid path' => [openApiJson(['paths' => ['orders' => ['get' => ['responses' => []]]]]), 'json', 'malformed', '/paths/orders'],
     'unknown path item field' => [openApiJson(['paths' => ['/orders' => ['GET' => ['responses' => []]]]]), 'json', 'malformed', '/paths/~1orders/GET'],
     'missing responses' => [openApiJson(['paths' => ['/orders' => ['get' => []]]]), 'json', 'malformed', '/paths/~1orders/get/responses'],
