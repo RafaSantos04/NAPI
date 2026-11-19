@@ -4,8 +4,11 @@
 
 ## Status
 
-Proposed (P3-T01, decisões fechadas com o usuário em 2026-11-01). Passa a
-Accepted no JUDGE do P3-T06, como o ADR-0013 no P2.5.
+Accepted (JUDGE do P3-T06, 2026-11-19). Proposto no P3-T01, com as
+decisões fechadas com o usuário em 2026-11-01; os números e ajustes do T04
+estão marcados no texto. O JUDGE corrigiu FIND-039 e FIND-040 e deixou
+registrado um ponto a decidir: aceitar schemas recursivos (ciclo de `$ref`),
+hoje recusados pela decisão 14.
 
 Decisões do usuário:
 
@@ -178,7 +181,8 @@ duplicá-lo por ambiente criaria duas verdades.
     1. bytes (middleware) e UTF-8;
     2. decodificação com profundidade máxima: `json_decode` com `depth`; no
        YAML, `Yaml::parse()` sem objetos PHP e sem tags customizadas,
-       recusando tipo inválido;
+       recusando tipo inválido (`PARSE_EXCEPTION_ON_INVALID_TYPE` desde o
+       JUDGE: sem ela, as tags PHP viravam `null` em silêncio, FIND-040);
     3. campo `openapi` em **3.0.x ou 3.1.x**. Swagger 2.0 recebe uma
        mensagem própria pedindo a conversão; volta ao escopo se algum piloto
        pedir;

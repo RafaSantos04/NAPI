@@ -71,6 +71,8 @@ Nos demais casos, a evidência é a leitura do código citado.
 | [FIND-036](#find-036--token-derivado-pode-viver-mais-que-o-token-de-origem) | Token derivado pode viver mais que o token de origem | Security | Low | — | — (aberto na revisão Admin × API do P2.5, RESOLVED no P2.5-T06) |
 | [FIND-037](#find-037--rotas-de-storage-fora-dos-limites-de-entrada) | Rotas de storage fora dos limites de entrada | Security | Low | — | — (aberto e resolvido no JUDGE do P2.5) |
 | [FIND-038](#find-038--seeder-cria-administrador-com-senha-conhecida) | Seeder cria administrador com senha conhecida | Security | Medium | — | — (aberto no JUDGE do P2.5, RESOLVED em 2026-11-01) |
+| [FIND-039](#find-039--campos-longos-do-documento-derrubam-o-import-com-500) | Campos longos do documento derrubam o import com 500 | Security | Low | — | — (aberto e resolvido no JUDGE do P3) |
+| [FIND-040](#find-040--tags-php-do-yaml-viram-null-em-silêncio) | Tags PHP do YAML viram `null` em silêncio | Security | Low | — | — (aberto e resolvido no JUDGE do P3) |
 
 Contagem: 1 High · 14 Medium · 19 Low · 4 Improvement. Nenhum Critical.
 
@@ -1959,3 +1961,68 @@ removido do ambiente depois do primeiro login.
 **Tests:** `tests/Feature/BootstrapAdministratorCommandTest.php`.
 O seeder também passou a atualizar as contas demo existentes, permitindo
 rotacionar imediatamente um hash criado antes deste hardening.
+
+---
+
+## FIND-039 — Campos longos do documento derrubam o import com 500
+
+**Categoria:** Security · **Severidade:** Low
+
+### Evidence
+
+Encontrado no JUDGE do P3. O parser exigia `info.title` e `info.version`
+não vazios e `openapi` no formato `3.(0|1).<dígitos>`, mas não limitava o
+tamanho. As colunas da versão são `varchar(255)`, `varchar(100)` e
+`varchar(20)`. Um título de 300 caracteres, um `info.version` de 150 ou um
+`openapi` como `3.1.` seguido de 30 dígitos passavam pelo parser e
+quebravam no INSERT: **500** em vez de 422.
+
+### Risk
+
+Baixo: não há vazamento nem estado parcial (a transação desfaz tudo), mas o
+cliente recebe um erro de servidor por um documento inválido, a recusa não
+entra na trilha e o log ganha um erro que não é do sistema.
+
+### Status (JUDGE do P3)
+
+**Status:** RESOLVED (P3-T06)
+
+**Resolution:** o parser recusa título acima de 255 e `info.version` acima
+de 100 caracteres (`mb_strlen`, como o PostgreSQL conta) com
+`limit_exceeded`, e o patch do `openapi` aceita no máximo 9 dígitos
+(`unsupported_version`).
+
+**Tests:** `tests/Feature/ApiInventory/ApiSpecificationImportTest.php`
+(três casos no dataset de recusas; `accepts a title of 255 characters,
+counted in characters, not bytes`).
+
+---
+
+## FIND-040 — Tags PHP do YAML viram `null` em silêncio
+
+**Categoria:** Security · **Severidade:** Low
+
+### Evidence
+
+Encontrado no JUDGE do P3. O `Yaml::parse($documento, 0)` não executa
+`!php/const`, `!php/object` nem `!php/enum`, mas também não os recusa:
+devolve `null` no lugar. Um documento com `x-leak: !php/const PHP_VERSION`
+era aceito e importado. A decisão 14 do ADR-0014 pedia recusar tipo
+inválido.
+
+### Risk
+
+Baixo: nenhuma constante, objeto ou enum chega ao sistema, e o original
+guardado é o texto enviado. O problema é o documento aceito com um valor
+diferente do escrito, contra o que o ADR decidiu.
+
+### Status (JUDGE do P3)
+
+**Status:** RESOLVED (P3-T06)
+
+**Resolution:** `Yaml::parse()` com `Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE`;
+as três tags viram 422 (`malformed`). A mutação que volta para a flag `0`
+derruba os três casos.
+
+**Tests:** `tests/Feature/ApiInventory/ApiSpecificationImportTest.php`
+(`YAML PHP constant tag`, `YAML PHP object tag`, `YAML PHP enum tag`).

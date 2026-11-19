@@ -3,15 +3,16 @@
 [← Produto](README.md) · [Modelo de produto](product-model.md) · [Fases existentes](../phases/README.md)
 
 Auditoria inicial realizada em 25/10/2026 contra o commit `6ff5cdd` e
-atualizada após P1, após P2 (27/10/2026) e após o P2.5 (30/10/2026).
+atualizada após P1, após P2 (27/10/2026), após o P2.5 (30/10/2026) e após o
+backend do P3 (19/11/2026).
 
 ## Baseline verificado
 
 | Evidência | Resultado |
 |---|---|
-| Rotas próprias | 93 (`php artisan route:list --except-vendor`) |
-| Models / migrations / Actions | 14 / 24 / 36 |
-| Testes | 682, 3.659 assertions após o P2.5 (628 após P2) |
+| Rotas próprias | 103 (`php artisan route:list --except-vendor`) |
+| Models / migrations / Actions | 17 / 27 / 42 |
+| Testes | 871, 4.623 assertions após o P3 (682 após o P2.5) |
 | Formatação | `composer lint` aprovado |
 | Análise estática | `composer analyse` aprovado, sem erros |
 | Stack instalada | Laravel 13.42, PHP 8.4.27, Sanctum 4.3, PostgreSQL, Pest 4.7 |
@@ -31,6 +32,7 @@ atualizada após P1, após P2 (27/10/2026) e após o P2.5 (30/10/2026).
 | Tenancy P1 | Organization, Membership, contexto por rota, permissions contextuais, invariante de owner | fundação dos agregados comerciais |
 | Árvore P2 | Project, Application, Environment com FK composta, trigger de imutabilidade, arquivamento, papel `manager`, responsável e escopo autorizado | base para inventário OpenAPI e assessments |
 | Security gate P2.5 | proteção de credenciais única admin × API, limiter por usuário, conta privilegiada com token só no admin e senha reconfirmada, corpo até 64 KB, UTF-8, tetos de lista e senha (ADR-0013) | pré-requisito cumprido para o import OpenAPI do P3 |
+| Inventário P3 | especificação por Application, versão imutável com o original, import JSON/YAML sem rede (lock, cotas, idempotência, recusa auditada) e inventário de endpoints por versão (ADR-0014) | base dos assessments do P4 |
 | Visual foundation P2.6 | tokens Cyber Zinc & Emerald, marca local, evolução do shell, home do admin e landing institucional pública | trilha em andamento; preserva o Blade como backoffice e o Vue para o P13 |
 
 As Fases 4.3 e 4.4 estão implementadas. O texto original do novo roadmap as
@@ -40,7 +42,8 @@ os controllers e os testes comprovam a entrega.
 ## Ainda não existe
 
 - allowlist executável de alvo (o escopo autorizado do P2 é registro humano);
-- importação/versionamento OpenAPI e inventário de endpoints;
+- projeção de parâmetros, bodies, responses e tags do contrato (o original
+  já fica guardado em cada versão);
 - assessment de cliente, finding comercial, evidência ou reteste;
 - filas/processamento assíncrono em uso, storage de evidências ou workers
   isolados;
@@ -58,7 +61,7 @@ As ocorrências de “finding” existentes pertencem ao Reality Check interno e
 |---|---|
 | Reutilizar | identidade global `User`, Actions/DTOs, Policies, eventos/auditoria, PostgreSQL, API versionada, backoffice Blade e práticas de teste |
 | Evoluir | rate limits; contrato JSON; filas; storage; observabilidade |
-| Criar | ApiSpecificationVersion, Assessment, Finding, Evidence, Retest, Report e frontend SaaS |
+| Criar | Assessment, Finding, Evidence, Retest, Report e frontend SaaS |
 | Não misturar | `SecurityTestRun` com assessment/check real; `SecurityLabResource` com alvo/evidência de cliente; `Profile/Menu` globais com papéis de tenant sem ADR; Blade interno com a experiência do cliente |
 
 ## Dívidas que viram gates do produto

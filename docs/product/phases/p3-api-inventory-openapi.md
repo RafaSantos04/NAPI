@@ -2,7 +2,7 @@
 
 [← Produto](../README.md) · [Roadmap](../roadmap.md) · [ADR-0014](../../architecture/decisions/ADR-0014-api-specification-versioning.md) · [ADR-0013](../../architecture/decisions/ADR-0013-abuse-limits-and-expensive-operations.md) · [P2.5](p2-5-platform-security-gate.md)
 
-**Status:** em andamento (T01–T05 concluídos) · **JUDGE:** no P3-T06
+**Status:** backend concluído e validado · **JUDGE:** concluído (2026-11-19) · **Pendente:** P3-UI01 (catálogo Blade, depende do P2.6-T05)
 
 ## Executive Summary
 
@@ -32,6 +32,7 @@ T01 fixou o modelo e as decisões no
 | T03 | tabela `api_endpoints` (FK composta para a versão, append-only, CHECKs, identidade por método e template de path), `UNIQUE(organization_id, id)` na versão, model, relação e factory; parser recusa paths que só diferem no nome dos parâmetros | alterações do T03 |
 | T04 | correção do "billion laughs" (alvo de `$ref` percorrido uma vez, teto de 500.000 nós, YAML até 512 KB); `POST .../versions` (import) e `GET .../versions[/{version}]`; `ImportApiSpecificationVersion` com lock por organização, idempotência, versão + endpoints + auditoria numa transação e diff no evento; recusa auditada; limiter `api-imports`; `LimitRequestBodySize` com parâmetro | alterações do T04 |
 | T05 | `GET .../versions/{version}/endpoints`: inventário de uma versão, ordenado por path e método, filtro `method` e busca `search` em path e `operationId`, página fixa de 100 | alterações do T05 |
+| T06 | JUDGE; FIND-039 e FIND-040 corrigidos; versões com ids reais na suíte de segurança da árvore; medição de ponta a ponta; ADR-0014 Accepted | alterações do T06 |
 
 O parser recebe bytes e formato já selecionado pelo `Content-Type`. A rota
 HTTP, o limite antes da leitura do corpo, a autorização, a auditoria e a
@@ -182,10 +183,11 @@ assertions), `composer lint` e `composer analyse` aprovados em 19/11/2026.
 | `Feature/ApiInventory/ApiSpecificationIntegrityTest.php` | 16 |
 | `Feature/ApiInventory/ApiEndpointIntegrityTest.php` | 9 (T03) |
 | `Unit/Domain/ApiInventory/OpenApiParserTest.php` | 21 (T02 a T04) |
-| `Feature/ApiInventory/ApiSpecificationImportTest.php` | 33 (T04) |
+| `Feature/ApiInventory/ApiSpecificationImportTest.php` | 48 (33 no T04, 15 no JUDGE) |
 | `Feature/ApiInventory/ApiEndpointTest.php` | 12 (T05) |
 | `Feature/Security/RouteCoverageTest.php` | +1 (T04): o import aplica 2 MB depois de autenticação, permissão e cotas |
 | `Feature/Projects/ProjectTreeLockTest.php` | 1 |
+| `Feature/Security/ProjectTreeSecurityTest.php` (JUDGE) | a árvore ganhou uma versão real: as rotas de versão e de inventário recebem ids de verdade nos testes de não-membro; +1 import com especificação de outra organização, +2 versão e inventário misturados entre organizações, +3 ids malformados na versão |
 | `Feature/Security/ProjectTreeSecurityTest.php` | especificação em todas as regras (auditoria, rollback, isolamento, papel, ids malformados, mass assignment) |
 | `Feature/Security/RouteCoverageTest.php` | "never deletes" cobre `api-specifications` |
 | `Unit/Domain/Tenancy/Enums/OrganizationRoleTest.php` | +6 linhas na matriz |
@@ -280,6 +282,70 @@ Mutações do T05:
 | Coluna `created_by` na especificação | não | criador do Project | — | não criada |
 | Coluna `status` no `audit_logs` | não | resultado no nome da ação e no `meta` | — | não criada; P8 |
 | Matriz de permissões configurável pelo owner | não neste P3 | catálogo fixo (ADR-0011) | — | não criada; card a decidir |
+
+## JUDGE
+
+O card pedia validar specs inválidas e grandes, duplicidade, isolamento,
+idempotência e as decisões arquiteturais. Cada contestação foi atacada com
+teste ou medição.
+
+| Contestação | Evidência | Veredito |
+|---|---|---|
+| 1. Reimportar altera o que um assessment já viu (gate 1) | versão e endpoints append-only por trigger, mesmo por SQL direto; mesmo conteúdo devolve a versão existente; conteúdo novo vira `n + 1`; uma versão por especificação e por formato (`keeps versions per specification and per format`) | refutada |
+| 2. Arquivo malformado expõe parser, filesystem ou rede (gate 2) | 422 com mensagem própria e JSON pointer, sem trecho do documento (marcador ausente da resposta e da trilha); `$ref` `https`, relativo, `file://` e `//host` recusados com `Http::preventStrayRequests()`; o `Domain/ApiInventory` não chama `file_get_contents`, `fopen`, `Http` nem `Storage` (busca no código) | refutada |
+| 3. Tags PHP do YAML entram no sistema | `!php/const`, `!php/object` e `!php/enum` viravam `null` em silêncio: um documento com a tag fora de `openapi` era aceito | **confirmada → FIND-040, corrigido** com `Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE` |
+| 4. Um campo longo derruba o import | título acima de 255, `info.version` acima de 100 e `openapi` com patch de 30 dígitos davam **500** no INSERT | **confirmada → FIND-039, corrigido** no parser (422); 255 caracteres acentuados passam |
+| 5. Documento grande estoura o orçamento de 5 s | ponta a ponta, com gravação: JSON de 2 MB e 2.000 operações em 0,67 s; YAML de pior caso de 512 KB em 2,55 s; bomba de aliases recusada em 0,2 s | refutada (máquina de desenvolvimento) |
+| 6. Anônimo ou alguém acima da cota faz o servidor tratar o corpo grande | `Content-Length` de 3 MB: anônimo → 401 e acima da cota → 429, nunca 413 | refutada |
+| 7. Um estranho esgota a cota de outro tenant | 10 tentativas de fora não contam; 30 dos membros esgotam | refutada |
+| 8. Versão ou inventário acessível de outra organização | ids reais de outra organização sob a própria URL, e o inverso, → 404; ids malformados → 404; não-membro, membership desativada e admin global → 404 em todas as rotas | refutada |
+| 9. Endpoints duplicados no inventário | parser recusa templates equivalentes; índice único por expressão no banco | refutada |
+| 10. A trilha guarda conteúdo do cliente | `meta` comparado campo a campo; marcador ausente; pointer limitado a 255 | refutada |
+| 11. As recusas auditadas inflam a trilha | só 422 é auditado, limitado pelas cotas (10 por usuário e 30 por organização por hora) | refutada |
+| 12. Imports simultâneos quebram a numeração | lock por organização (409), especificação `FOR UPDATE` e `UNIQUE(api_specification_id, number)` como última linha | refutada por desenho; sem teste paralelo real (como no P1 e no P2) |
+| 13. O inventário cobre o que o roadmap pede | o roadmap fala em projetar parâmetros, schemes, bodies, responses e tags; o P3 projeta método, path, `operationId` e `summary` | **confirmada como desvio de escopo**: o original fica em cada versão e o resto pode ser projetado depois sem reimportar (decisão 6). Entra quando o P4 precisar |
+
+Conferência da seção Security Impact do ADR-0014, item a item:
+
+| Item | Teste |
+|---|---|
+| 413 acima do teto; 415 sem `Content-Type` aceito | `rejects a body above 2 MB…`, `rejects other media types…` |
+| 401 e 429 sem tratar o corpo grande | `answers 401…`, `answers 429 above the quota…` |
+| cotas por usuário e por organização, recusas contam | `Import quotas` |
+| malformado, não UTF-8, profundidade, Swagger 2.0 → 422 | dataset de recusas (JSON e YAML) |
+| `$ref` externo sem rede nem disco | dataset de recusas + busca no código |
+| "billion laughs" | `rejects YAML aliases that expand into millions of nodes` |
+| ciclo e expansão acima do teto | dataset de recusas e `OpenApiParserTest` |
+| mesmo conteúdo, uma versão; simultâneos → 409 | `returns the existing version…`, `refuses a second concurrent import…` |
+| versão imutável por SQL direto | `ApiSpecificationIntegrityTest`, `ApiEndpointIntegrityTest` |
+| isolamento e FK composta | `ProjectTreeSecurityTest`, testes de integridade |
+| recusa auditada com motivo e hash, sem conteúdo | dataset de recusas |
+
+### Riscos residuais
+
+- **Schemas recursivos são recusados.** O ADR manda recusar ciclo de
+  `$ref`, e isso pega schemas como `Category.children → Category`, comuns
+  em contratos reais. Desde o T04 cada alvo é percorrido uma vez, então
+  aceitar a recursão já não traz risco de explosão. Recomendação: decidir
+  antes do primeiro piloto se o ciclo passa a ser aceito.
+- A Policy `import` não se distingue de `view` enquanto todo papel tiver as
+  duas chaves (catálogo fixo do ADR-0011).
+- Tempos medidos na máquina de desenvolvimento (Windows, sem JIT); medir de
+  novo no servidor se os contratos crescerem.
+- O limite de 2 MB depende de o Laravel excluir middleware pelo nome exato
+  com parâmetro; o `RouteCoverageTest` falha se isso mudar.
+- Um processo morto segura o lock da organização por até 30 s.
+- YAML sem aspas lê datas como número: `version: 2024-01-01` é recusado
+  com mensagem clara; o cliente precisa pôr aspas.
+- O inventário é mínimo (contestação 13).
+
+### Findings
+
+- **Novos no JUDGE e resolvidos:** FIND-039 (Low) e FIND-040 (Low).
+- Detalhes em [findings](../../findings/README.md).
+
+Verificações do T06: 21 testes novos, suíte completa com 871 testes (4.623
+assertions), `composer lint` e `composer analyse` aprovados em 19/11/2026.
 
 ## Abstraction Review
 

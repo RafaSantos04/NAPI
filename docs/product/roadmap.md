@@ -24,7 +24,7 @@ depois do Release Candidate do backend.
 | P2 | Projects, Applications & Environments | concluída | hierarquia comercial e escopo de ambiente auditáveis |
 | P2.5 | Platform Security Gate | concluída | proteção de credenciais, rate limiting, limites de corpo e de entrada e política de operações caras antes do P3 |
 | P2.6 | Visual Foundation / Admin Design System | em andamento, paralelo ao P3 | identidade e componentes do backoffice sem misturar Blade com o futuro cliente Vue |
-| P3 | API Inventory / OpenAPI | em andamento (T01–T05 concluídos) | import versionado e inventário consultável |
+| P3 | API Inventory / OpenAPI | backend concluído (JUDGE 2026-11-19); P3-UI01 pendente | import versionado e inventário consultável |
 | P4 | Assessments | planejada | assessment manual autorizado com workflow e checklist |
 | P5 | Findings / Evidence | planejada | finding estruturado e evidência privada com redaction |
 | P6 | Retests | planejada | ciclo before/after, autoria e decisão rastreáveis |
@@ -158,6 +158,14 @@ antecipa o frontend do cliente. Veja o [relatório vivo do P2.6](phases/p2-6-vis
 Gate: reimport não altera assessments históricos e arquivos malformados não
 expõem parser, filesystem ou rede.
 
+**Entregue (backend):** gate cumprido. Veja o
+[relatório do P3](phases/p3-api-inventory-openapi.md) e o
+[ADR-0014](../architecture/decisions/ADR-0014-api-specification-versioning.md).
+O inventário projeta método, path, `operationId` e `summary`; parâmetros,
+bodies, responses e tags ficam para quando o P4 precisar, a partir do
+original guardado em cada versão. O catálogo no admin (P3-UI01) depende do
+P2.6-T05.
+
 ### P4 — Assessments
 
 - assessment manual/assistido, checklist e máquina de estados;
@@ -238,7 +246,7 @@ hipótese ainda aberta:
 | P1 | modelo multi-tenant, contexto de organização e autorização de memberships — ADR-0011 entregue |
 | P2 | integridade de tenant da árvore de projetos, lifecycle e papéis — ADR-0012 entregue |
 | P2.5 | política de abuso e de operações caras (credenciais, rate limit, payload, fila) — ADR-0013 entregue (Accepted) |
-| P3 | armazenamento/versionamento do contrato OpenAPI e política para referências externas |
+| P3 | armazenamento/versionamento do contrato OpenAPI e política para referências externas — ADR-0014 entregue (Accepted) |
 | P5 | classificação, criptografia, retenção e acesso a evidências |
 | P7 | snapshots e compartilhamento externo |
 | P9 | entitlement, provedor de billing e lifecycle da assinatura |

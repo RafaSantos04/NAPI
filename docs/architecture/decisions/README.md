@@ -33,7 +33,7 @@ decisão registrada na Fase 3), ela é citada.
 | [ADR-0011](ADR-0011-multi-tenant-organization-context.md) | Organization como tenant, Membership contextual, organização corrente explícita e invariante do último owner | Accepted (P1; catálogo de papéis e permissões estendido pelo ADR-0012) |
 | [ADR-0012](ADR-0012-project-tree-tenant-integrity.md) | Project/Application/Environment com `organization_id`, FK composta e trigger de imutabilidade; papéis owner, manager e member; arquivamento pelo criador | Accepted (P2) |
 | [ADR-0013](ADR-0013-abuse-limits-and-expensive-operations.md) | Proteção de credenciais única para admin e API (identidade, identidade + IP e IP, incremento atômico), senha de conta privilegiada só no admin, limiter por usuário, limite de corpo, UTF-8 e `max:`; política de operações caras para o P3 | Accepted (P2.5, JUDGE do T05) |
-| [ADR-0014](ADR-0014-api-specification-versioning.md) | Especificação OpenAPI por Application, versão imutável e append-only com o original no PostgreSQL, import síncrono pelo corpo bruto (JSON/YAML) até 2 MB, sem `$ref` externo nem rede, rotas rasas, lock e cota por organização e por usuário, recusas auditadas | Proposed (P3-T01, decisões fechadas; aceite no JUDGE do P3-T06) |
+| [ADR-0014](ADR-0014-api-specification-versioning.md) | Especificação OpenAPI por Application, versão imutável e append-only com o original no PostgreSQL, import síncrono pelo corpo bruto (JSON/YAML) até 2 MB, sem `$ref` externo nem rede, rotas rasas, lock e cota por organização e por usuário, recusas auditadas | Accepted (P3, JUDGE do T06) |
 
 ## Template
 
