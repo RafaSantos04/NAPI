@@ -166,6 +166,33 @@ describe('Importing OpenAPI documents', function () {
             ->and(AuditLog::count())->toBe($auditCount);
     });
 
+    it('accepts a title of 255 characters, counted in characters, not bytes', function () {
+        $owner = User::factory()->create();
+        $specification = importableSpecification($owner);
+        $title = str_repeat('é', 255);
+
+        importInto($specification, $owner, json_encode(openApiDocumentWith(overrides: ['info' => ['title' => $title, 'version' => str_repeat('9', 100)]])))
+            ->assertCreated()
+            ->assertJsonPath('data.info_title', $title);
+    });
+
+    it('keeps versions per specification and per format', function () {
+        $owner = User::factory()->create();
+        $specification = importableSpecification($owner);
+        $sibling = ApiSpecification::factory()->for($specification->application)->create();
+        $document = openApiDocumentWith();
+
+        importInto($specification, $owner, json_encode($document))->assertCreated()->assertJsonPath('data.number', 1);
+        importInto($sibling, $owner, json_encode($document))->assertCreated()->assertJsonPath('data.number', 1);
+        // The same contract in YAML is other content: a new version.
+        importInto($specification, $owner, Yaml::dump($document, 10), 'application/yaml')
+            ->assertCreated()
+            ->assertJsonPath('data.number', 2)
+            ->assertJsonPath('data.format', 'yaml');
+
+        expect(ApiSpecificationVersion::count())->toBe(3);
+    });
+
     it('accepts a document above the 64 KB default body limit', function () {
         $owner = User::factory()->create();
         $specification = importableSpecification($owner);
@@ -219,6 +246,19 @@ describe('Refusing OpenAPI imports', function () {
         'remote reference' => [json_encode(openApiDocumentWith(overrides: ['components' => ['schemas' => ['Order' => ['$ref' => 'https://example.com/order.json']]]])), 'application/json', 'external_ref', '/components/schemas/Order/$ref'],
         'reference cycle' => [json_encode(openApiDocumentWith(overrides: ['components' => ['schemas' => ['Order' => ['$ref' => '#/components/schemas/Order']]]])), 'application/json', 'ref_cycle', '/components/schemas/Order/$ref'],
         'YAML above 512 KB' => ["openapi: 3.1.0\n# ".str_repeat('a', 512 * 1024), 'application/yaml', 'limit_exceeded', ''],
+        'malformed YAML' => ["openapi: 3.1.0\ninfo: [".IMPORT_CONTENT_MARKER, 'application/yaml', 'malformed', ''],
+        'YAML not UTF-8' => ["openapi: \"\xFF\"\n", 'application/yaml', 'malformed', ''],
+        // Where a silent null would leave the document valid (FIND-040).
+        'YAML PHP constant tag' => ["openapi: 3.1.0\ninfo: {title: Orders, version: '1'}\npaths: {}\nx-leak: !php/const PHP_VERSION\n", 'application/yaml', 'malformed', ''],
+        'YAML PHP object tag' => ["openapi: 3.1.0\ninfo: {title: Orders, version: '1'}\npaths: {}\nx-object: !php/object 'O:8:\"stdClass\":0:{}'\n", 'application/yaml', 'malformed', ''],
+        'YAML PHP enum tag' => ["openapi: 3.1.0\ninfo: {title: Orders, version: '1'}\npaths: {}\nx-enum: !php/enum Foo::Bar\n", 'application/yaml', 'malformed', ''],
+        'JSON nested above 64 levels' => [str_repeat('[', 70).str_repeat(']', 70), 'application/json', 'malformed', ''],
+        'relative file reference' => [json_encode(openApiDocumentWith(overrides: ['components' => ['schemas' => ['Order' => ['$ref' => 'order.yaml#/Order']]]])), 'application/json', 'external_ref', '/components/schemas/Order/$ref'],
+        'file URL reference' => [json_encode(openApiDocumentWith(overrides: ['components' => ['schemas' => ['Order' => ['$ref' => 'file:///etc/passwd']]]])), 'application/json', 'external_ref', '/components/schemas/Order/$ref'],
+        'protocol-relative reference' => [json_encode(openApiDocumentWith(overrides: ['components' => ['schemas' => ['Order' => ['$ref' => '//attacker.test/order.json']]]])), 'application/json', 'external_ref', '/components/schemas/Order/$ref'],
+        'title above 255 characters' => [json_encode(openApiDocumentWith(overrides: ['info' => ['title' => str_repeat('t', 256), 'version' => '1']])), 'application/json', 'limit_exceeded', '/info/title'],
+        'info version above 100 characters' => [json_encode(openApiDocumentWith(overrides: ['info' => ['title' => 'Orders', 'version' => str_repeat('9', 101)]])), 'application/json', 'limit_exceeded', '/info/version'],
+        'OpenAPI patch number out of range' => [json_encode(openApiDocumentWith(overrides: ['openapi' => '3.1.'.str_repeat('9', 30)])), 'application/json', 'unsupported_version', '/openapi'],
     ]);
 
     it('rejects other media types with 415, without auditing', function (string $contentType) {
@@ -241,6 +281,16 @@ describe('Refusing OpenAPI imports', function () {
         importInto($specification, $owner, str_repeat(' ', 2 * 1024 * 1024 + 1))->assertStatus(413);
 
         expect(AuditLog::count())->toBe($auditCount);
+    });
+
+    it('answers 429 above the quota before looking at the body size', function () {
+        $owner = User::factory()->create();
+        $specification = importableSpecification($owner);
+        foreach (range(1, 10) as $attempt) {
+            importInto($specification, $owner, '{')->assertUnprocessable();
+        }
+
+        importInto($specification, $owner, '{}', server: ['CONTENT_LENGTH' => 3 * 1024 * 1024])->assertTooManyRequests();
     });
 
     it('answers 401 to an anonymous import before looking at its body size', function () {

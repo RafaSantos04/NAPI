@@ -63,7 +63,9 @@ final class OpenApiParser
         if (isset($decoded['swagger']) && ! isset($decoded['openapi'])) {
             throw $this->error('unsupported_version', '/swagger', 'Convert Swagger 2.0 to OpenAPI 3 before importing.');
         }
-        if (! is_string($version) || preg_match('/^3\.(?:0|1)\.\d+$/D', $version) !== 1) {
+        // The patch number is bounded so the value fits the version's
+        // openapi_version column (FIND-039).
+        if (! is_string($version) || preg_match('/^3\.(?:0|1)\.\d{1,9}$/D', $version) !== 1) {
             throw $this->error('unsupported_version', '/openapi', 'Only OpenAPI 3.0.x and 3.1.x are supported.');
         }
 
@@ -71,9 +73,14 @@ final class OpenApiParser
         if (! is_array($info) || array_is_list($info)) {
             throw $this->error('malformed', '/info', 'The info field must be an object.');
         }
-        foreach (['title', 'version'] as $field) {
+        // The lengths of the version's columns: a longer value is the
+        // client's error (422), not a database one (FIND-039).
+        foreach (['title' => 255, 'version' => 100] as $field => $maxLength) {
             if (! is_string($info[$field] ?? null) || trim($info[$field]) === '') {
                 throw $this->error('malformed', '/info/'.$field, 'This field must be a non-empty string.');
+            }
+            if (mb_strlen($info[$field]) > $maxLength) {
+                throw $this->error('limit_exceeded', '/info/'.$field, "This field exceeds {$maxLength} characters.");
             }
         }
 
@@ -154,7 +161,9 @@ final class OpenApiParser
         try {
             return match ($format) {
                 'json' => json_decode($rawDocument, true, self::MAX_DEPTH, JSON_THROW_ON_ERROR),
-                'yaml' => Yaml::parse($rawDocument, 0),
+                // Without objects, constants or custom tags, and refusing them
+                // instead of reading them as null (FIND-040).
+                'yaml' => Yaml::parse($rawDocument, Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE),
                 default => throw $this->error('malformed', '', 'The document format must be JSON or YAML.'),
             };
         } catch (JsonException|ParseException $exception) {
