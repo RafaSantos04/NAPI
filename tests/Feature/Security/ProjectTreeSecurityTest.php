@@ -2,6 +2,7 @@
 
 use App\Domain\Tenancy\Enums\OrganizationRole;
 use App\Models\ApiSpecification;
+use App\Models\ApiSpecificationVersion;
 use App\Models\Application;
 use App\Models\AuditLog;
 use App\Models\Environment;
@@ -21,7 +22,7 @@ use Illuminate\Support\Str;
 /**
  * A full tree in a fresh organization, created by $creator with $role.
  *
- * @return array{organization: Organization, project: Project, application: Application, environment: Environment, apiSpecification: ApiSpecification}
+ * @return array{organization: Organization, project: Project, application: Application, environment: Environment, apiSpecification: ApiSpecification, version: ApiSpecificationVersion}
  */
 function projectTreeFor(User $creator, OrganizationRole $role = OrganizationRole::Owner): array
 {
@@ -30,12 +31,16 @@ function projectTreeFor(User $creator, OrganizationRole $role = OrganizationRole
     $application = Application::factory()->for($project)->create();
     $environment = Environment::factory()->for($application)->create();
     $apiSpecification = ApiSpecification::factory()->for($application)->create();
+    // Imported by the creator, so the tree adds no other membership.
+    $version = ApiSpecificationVersion::factory()->for($apiSpecification, 'specification')->create([
+        'imported_by_membership_id' => $project->created_by_membership_id,
+    ]);
 
-    return compact('organization', 'project', 'application', 'environment', 'apiSpecification');
+    return compact('organization', 'project', 'application', 'environment', 'apiSpecification', 'version');
 }
 
 /**
- * @param  array{organization: Organization, project: Project, application: Application, environment: Environment, apiSpecification: ApiSpecification}  $tree
+ * @param  array{organization: Organization, project: Project, application: Application, environment: Environment, apiSpecification: ApiSpecification, version: ApiSpecificationVersion}  $tree
  */
 function treeUri(array $tree, string $template): string
 {
@@ -45,6 +50,7 @@ function treeUri(array $tree, string $template): string
         '{application}' => $tree['application']->id,
         '{environment}' => $tree['environment']->id,
         '{apiSpecification}' => $tree['apiSpecification']->id,
+        '{version}' => $tree['version']->id,
     ]);
 }
 
@@ -112,7 +118,7 @@ function projectTreeOperation(string $operation): array
 /**
  * Restoring needs an archived target; every other operation an active tree.
  *
- * @param  array{organization: Organization, project: Project, application: Application, environment: Environment, apiSpecification: ApiSpecification}  $tree
+ * @param  array{organization: Organization, project: Project, application: Application, environment: Environment, apiSpecification: ApiSpecification, version: ApiSpecificationVersion}  $tree
  */
 function prepareProjectTreeOperation(string $operation, array $tree): void
 {
@@ -215,6 +221,22 @@ describe('Project tree isolation', function () {
         'foreign environment' => ['api/v1/organizations/{organization}/projects/{project}/applications/{application}/environments/{environment}/archive'],
         'foreign application, own specification list' => ['api/v1/organizations/{organization}/projects/{project}/applications/{application}/api-specifications'],
         'foreign api specification' => ['api/v1/organizations/{organization}/api-specifications/{apiSpecification}/archive'],
+        'foreign api specification, import' => ['api/v1/organizations/{organization}/api-specifications/{apiSpecification}/versions'],
+    ]);
+
+    it('returns 404 when a version or its inventory is read under another organization or specification', function (string $template) {
+        $user = User::factory()->create();
+        $ownTree = projectTreeFor($user);
+        $otherTree = projectTreeFor($user);
+        // Same user in both organizations: only the other tree's version
+        // goes into this tree's URL.
+        $mixed = [...$ownTree, 'version' => $otherTree['version']];
+
+        asToken($user, 'GET', treeUri($mixed, $template))->assertNotFound();
+        asToken($user, 'GET', treeUri($otherTree, $template))->assertOk();
+    })->with([
+        'version' => ['api/v1/organizations/{organization}/api-specifications/{apiSpecification}/versions/{version}'],
+        'inventory' => ['api/v1/organizations/{organization}/api-specifications/{apiSpecification}/versions/{version}/endpoints'],
     ]);
 
     it('applies the role of the organization in the URL, not the strongest one', function (string $level) {
@@ -239,13 +261,14 @@ describe('Project tree isolation', function () {
     it('returns 404 for malformed or unknown ids at every level', function (string $level, string $id) {
         $owner = User::factory()->create();
         $tree = projectTreeFor($owner);
-        $template = $level === 'apiSpecification'
-            ? 'api/v1/organizations/{organization}/api-specifications/{apiSpecification}'
-            : 'api/v1/organizations/{organization}/projects/{project}/applications/{application}/environments/{environment}';
+        $template = match ($level) {
+            'apiSpecification', 'version' => 'api/v1/organizations/{organization}/api-specifications/{apiSpecification}/versions/{version}/endpoints',
+            default => 'api/v1/organizations/{organization}/projects/{project}/applications/{application}/environments/{environment}',
+        };
         $uri = str_replace(rawurlencode($tree[$level]->id), rawurlencode($id), treeUri($tree, $template));
 
         asToken($owner, 'GET', $uri)->assertNotFound();
-    })->with(['project', 'application', 'environment', 'apiSpecification'])->with([
+    })->with(['project', 'application', 'environment', 'apiSpecification', 'version'])->with([
         'sql fragment' => ["abc' OR '1'='1"],
         'oversized' => [str_repeat('A', 40)],
         'unknown ulid' => ['01ARZ3NDEKTSV4RRFFQ69G5FAV'],
