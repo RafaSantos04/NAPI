@@ -24,7 +24,7 @@ depois do Release Candidate do backend.
 | P2 | Projects, Applications & Environments | concluída | hierarquia comercial e escopo de ambiente auditáveis |
 | P2.5 | Platform Security Gate | concluída | proteção de credenciais, rate limiting, limites de corpo e de entrada e política de operações caras antes do P3 |
 | P2.6 | Visual Foundation / Admin Design System | em andamento, paralelo ao P3 | identidade e componentes do backoffice sem misturar Blade com o futuro cliente Vue |
-| P3 | API Inventory / OpenAPI | em andamento (T01 concluído) | import versionado e inventário consultável |
+| P3 | API Inventory / OpenAPI | em andamento (T01–T02 concluídos) | import versionado e inventário consultável |
 | P4 | Assessments | planejada | assessment manual autorizado com workflow e checklist |
 | P5 | Findings / Evidence | planejada | finding estruturado e evidência privada com redaction |
 | P6 | Retests | planejada | ciclo before/after, autoria e decisão rastreáveis |

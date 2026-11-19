@@ -2,7 +2,7 @@
 
 [← Produto](../README.md) · [Roadmap](../roadmap.md) · [ADR-0014](../../architecture/decisions/ADR-0014-api-specification-versioning.md) · [ADR-0013](../../architecture/decisions/ADR-0013-abuse-limits-and-expensive-operations.md) · [P2.5](p2-5-platform-security-gate.md)
 
-**Status:** em andamento (T01 concluído) · **JUDGE:** no P3-T06
+**Status:** em andamento (T01–T02 concluídos) · **JUDGE:** no P3-T06
 
 ## Executive Summary
 
@@ -28,6 +28,22 @@ T01 fixou o modelo e as decisões no
 | Task | Entrega | Commits |
 |---|---|---|
 | T01 | ADR-0014 com as decisões do usuário; `ProjectTreeLock`, `Slug`, `Archivable` e `SearchableByName` (Abstraction Review do P2); tabelas `api_specifications` e `api_specification_versions` (FK composta, trigger de tenant, append-only, CHECKs); 6 permissions `api_specifications.*`; Policy, Actions, requests, resource e rotas da especificação | ver comandos do T01 |
+| T02 | `OpenApiParser` para JSON e YAML, contrato `OpenApiDocument`, erro estruturado, validação de OpenAPI 3.0.x/3.1.x, estrutura mínima de `info`/`paths`/operações, referências locais sem rede, ciclos e limites do ADR-0014; `symfony/yaml` declarado como dependência direta | alterações do T02 |
+
+O parser recebe bytes e formato já selecionado pelo `Content-Type`. A rota
+HTTP, o limite antes da leitura do corpo, a autorização, a auditoria e a
+persistência da versão entram no T04. O T02 não publica endpoint de import.
+Os erros carregam motivo estável, JSON pointer e mensagem própria; o texto
+original do parser e o conteúdo do cliente não são expostos.
+
+O T02 usa o parser Symfony YAML já instalado, com flags padrão (sem objetos
+PHP ou tags customizadas), em vez de adicionar uma biblioteca OpenAPI. A
+validação nesta fase cobre o contrato necessário ao inventário; ela não
+promete validar todas as extensões semânticas da especificação OpenAPI.
+Referências de Path Item locais são resolvidas para projetar operações.
+Verificações do T02: 17 testes focados (59 assertions), suíte completa com
+791 testes (4.118 assertions), `composer lint`, `composer analyse` e
+`git diff --check` aprovados em 19/11/2026.
 
 ## Decisões fixadas na execução
 
