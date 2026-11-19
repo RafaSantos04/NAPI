@@ -30,6 +30,10 @@ erDiagram
     projects ||--o{ applications : "(organization_id, project_id), restrict"
     applications ||--o{ environments : "(organization_id, application_id), restrict"
     organization_memberships ||--o{ environments : "(organization_id, responsible_membership_id), restrict"
+    applications ||--o{ api_specifications : "(organization_id, application_id), restrict"
+    api_specifications ||--o{ api_specification_versions : "(organization_id, api_specification_id), restrict"
+    organization_memberships ||--o{ api_specification_versions : "(organization_id, imported_by_membership_id), restrict"
+    api_specification_versions ||--o{ api_endpoints : "(organization_id, api_specification_version_id), restrict"
 ```
 
 ## Tabelas
@@ -222,6 +226,66 @@ trigger `environments_tenant_immutable` congela tenant e application, mas não
 o responsável. Escritas travam project e application com `FOR SHARE` antes do
 environment.
 
+### `api_specifications` (P3)
+
+| Coluna | Tipo | Constraint |
+|---|---|---|
+| `id` | ULID | PK |
+| `organization_id` | ULID | `NOT NULL`; imutável (trigger) |
+| `application_id` | ULID | `NOT NULL`; FK composta `(organization_id, application_id)` → `applications(organization_id, id)` **restrict**; imutável (trigger) |
+| `name` | varchar(100) | |
+| `slug` | varchar(100) | UNIQUE `(organization_id, application_id, slug)` |
+| `description` | text | nullable |
+| `archived_at` | timestamp | nullable; `null` = ativo |
+| `created_at`, `updated_at` | timestamp | |
+
+O contrato lógico de uma Application ([ADR-0014](../architecture/decisions/ADR-0014-api-specification-versioning.md)).
+`UNIQUE(organization_id, id)` é o alvo da FK composta das versões, e o
+trigger `api_specifications_tenant_immutable` congela tenant e application.
+
+### `api_specification_versions` (P3)
+
+| Coluna | Tipo | Constraint |
+|---|---|---|
+| `id` | ULID | PK |
+| `organization_id` | ULID | `NOT NULL` |
+| `api_specification_id` | ULID | FK composta `(organization_id, api_specification_id)` → `api_specifications(organization_id, id)` **restrict** |
+| `imported_by_membership_id` | ULID | FK composta `(organization_id, imported_by_membership_id)` → `organization_memberships(organization_id, id)` **restrict** |
+| `number` | integer | CHECK `> 0`; UNIQUE `(api_specification_id, number)` |
+| `format` | varchar(10) | CHECK `json` \| `yaml` |
+| `openapi_version`, `info_title`, `info_version` | varchar | |
+| `content_sha256` | char(64) | CHECK hex minúsculo; UNIQUE `(api_specification_id, content_sha256)` (idempotência) |
+| `size_bytes` | integer | CHECK `> 0` |
+| `raw_document` | text | os bytes recebidos; nunca serializado |
+| `created_at` | timestamp | sem `updated_at` |
+
+Um import bem-sucedido. O trigger `api_specification_versions_append_only`
+(função `napi_prevent_row_mutation()`) recusa `UPDATE` e `DELETE`, mesmo
+por SQL direto. Desde o T03, `UNIQUE(organization_id, id)` é o alvo da FK
+composta dos endpoints.
+
+### `api_endpoints` (P3)
+
+| Coluna | Tipo | Constraint |
+|---|---|---|
+| `id` | ULID | PK |
+| `organization_id` | ULID | `NOT NULL` |
+| `api_specification_version_id` | ULID | FK composta `(organization_id, api_specification_version_id)` → `api_specification_versions(organization_id, id)` **restrict** |
+| `method` | varchar(7) | CHECK `GET` \| `PUT` \| `POST` \| `DELETE` \| `OPTIONS` \| `HEAD` \| `PATCH` \| `TRACE` |
+| `path` | text | CHECK começa com `/`; como escrito no documento |
+| `operation_id`, `summary` | text | nullable |
+
+O inventário é uma projeção da versão, reconstruível do `raw_document`, e
+pertence a ela, não à especificação nem ao environment (ADR-0014, decisões 6
+e 7). Não tem timestamps: nasce junto com a versão. A identidade
+determinística é o índice único `api_endpoints_identity_unique` em
+`(api_specification_version_id, method, regexp_replace(path, '\{[^}]*\}', '{}', 'g'))`:
+a OpenAPI trata `/orders/{id}` e `/orders/{orderId}` como o mesmo path, e o
+parser recusa os dois no mesmo documento com 422 antes de o índice ser
+alcançado. O trigger `api_endpoints_append_only` usa a mesma função das
+versões. `text` sem teto próprio: o documento de 2 MB já limita o tamanho, e
+um valor longo não pode transformar um import válido em 500.
+
 ### `personal_access_tokens` (Sanctum)
 
 `id` **bigint** PK · `tokenable_type` + `tokenable_id` (`ulidMorphs`,
@@ -316,6 +380,8 @@ de consultas sobre esta tabela.
 | Trigger `napi_prevent_tenant_reassignment()` | `organization_memberships`, `projects`, `applications`, `environments` (P2) | congela tenant e pai: a FK composta valida o INSERT, o trigger impede mover a linha depois |
 | FK composta | `projects` → `organization_memberships`, `applications` → `projects`, `environments` → `applications` e → `organization_memberships` (P2) | criador, pai e responsável sempre da mesma organização |
 | CHECK de classificação | `environments` (P2) | conjunto fechado; regras futuras (P10) dependem dele |
+| Trigger `napi_prevent_row_mutation()` | `api_specification_versions`, `api_endpoints` (P3) | o que um assessment avaliou não muda, nem por SQL direto |
+| Índice único por expressão | `api_endpoints` (P3) | um endpoint por método e template de path em cada versão |
 
 P1 usa `restrict` nas duas FKs de `organization_memberships`, porque um
 vínculo histórico não pode desaparecer pela exclusão do User ou da

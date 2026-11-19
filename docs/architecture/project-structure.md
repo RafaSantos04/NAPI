@@ -109,7 +109,7 @@ app/
 │                              SecurityLabResource, SecurityTestRun,
 │                              Organization, OrganizationMembership (P1),
 │                              Project, Application, Environment (P2)
-│                              ApiSpecification, ApiSpecificationVersion (P3)
+│                              ApiSpecification, ApiSpecificationVersion, ApiEndpoint (P3)
 │                              + pivots UserProfile, MenuProfile
 │   └── Concerns/              Archivable, SearchableByName: scopes de listagem da árvore (P3)
 ├── Policies/                  UserPolicy, ProfilePolicy, MenuPolicy,
@@ -125,10 +125,10 @@ config/security.php            Feature flag do Security Lab (desligada por padr�
 database/
 ├── migrations/                citext, users, tokens, IAM, audit_logs, tenancy (P1),
 │                              árvore de projetos com FK composta e triggers (P2)
-│                              especificações e versões append-only (P3)
+│                              especificações, versões e endpoints append-only (P3)
 ├── factories/                 User, UserDetails, Profile, Menu, Organization,
 │                              OrganizationMembership, Project, Application, Environment,
-│                              ApiSpecification, ApiSpecificationVersion
+│                              ApiSpecification, ApiSpecificationVersion, ApiEndpoint
 └── seeders/                   Perfis, menus de sistema, usuários de demonstração
 routes/api.php                 Todas as rotas /api/v1
 routes/web.php                 Área administrativa /admin
