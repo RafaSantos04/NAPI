@@ -91,7 +91,7 @@ it('rejects malformed input without exposing its contents', function (string $bo
     'unsupported version' => [openApiJson(['openapi' => '3.2.0']), 'json', 'unsupported_version', '/openapi'],
     'external reference' => [openApiJson(['components' => ['schemas' => ['Order' => ['$ref' => 'https://example.com/schema']]]]), 'json', 'external_ref', '/components/schemas/Order/$ref'],
     'missing reference' => [openApiJson(['components' => ['schemas' => ['Order' => ['$ref' => '#/components/schemas/Missing']]]]), 'json', 'malformed', '/components/schemas/Order/$ref'],
-    'reference cycle' => [openApiJson(['components' => ['schemas' => ['Order' => ['$ref' => '#/components/schemas/Order']]]]), 'json', 'ref_cycle', '#/components/schemas/Order/$ref'],
+    'reference cycle' => [openApiJson(['components' => ['schemas' => ['Order' => ['$ref' => '#/components/schemas/Order']]]]), 'json', 'ref_cycle', '/components/schemas/Order/$ref'],
     'paths differing only in parameter names' => [openApiJson(['paths' => [
         '/orders/{id}' => ['get' => ['responses' => ['200' => ['description' => 'OK']]]],
         '/orders/{orderId}' => ['delete' => ['responses' => ['204' => ['description' => 'Deleted']]]],
@@ -106,6 +106,45 @@ it('limits document bytes before decoding', function () {
 
     expect(fn () => (new OpenApiParser)->parse($body, 'json'))
         ->toThrow(OpenApiParseException::class, 'The document exceeds the 2 MB limit.');
+});
+
+it('limits YAML documents to 512 KB before decoding', function () {
+    $body = str_repeat(' ', 512 * 1024 + 1);
+
+    expect(fn () => (new OpenApiParser)->parse($body, 'yaml'))
+        ->toThrow(OpenApiParseException::class, 'A YAML document exceeds the 512 KB limit; send it as JSON, up to 2 MB.');
+});
+
+it('rejects YAML aliases that expand into millions of nodes', function () {
+    // A few hundred bytes that decode into 10^6 strings: each alias copies the list above it.
+    $yaml = "openapi: 3.1.0
+info: {title: Orders, version: '1'}
+paths: {}
+x-a0: &a0 [lol, lol, lol, lol, lol, lol, lol, lol, lol, lol]
+";
+    for ($level = 1; $level <= 5; $level++) {
+        $yaml .= "x-a{$level}: &a{$level} [".implode(', ', array_fill(0, 10, '*a'.($level - 1))).']
+';
+    }
+
+    expect(fn () => (new OpenApiParser)->parse($yaml, 'yaml'))
+        ->toThrow(OpenApiParseException::class, 'The document exceeds the node limit.');
+});
+
+it('walks each reference target once, however often it is referenced', function () {
+    // 9,000 references to a 100-node schema: walking it per reference would
+    // visit 900,000 nodes and break the node limit.
+    $properties = [];
+    for ($index = 0; $index < 49; $index++) {
+        $properties['field'.$index] = ['type' => 'string'];
+    }
+
+    $document = (new OpenApiParser)->parse(openApiJson([
+        'components' => ['schemas' => ['Order' => ['type' => 'object', 'properties' => $properties]]],
+        'x-references' => array_fill(0, 9000, ['$ref' => '#/components/schemas/Order']),
+    ]), 'json');
+
+    expect($document->endpoints)->toHaveCount(1);
 });
 
 it('limits the number of operations', function () {

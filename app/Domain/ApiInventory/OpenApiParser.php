@@ -9,7 +9,12 @@ use Symfony\Component\Yaml\Yaml;
 
 final class OpenApiParser
 {
-    private const MAX_BYTES = 2 * 1024 * 1024;
+    // Also the import route's body limit (ADR-0014, decision 13).
+    public const MAX_BYTES = 2 * 1024 * 1024;
+
+    // symfony/yaml takes seconds per MB; 512 KB keeps the worst case measured
+    // well inside the 5 s budget (ADR-0014). JSON decodes 2 MB in a fraction.
+    private const MAX_YAML_BYTES = 512 * 1024;
 
     private const MAX_DEPTH = 64;
 
@@ -17,9 +22,18 @@ final class OpenApiParser
 
     private const MAX_REF_EXPANSIONS = 10000;
 
+    // YAML aliases copy subtrees by value: a few hundred bytes can decode
+    // into millions of nodes (ADR-0014, "billion laughs").
+    private const MAX_NODES = 500000;
+
     private const METHODS = ['get', 'put', 'post', 'delete', 'options', 'head', 'patch', 'trace'];
 
     private int $refExpansions = 0;
+
+    private int $nodes = 0;
+
+    /** @var array<string, bool> false while the target is being walked, true once walked */
+    private array $walkedReferences = [];
 
     /** @var array<string, mixed> */
     private array $document = [];
@@ -27,8 +41,13 @@ final class OpenApiParser
     public function parse(string $rawDocument, string $format): OpenApiDocument
     {
         $this->refExpansions = 0;
+        $this->nodes = 0;
+        $this->walkedReferences = [];
         if (strlen($rawDocument) > self::MAX_BYTES) {
             throw $this->error('limit_exceeded', '', 'The document exceeds the 2 MB limit.');
+        }
+        if ($format === 'yaml' && strlen($rawDocument) > self::MAX_YAML_BYTES) {
+            throw $this->error('limit_exceeded', '', 'A YAML document exceeds the 512 KB limit; send it as JSON, up to 2 MB.');
         }
         if (preg_match('//u', $rawDocument) !== 1) {
             throw $this->error('malformed', '', 'The document must be valid UTF-8.');
@@ -63,7 +82,7 @@ final class OpenApiParser
             throw $this->error('malformed', '/paths', 'The paths field must be an object.');
         }
 
-        $this->validateTree($decoded, '', 0, []);
+        $this->validateTree($decoded, '', 0);
 
         $endpoints = [];
         $templates = [];
@@ -72,9 +91,7 @@ final class OpenApiParser
             if (! is_string($path) || ! str_starts_with($path, '/') || str_contains($path, '?') || str_contains($path, '#')) {
                 throw $this->error('malformed', $pathPointer, 'A path must start with / and contain no query or fragment.');
             }
-            // OpenAPI treats /pets/{id} and /pets/{petId} as the same path;
-            // the api_endpoints_identity_unique index applies the same rule.
-            $template = (string) preg_replace('/\{[^}]*\}/', '{}', $path);
+            $template = self::pathTemplate($path);
             if (isset($templates[$template])) {
                 throw $this->error('malformed', $pathPointer, 'Paths that differ only in parameter names are identical.');
             }
@@ -123,6 +140,15 @@ final class OpenApiParser
         return new OpenApiDocument($format, $version, $info['title'], $info['version'], $endpoints);
     }
 
+    /**
+     * OpenAPI treats /pets/{id} and /pets/{petId} as the same path; the
+     * api_endpoints_identity_unique index applies the same rule.
+     */
+    public static function pathTemplate(string $path): string
+    {
+        return (string) preg_replace('/\{[^}]*\}/', '{}', $path);
+    }
+
     private function decode(string $rawDocument, string $format): mixed
     {
         try {
@@ -137,9 +163,9 @@ final class OpenApiParser
         }
     }
 
-    /** @param list<string> $ancestors */
-    private function validateTree(mixed $node, string $pointer, int $depth, array $ancestors): void
+    private function validateTree(mixed $node, string $pointer, int $depth): void
     {
+        $this->countNode($pointer);
         if ($depth > self::MAX_DEPTH) {
             throw $this->error('limit_exceeded', $pointer, 'The document exceeds the nesting limit.');
         }
@@ -147,23 +173,43 @@ final class OpenApiParser
             return;
         }
         foreach ($node as $key => $value) {
-            $childPointer = $pointer.'/'.$this->escape((string) $key);
             if ($key === '$ref') {
+                $childPointer = $pointer.'/$ref';
                 if (! is_string($value) || ! str_starts_with($value, '#/')) {
                     throw $this->error('external_ref', $childPointer, 'Only local references are supported.');
-                }
-                if (in_array($value, $ancestors, true)) {
-                    throw $this->error('ref_cycle', $childPointer, 'A reference cycle is not supported.');
                 }
                 if (++$this->refExpansions > self::MAX_REF_EXPANSIONS) {
                     throw $this->error('limit_exceeded', $childPointer, 'The document exceeds the reference expansion limit.');
                 }
-                $target = $this->resolveReference($value, $childPointer);
-                $this->validateTree($target, $value, $depth + 1, [...$ancestors, $value]);
+                $walked = $this->walkedReferences[$value] ?? null;
+                if ($walked === false) {
+                    throw $this->error('ref_cycle', $childPointer, 'A reference cycle is not supported.');
+                }
+                // Each target is walked once: walking it again per reference
+                // turns a large schema referenced many times into minutes.
+                if ($walked === null) {
+                    $this->walkedReferences[$value] = false;
+                    // The target is reported by its JSON pointer, like every other node.
+                    $this->validateTree($this->resolveReference($value, $childPointer), substr($value, 1), $depth + 1);
+                    $this->walkedReferences[$value] = true;
+                }
 
                 continue;
             }
-            $this->validateTree($value, $childPointer, $depth + 1, $ancestors);
+            if (! is_array($value)) {
+                // Scalars need no pointer unless they break the limit.
+                $this->countNode($pointer);
+
+                continue;
+            }
+            $this->validateTree($value, $pointer.'/'.$this->escape((string) $key), $depth + 1);
+        }
+    }
+
+    private function countNode(string $pointer): void
+    {
+        if (++$this->nodes > self::MAX_NODES) {
+            throw $this->error('limit_exceeded', $pointer, 'The document exceeds the node limit.');
         }
     }
 
