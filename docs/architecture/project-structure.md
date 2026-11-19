@@ -87,6 +87,7 @@ app/
 │   │   ├── {Project,Application,Environment}StatusController.php  archive/restore (P2)
 │   │   ├── ApiSpecification{,Status}Controller.php                rotas rasas (P3)
 │   │   ├── ApiSpecificationVersionController.php                  versões e import (P3-T04)
+│   │   ├── ApiEndpointController.php                              inventário de uma versão (P3-T05)
 │   │   ├── ProfileController.php
 │   │   ├── UserController.php
 │   │   ├── UserProfileController.php
@@ -110,7 +111,7 @@ app/
 │   │                          Concerns/ com mensagens em português e SendsEveryField
 │   └── Resources/             User, Profile, Menu, Organization, OrganizationMembership,
 │                              Project, Application, Environment, ApiSpecification,
-│                              ApiSpecificationVersionResource
+│                              ApiSpecificationVersion, ApiEndpointResource
 ├── Exceptions/                LastActiveOrganizationOwnerException (409, P1)
 ├── Models/                    User, UserDetails, Profile, Menu, AuditLog,
 │                              SecurityLabResource, SecurityTestRun,

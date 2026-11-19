@@ -2,7 +2,7 @@
 
 [← Produto](../README.md) · [Roadmap](../roadmap.md) · [ADR-0014](../../architecture/decisions/ADR-0014-api-specification-versioning.md) · [ADR-0013](../../architecture/decisions/ADR-0013-abuse-limits-and-expensive-operations.md) · [P2.5](p2-5-platform-security-gate.md)
 
-**Status:** em andamento (T01–T04 concluídos) · **JUDGE:** no P3-T06
+**Status:** em andamento (T01–T05 concluídos) · **JUDGE:** no P3-T06
 
 ## Executive Summary
 
@@ -31,6 +31,7 @@ T01 fixou o modelo e as decisões no
 | T02 | `OpenApiParser` para JSON e YAML, contrato `OpenApiDocument`, erro estruturado, validação de OpenAPI 3.0.x/3.1.x, estrutura mínima de `info`/`paths`/operações, referências locais sem rede, ciclos e limites do ADR-0014; `symfony/yaml` declarado como dependência direta | alterações do T02 |
 | T03 | tabela `api_endpoints` (FK composta para a versão, append-only, CHECKs, identidade por método e template de path), `UNIQUE(organization_id, id)` na versão, model, relação e factory; parser recusa paths que só diferem no nome dos parâmetros | alterações do T03 |
 | T04 | correção do "billion laughs" (alvo de `$ref` percorrido uma vez, teto de 500.000 nós, YAML até 512 KB); `POST .../versions` (import) e `GET .../versions[/{version}]`; `ImportApiSpecificationVersion` com lock por organização, idempotência, versão + endpoints + auditoria numa transação e diff no evento; recusa auditada; limiter `api-imports`; `LimitRequestBodySize` com parâmetro | alterações do T04 |
+| T05 | `GET .../versions/{version}/endpoints`: inventário de uma versão, ordenado por path e método, filtro `method` e busca `search` em path e `operationId`, página fixa de 100 | alterações do T05 |
 
 O parser recebe bytes e formato já selecionado pelo `Content-Type`. A rota
 HTTP, o limite antes da leitura do corpo, a autorização, a auditoria e a
@@ -133,6 +134,30 @@ auth:sanctum → throttle:authenticated → throttle:api-imports → binding
 Verificações do T04: 37 testes novos, suíte completa com 838 testes (4.423
 assertions), `composer lint` e `composer analyse` aprovados em 19/11/2026.
 
+### T05 — Consulta do inventário
+
+`GET /organizations/{organization}/api-specifications/{apiSpecification}/versions/{version}/endpoints`,
+com `api_specifications.view`. A versão só é encontrada sob a própria
+especificação (scoped binding), e a especificação só sob a organização.
+
+- Ordem estável: `path`, `method`, `id`.
+- `method`: um dos oito métodos da OpenAPI, em qualquer caixa (`get` vira
+  `GET`); outro valor → 422.
+- `search` (até 100 caracteres): trecho do `path` ou do `operationId`, sem
+  diferenciar maiúsculas; `%` e `_` valem literalmente, como no
+  `SearchableByName`.
+- **Página fixa de 100**, no envelope `data` + `meta` de todas as listagens.
+  O resto da API pagina de 15 em 15, mas um contrato pode ter 2.000
+  operações: com 15 seriam 134 requisições, acima do limite de 120 por
+  minuto por usuário. Com 100, são 20. O cliente não escolhe o tamanho, como
+  pede a regra de paginação fixa do ADR-0013.
+- A especificação arquivada continua legível, como no resto da árvore.
+- Sem rota de detalhe de endpoint: o item da listagem já traz todos os
+  campos, e nada referencia um endpoint por id antes do P4/P5.
+
+Verificações do T05: 12 testes novos, suíte completa com 850 testes (4.473
+assertions), `composer lint` e `composer analyse` aprovados em 19/11/2026.
+
 ## Decisões fixadas na execução
 
 | Decisão | Valor | Onde |
@@ -158,6 +183,7 @@ assertions), `composer lint` e `composer analyse` aprovados em 19/11/2026.
 | `Feature/ApiInventory/ApiEndpointIntegrityTest.php` | 9 (T03) |
 | `Unit/Domain/ApiInventory/OpenApiParserTest.php` | 21 (T02 a T04) |
 | `Feature/ApiInventory/ApiSpecificationImportTest.php` | 33 (T04) |
+| `Feature/ApiInventory/ApiEndpointTest.php` | 12 (T05) |
 | `Feature/Security/RouteCoverageTest.php` | +1 (T04): o import aplica 2 MB depois de autenticação, permissão e cotas |
 | `Feature/Projects/ProjectTreeLockTest.php` | 1 |
 | `Feature/Security/ProjectTreeSecurityTest.php` | especificação em todas as regras (auditoria, rollback, isolamento, papel, ids malformados, mass assignment) |
@@ -206,6 +232,18 @@ Mutações do T04:
 | Documento no `meta` da recusa | pega |
 | Policy `import` conferindo `view` | **não pega**: hoje todo papel tem as duas chaves (catálogo fixo do ADR-0011). Vira testável com a matriz configurável |
 
+Mutações do T05:
+
+| Mutação | Resultado |
+|---|---|
+| Sem o filtro de método | pega |
+| Busca sem escapar `%` e `_` | pega |
+| Busca só no `path` | pega: a busca por `operationId` |
+| Página de 15 | pega: o inventário de 2.000 operações em 20 páginas |
+| Método sem normalizar a caixa | pega: `?method=delete` |
+| Endpoints de todas as versões | pega: a outra versão da mesma especificação |
+| Request sem chamar a Policy | **não pega pela HTTP**: o `permission:` e o scoped binding respondem 404 antes. A Policy é defesa em profundidade, e o tenant dela é testado direto pelo Gate desde o T01 |
+
 ## Engineering Gate
 
 | Componente | Precisa existir? | Já existia? | Laravel/PHP/PostgreSQL resolve? | Decisão |
@@ -231,6 +269,11 @@ Mutações do T04:
 | Tabela de diff | não: refazível pelas projeções imutáveis | — | — | contagens no `meta` do evento |
 | `OpenApiParser::pathTemplate()` | sim, a mesma regra no parser e no diff | regex inline (T03) | — | extraída |
 | Lib YAML em C (`ext-yaml`) | não agora | — | — | não adotada; o teto de 512 KB resolve sem dependência nova |
+| `ApiEndpointController` + request + resource | sim, a consulta do T05 | não | — | criados |
+| Rota de detalhe do endpoint | não: a listagem traz todos os campos | — | — | não criada |
+| `per_page` escolhido pelo cliente | não | paginação fixa (ADR-0013) | — | não criado; página fixa de 100 só no inventário |
+| `ApiEndpoint::METHODS` | sim, a validação do filtro | lista privada e minúscula no parser, CHECK no banco | — | criada no model, como as outras listas fechadas |
+| Busca genérica por colunas | não nesta fase | `SearchableByName` (só `name`) | `whereLike` | scope local `pathOrOperationContains` (veja a Abstraction Review) |
 | `ProjectTreeLock` | sim, 8 Actions repetiam a ordem de locks (P2) | cópias nas Actions | não | criado; Environment perdeu o parâmetro `$project` |
 | `Slug` | sim, 8 requests repetiam a regex | regex inline | `regex:` | rule com a mesma mensagem; unicidade fica em cada request |
 | `Archivable`, `SearchableByName` | sim, 3 controllers repetiam os filtros | `when()` inline | scopes locais | traits com scopes |
@@ -251,3 +294,20 @@ parte do contrato de cada nível.
 
 **3. O que continua específico:** as rotas rasas, a ausência de criador e a
 versão append-only são só da especificação.
+
+### Abstraction Review do T05
+
+O inventário trouxe o **segundo caso de busca por texto**: o
+`SearchableByName` busca em `name`, e o `ApiEndpoint` busca em `path` ou
+`operation_id`.
+
+**1. O que se repetiu:** escapar `%`, `_` e `\` do texto do cliente e
+montar `%texto%` para o `whereLike`; o `when($search !== null)`.
+
+**2. O que merece abstração:** o padrão literal. Na próxima fase que buscar
+texto, o `SearchableByName` pode virar um scope que recebe as colunas, e o
+escape fica num lugar só. Não foi feito agora: a regra do projeto proíbe
+abstrair na mesma fase em que a repetição aparece.
+
+**3. O que continua específico:** quais colunas entram na busca, e se a
+busca combina colunas com `OR`.

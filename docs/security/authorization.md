@@ -137,7 +137,7 @@ escolhe o papel de cada membro, não permissões individuais.
 | `POST .../environments/{environment}/archive`, `.../restore` (P2) | `environments.archive_own` contextual; a Policy decide o alcance |
 | `GET`, `POST .../applications/{application}/api-specifications`; `GET`, `PATCH .../api-specifications/{apiSpecification}` (P3) | `api_specifications.view`, `api_specifications.create`, `api_specifications.update` contextuais |
 | `POST .../api-specifications/{apiSpecification}/archive`, `.../restore` (P3) | `api_specifications.archive_own` contextual; a Policy decide o alcance |
-| `GET .../api-specifications/{apiSpecification}/versions[/{version}]` (P3-T04) | `api_specifications.view` contextual |
+| `GET .../api-specifications/{apiSpecification}/versions[/{version}]` (P3-T04) e `.../versions/{version}/endpoints` (P3-T05) | `api_specifications.view` contextual |
 | `POST .../api-specifications/{apiSpecification}/versions` (P3-T04) | `api_specifications.import` contextual, separado de `update` (ADR-0014, decisão 19) |
 
 Perfis padrão:
