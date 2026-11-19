@@ -54,6 +54,9 @@ nunca `*`.
 5. No NPM, crie o Proxy Host com scheme `http`, hostname igual ao IP da VM e
    porta `8006`. Solicite certificado válido, habilite Force SSL e HTTP/2. HSTS só
    deve ser ligado depois que HTTPS estiver confirmado em todo o domínio.
+   O import OpenAPI aceita até 2 MB de corpo (ADR-0014): se o NPM tiver um
+   `client_max_body_size` menor que isso, aumente-o no Proxy Host. O Apache
+   do contêiner aceita 10 MB.
 6. Entre em `/admin/login`, confirme o acesso e troque a senha inicial pela
    interface quando esse fluxo existir. Imediatamente depois, remova
    `NAPI_BOOTSTRAP_ADMIN_PASSWORD` do ambiente e redeploye. O comando detecta

@@ -135,6 +135,13 @@ duplicá-lo por ambiente criaria duas verdades.
     O limiter conta **toda tentativa** que passa pela autenticação,
     inclusive as recusadas e as idempotentes. Por isso ele também limita
     quantas recusas entram na auditoria (decisão 20).
+
+    **Ajuste do T04:** no Laravel, o `throttle` roda antes do binding e da
+    camada de permissão. Contada para qualquer autenticado, a cota da
+    organização poderia ser esgotada por quem nem pertence a ela, só
+    chamando a URL. Por isso a cota da organização só é gasta por quem tem
+    `api_specifications.import` nela (`User::hasPermission()`); os demais
+    gastam só a cota pessoal e recebem 404 da permissão.
 11. **Ordem no import:** autenticação, ability do token, os dois limiters,
     e só então o teto de 2 MB. Um anônimo ou alguém acima da cota é
     recusado antes de o servidor ler o corpo grande. O proxy de borda
@@ -157,6 +164,15 @@ duplicá-lo por ambiente criaria duas verdades.
       aplica de novo com o limite como parâmetro
       (`LimitRequestBodySize:<bytes>`), na posição da decisão 11.
     - O `RouteCoverageTest` passa a aceitar a versão com parâmetro.
+    - **Ajuste do T04:** o Laravel 13 exclui um nome de classe sem parâmetro
+      junto com todas as versões parametrizadas dela. Por isso os grupos
+      `api` e `web` declaram o padrão como `LimitRequestBodySize:65536`, e a
+      rota exclui exatamente esse nome. Se o framework mudar essa regra, a
+      rota fica sem limite e o `RouteCoverageTest` falha.
+    - **UTF-8 no import:** a rota também retira o `RejectInvalidUtf8`. O
+      corpo é o próprio documento, e o parser recusa texto fora do UTF-8 com
+      422 auditado, como pede a seção Security Impact; o middleware daria 400
+      sem trilha. A rota não lê query nem formulário.
 14. **Ordem das checagens**, cada uma antes de qualquer trabalho maior (item
     29):
     1. bytes (middleware) e UTF-8;
@@ -189,6 +205,11 @@ duplicá-lo por ambiente criaria duas verdades.
     versão nova. Uma transação grava a versão, a projeção de endpoints (T03)
     e o evento de auditoria; qualquer falha desfaz tudo (item 35).
 
+    **Diff (T04):** o evento do import registra a contagem de endpoints e o
+    diff contra a versão anterior (adicionados e removidos, pela identidade
+    método × template de path). O diff completo sempre pode ser refeito
+    pelas projeções das duas versões, que nunca mudam.
+
 ### Números iniciais
 
 São revisados no T04, com medição. Mudar um número exige atualizar este
@@ -199,7 +220,9 @@ ADR.
 | Corpo do import | 2 MB | cobre a maioria dos contratos de produto; um JSON de 2 MB decodificado cabe com folga nos 128 MB de `memory_limit` |
 | Profundidade de aninhamento | 64 | `json_decode` e a travessia; contratos reais ficam bem abaixo |
 | Operações (método × path) | 2.000 | inventário legível; acima disso, o contrato deveria ser dividido em especificações |
+| Corpo YAML | 512 KB | medido no T04: o `symfony/yaml` leva de 1,7 s a 2,7 s em 512 KB, de 3 s a 4,6 s em 1 MB e de 6 s a 9 s (cerca de 100 MB) em 2 MB; o JSON de 2 MB leva 0,2 s. Decisão do usuário em 2026-11-19 |
 | Expansões de `$ref` | 10.000 | impede a explosão por referências encadeadas |
+| Nós visitados | 500.000 | aliases YAML copiam subárvores: poucas centenas de bytes viram milhões de nós ("billion laughs"); cada alvo de `$ref` é percorrido uma vez só |
 | Orçamento de tempo | 5 s no teto | síncrono aceitável; acima disso, fila (decisão 16) |
 | Imports por organização | 30 por hora | uso humano e de CI folgado, abuso não |
 | Imports por usuário | 10 por hora | um membro não esgota a cota da organização |
@@ -296,6 +319,8 @@ ADR.
   configurável segue adiada pelo ADR-0011.
 - O modelo de produto muda: versões passam de Environment para
   Application. O documento é atualizado quando o ADR for aceito.
+- YAML acima de 512 KB é recusado; o mesmo contrato entra em JSON até
+  2 MB.
 - `symfony/yaml` vira dependência direta. Hoje ela já está instalada como
   dependência transitiva (v8.1.8); o `require` entra no T02, com
   aprovação do usuário de 2026-11-01.
@@ -314,10 +339,11 @@ Testes obrigatórios ao longo do P3, exigidos pelo JUDGE do P3-T06:
   rede ou de leitura de arquivo, provada com `Http::preventStrayRequests()`
   e sem acesso a disco;
 - YAML com aliases encadeados ("billion laughs") recusado dentro do
-  orçamento de tempo e de memória. **Risco a medir no T02**: o
-  `symfony/yaml` resolve aliases, e a travessia posterior pode explodir; as
-  mitigações candidatas são o teto de nós durante a travessia e a recusa de
-  âncoras;
+  orçamento de tempo e de memória. **Medido no T04**: a leitura do YAML
+  era rápida (8 ms), e a explosão estava na travessia: 420 bytes levavam
+  8,8 s. O mesmo valia para JSON, com um schema grande referenciado milhares
+  de vezes (400 KB, 27,5 s). Mitigação: cada alvo de `$ref` é percorrido uma
+  vez só, e um teto de 500.000 nós recusa a bomba em cerca de 0,2 s;
 - ciclo de `$ref` e expansão acima do teto → 422;
 - mesmo conteúdo duas vezes → uma versão só; dois imports simultâneos na
   organização → 409;

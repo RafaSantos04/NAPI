@@ -2,7 +2,7 @@
 
 [← Produto](../README.md) · [Roadmap](../roadmap.md) · [ADR-0014](../../architecture/decisions/ADR-0014-api-specification-versioning.md) · [ADR-0013](../../architecture/decisions/ADR-0013-abuse-limits-and-expensive-operations.md) · [P2.5](p2-5-platform-security-gate.md)
 
-**Status:** em andamento (T01–T03 concluídos) · **JUDGE:** no P3-T06
+**Status:** em andamento (T01–T04 concluídos) · **JUDGE:** no P3-T06
 
 ## Executive Summary
 
@@ -30,6 +30,7 @@ T01 fixou o modelo e as decisões no
 | T01 | ADR-0014 com as decisões do usuário; `ProjectTreeLock`, `Slug`, `Archivable` e `SearchableByName` (Abstraction Review do P2); tabelas `api_specifications` e `api_specification_versions` (FK composta, trigger de tenant, append-only, CHECKs); 6 permissions `api_specifications.*`; Policy, Actions, requests, resource e rotas da especificação | ver comandos do T01 |
 | T02 | `OpenApiParser` para JSON e YAML, contrato `OpenApiDocument`, erro estruturado, validação de OpenAPI 3.0.x/3.1.x, estrutura mínima de `info`/`paths`/operações, referências locais sem rede, ciclos e limites do ADR-0014; `symfony/yaml` declarado como dependência direta | alterações do T02 |
 | T03 | tabela `api_endpoints` (FK composta para a versão, append-only, CHECKs, identidade por método e template de path), `UNIQUE(organization_id, id)` na versão, model, relação e factory; parser recusa paths que só diferem no nome dos parâmetros | alterações do T03 |
+| T04 | correção do "billion laughs" (alvo de `$ref` percorrido uma vez, teto de 500.000 nós, YAML até 512 KB); `POST .../versions` (import) e `GET .../versions[/{version}]`; `ImportApiSpecificationVersion` com lock por organização, idempotência, versão + endpoints + auditoria numa transação e diff no evento; recusa auditada; limiter `api-imports`; `LimitRequestBodySize` com parâmetro | alterações do T04 |
 
 O parser recebe bytes e formato já selecionado pelo `Content-Type`. A rota
 HTTP, o limite antes da leitura do corpo, a autorização, a auditoria e a
@@ -73,6 +74,65 @@ ADR.
 Verificações do T03: 10 testes novos, suíte completa com 801 testes (4.148
 assertions), `composer lint` e `composer analyse` aprovados em 19/11/2026.
 
+### T04 — Importação idempotente
+
+**Antes do import, a correção do parser.** O ADR-0014 pedia medir o
+"billion laughs" no T02. A medição mostrou que a leitura do YAML é rápida e
+que a explosão está na travessia: cada `$ref` percorria o alvo de novo, e
+cada alias YAML é uma cópia da subárvore.
+
+| Entrada | Antes | Depois |
+|---|---|---|
+| YAML de 420 bytes com aliases em 6 níveis | aceito em 8,8 s | recusado em 0,2 s (teto de nós) |
+| YAML de 472 bytes, 7 níveis | mais de 60 s | recusado em 0,2 s |
+| JSON de 400 KB, schema de 2.000 campos com 9.000 `$ref` | aceito em 27,5 s | aceito em 0,03 s |
+
+Ainda na medição, o próprio `symfony/yaml` se mostrou lento em documentos
+grandes (de 6 s a 9 s e cerca de 100 MB em 2 MB). Por decisão do usuário, o
+YAML ficou limitado a 512 KB (pior caso medido de 2,7 s); o JSON segue em
+2 MB (0,2 s). Os números estão no ADR-0014.
+
+**O import** (`POST /organizations/{organization}/api-specifications/{apiSpecification}/versions`):
+
+```text
+auth:sanctum → throttle:authenticated → throttle:api-imports → binding
+→ token.ability → organization.context → permission:api_specifications.import
+→ LimitRequestBodySize:2097152 → Policy import → Content-Type (415)
+→ ImportApiSpecificationVersion
+```
+
+- `Content-Type` `application/json`, `application/yaml`,
+  `application/x-yaml` ou `text/yaml`; outro → 415. O corpo é lido bruto,
+  nunca por `$request->json()` ou FormRequest, que decodificariam o
+  documento fora dos limites do parser.
+- **Lock por organização** (`Cache::lock`, 30 s, sem espera): o segundo
+  import simultâneo recebe 409, sem auditoria.
+- **Parse fora da transação**: nenhuma linha fica travada durante o trecho
+  que gasta CPU. Recusa → 422 com motivo e JSON pointer, e
+  `api_specification_import_rejected` com motivo, pointer (até 255
+  caracteres), formato, tamanho e hash, nunca o conteúdo.
+- **Transação**: lock da árvore (ADR-0012), especificação `FOR UPDATE`,
+  ancestral ou especificação arquivada → 409; mesmo hash → a versão
+  existente (200, sem auditoria); senão versão `n + 1`, endpoints e
+  `api_specification_version_imported` com contagem e diff (adicionados e
+  removidos, pela identidade do T03). Falha da trilha desfaz tudo.
+- **Cotas** `api-imports`: 10 por hora por usuário e 30 por hora por
+  organização, contando toda tentativa. A cota da organização só é gasta
+  por quem pode importar nela (o throttle roda antes da permissão; sem isso,
+  um estranho esgotaria a cota de outro tenant).
+- **Corpo**: os grupos declaram `LimitRequestBodySize:65536`; a rota exclui
+  exatamente esse nome e aplica 2 MB depois das cotas. O UTF-8 da rota fica
+  com o parser (422 auditado).
+- `GET .../versions` lista da mais nova para a mais antiga, com
+  `endpoints_count`; `GET .../versions/{version}` só sob a própria
+  especificação. O documento original nunca sai pela API.
+- Os ponteiros de erro dentro de um alvo de `$ref` passaram a sair como
+  JSON pointer (`/components/...`), como todos os outros; no T02 saíam com
+  `#`.
+
+Verificações do T04: 37 testes novos, suíte completa com 838 testes (4.423
+assertions), `composer lint` e `composer analyse` aprovados em 19/11/2026.
+
 ## Decisões fixadas na execução
 
 | Decisão | Valor | Onde |
@@ -80,7 +140,9 @@ assertions), `composer lint` e `composer analyse` aprovados em 19/11/2026.
 | Dono da especificação | Application | ADR-0014, item 1 |
 | Rotas | criar e listar sob a Application; `show`, `update`, `archive` e `restore` em `/organizations/{organization}/api-specifications/{apiSpecification}` | item 8 |
 | Limites de chamada | toda rota com `throttle:authenticated`; import com `api-imports` (30/h por organização e 10/h por usuário, contando toda tentativa) | itens 9 a 11 |
-| Teto do documento | 2 MB, depois de autenticação e cota | itens 11 e 13 |
+| Teto do documento | 2 MB (YAML 512 KB, medido no T04), depois de autenticação e cota | itens 11 e 13 |
+| Cota da organização | gasta só por quem tem `api_specifications.import` nela | ajuste do item 10 (T04) |
+| Nós visitados | 500.000; cada alvo de `$ref` percorrido uma vez | Security Impact (T04) |
 | Swagger 2.0 | fora do P3 | item 14 |
 | Recusa de import | auditada como `api_specification_import_rejected`, sem conteúdo; sem coluna de status no `audit_logs` | item 20 |
 | Permissões do member | todas menos `archive`; `import` separado de `update` | item 19 |
@@ -94,7 +156,9 @@ assertions), `composer lint` e `composer analyse` aprovados em 19/11/2026.
 | `Feature/ApiInventory/ApiSpecificationTest.php` | 37 |
 | `Feature/ApiInventory/ApiSpecificationIntegrityTest.php` | 16 |
 | `Feature/ApiInventory/ApiEndpointIntegrityTest.php` | 9 (T03) |
-| `Unit/Domain/ApiInventory/OpenApiParserTest.php` | 18 (T02 e T03) |
+| `Unit/Domain/ApiInventory/OpenApiParserTest.php` | 21 (T02 a T04) |
+| `Feature/ApiInventory/ApiSpecificationImportTest.php` | 33 (T04) |
+| `Feature/Security/RouteCoverageTest.php` | +1 (T04): o import aplica 2 MB depois de autenticação, permissão e cotas |
 | `Feature/Projects/ProjectTreeLockTest.php` | 1 |
 | `Feature/Security/ProjectTreeSecurityTest.php` | especificação em todas as regras (auditoria, rollback, isolamento, papel, ids malformados, mass assignment) |
 | `Feature/Security/RouteCoverageTest.php` | "never deletes" cobre `api-specifications` |
@@ -124,6 +188,24 @@ Mutações do T03, todas pegas:
 | Sem o trigger append-only | "never updates or deletes an endpoint" |
 | CHECK de método aceitando `CONNECT` e minúsculas | "rejects an endpoint with values outside its domain" |
 
+Mutações do T04:
+
+| Mutação | Resultado |
+|---|---|
+| Alvo de `$ref` percorrido a cada referência | pega: "walks each reference target once" |
+| Sem o teto de nós | pega: "rejects YAML aliases that expand into millions of nodes" |
+| Sem o teto de 512 KB do YAML | pega: "limits YAML documents to 512 KB" |
+| Cota da organização sem conferir a permissão | pega: o estranho esgota a cota |
+| Sem a cota da organização | pega: "limits the organization to 30 attempts" |
+| Sem idempotência | pega: o reimport vira 500 no UNIQUE |
+| Recusa sem auditoria | pega: 6 casos de 422 e a cota |
+| Sem o lock da organização | pega: "refuses a second concurrent import" |
+| Sem conferir a especificação arquivada | pega |
+| Rota com o limite de 64 KB | pega: o documento de 200 KB e o `RouteCoverageTest` |
+| Diff pelo path literal | pega: renomear parâmetro conta como troca |
+| Documento no `meta` da recusa | pega |
+| Policy `import` conferindo `view` | **não pega**: hoje todo papel tem as duas chaves (catálogo fixo do ADR-0011). Vira testável com a matriz configurável |
+
 ## Engineering Gate
 
 | Componente | Precisa existir? | Já existia? | Laravel/PHP/PostgreSQL resolve? | Decisão |
@@ -140,6 +222,15 @@ Mutações do T03, todas pegas:
 | Timestamps no endpoint | não | `created_at` da versão | — | não criados |
 | UNIQUE de `operationId` na versão | não | — | — | não criado: a identidade é método × path; contratos reais repetem `operationId` e o inventário não depende dele |
 | Coluna de posição/ordem | não | — | `ORDER BY path, method` | não criada |
+| `ImportApiSpecificationVersion` | sim, o caso de uso do import | não | — | criada (T04) |
+| `ApiImport` com status | não: o import segue síncrono dentro do orçamento | — | — | não criado (ADR-0014, decisão 4) |
+| Fila para o import | não: pior caso medido de 2,7 s (YAML de 512 KB) | — | — | não criada |
+| `ApiImportInProgressException` | sim, 409 do lock | — | `ConflictHttpException` serviria, mas o domínio não lança exceções HTTP | criada |
+| Middleware separado para 2 MB | não | `LimitRequestBodySize` | parâmetro de middleware | parâmetro; o grupo usa o nome com parâmetro |
+| FormRequest do import | não: decodificaria o documento fora do parser | — | `Request::getContent()` | não criado |
+| Tabela de diff | não: refazível pelas projeções imutáveis | — | — | contagens no `meta` do evento |
+| `OpenApiParser::pathTemplate()` | sim, a mesma regra no parser e no diff | regex inline (T03) | — | extraída |
+| Lib YAML em C (`ext-yaml`) | não agora | — | — | não adotada; o teto de 512 KB resolve sem dependência nova |
 | `ProjectTreeLock` | sim, 8 Actions repetiam a ordem de locks (P2) | cópias nas Actions | não | criado; Environment perdeu o parâmetro `$project` |
 | `Slug` | sim, 8 requests repetiam a regex | regex inline | `regex:` | rule com a mesma mensagem; unicidade fica em cada request |
 | `Archivable`, `SearchableByName` | sim, 3 controllers repetiam os filtros | `when()` inline | scopes locais | traits com scopes |

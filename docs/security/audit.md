@@ -55,6 +55,10 @@ carregado pelo evento.
 | `application_updated` | `ApplicationUpdated` | `UpdateApplication` (P2) | `App\Models\Application` | `fields` (nomes) |
 | `environment_created` / `environment_archived` / `environment_restored` | `Environment*` | `CreateEnvironment`, `ArchiveEnvironment`, `RestoreEnvironment` (P2) | `App\Models\Environment` | — |
 | `environment_updated` | `EnvironmentUpdated` | `UpdateEnvironment` (P2) | `App\Models\Environment` | `fields` (nomes; o conteúdo de `authorized_scope` nunca entra) |
+| `api_specification_created` / `api_specification_archived` / `api_specification_restored` | `ApiSpecification*` | `CreateApiSpecification`, `ArchiveApiSpecification`, `RestoreApiSpecification` (P3) | `App\Models\ApiSpecification` | — |
+| `api_specification_updated` | `ApiSpecificationUpdated` | `UpdateApiSpecification` (P3; só se algo mudou) | `App\Models\ApiSpecification` | `fields` (nomes) |
+| `api_specification_version_imported` | `ApiSpecificationVersionImported` | `ImportApiSpecificationVersion` (P3-T04; não no reimport idempotente) | `App\Models\ApiSpecificationVersion` | `api_specification_id`, `number`, `format`, `openapi_version`, `size_bytes`, `content_sha256`, `endpoints`, `endpoints_added`, `endpoints_removed`; **nunca o documento** |
+| `api_specification_import_rejected` | `ApiSpecificationImportRejected` | `ImportApiSpecificationVersion` (P3-T04), quando o parser recusa com 422; gravado fora da transação | `App\Models\ApiSpecification` | `reason`, `pointer` (até 255 caracteres), `format`, `size_bytes`, `content_sha256`; nunca o documento nem a mensagem do parser |
 
 O id do token vai em `meta` porque é inteiro e `subject_id` é ULID. O segredo
 do token nunca é gravado.

@@ -138,7 +138,7 @@ Testes transversais em `tests/Feature/Security/ProjectTreeSecurityTest.php`.
 | Escrita sem trilha ou trilha sem escrita | ✅ | evento síncrono dentro da transação da Action | as 12 operações: 1 linha exata e rollback quando a trilha falha | — |
 | Escopo autorizado vazando em logs | ✅ | `environment_updated` registra só nomes de campos | `EnvironmentTest` | — |
 | Escrita concorrente com arquivamento do ancestral | ⚠️ | ancestrais `FOR SHARE` de cima para baixo, linha alterada `FOR UPDATE` | sem teste paralelo (como no P1) | protocolo de lock verificado por revisão, não por teste |
-| Abuso de volume nas rotas novas | ✅ | `throttle:authenticated` (120 / min por usuário) e corpo até 64 KB em todas as rotas (P2.5-T02 e T03) | `LoginThrottleTest`, `InputLimitsTest`, `RouteCoverageTest` | FIND-016 resolvido no P2.5 |
+| Abuso de volume nas rotas novas | ✅ | `throttle:authenticated` (120 / min por usuário) e corpo até 64 KB em todas as rotas (P2.5-T02 e T03), exceto o import OpenAPI: 2 MB depois da autenticação e das cotas `api-imports`, YAML até 512 KB e teto de nós contra "billion laughs" (P3-T04) | `LoginThrottleTest`, `InputLimitsTest`, `RouteCoverageTest` | FIND-016 resolvido no P2.5 |
 
 ## Entrada
 

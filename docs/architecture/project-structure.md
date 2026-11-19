@@ -42,8 +42,12 @@ app/
 │   ├── Exceptions/            {Project,Application,Environment}LifecycleException (409)
 │   └── ProjectTreeLock.php    Ordem de locks da árvore: ancestrais FOR SHARE, arquivado → 409 (P3)
 ├── Domain/ApiInventory/       Especificações OpenAPI (P3, ADR-0014)
-│   ├── Actions/               {Create,Update,Archive,Restore}ApiSpecification
-│   └── Exceptions/            ApiSpecificationLifecycleException (409)
+│   ├── Actions/               {Create,Update,Archive,Restore}ApiSpecification,
+│   │                          ImportApiSpecificationVersion (T04)
+│   ├── Exceptions/            ApiSpecificationLifecycleException, ApiImportInProgressException (409),
+│   │                          OpenApiParseException (422)
+│   ├── OpenApiParser.php      JSON/YAML → OpenApiDocument, sem rede, com os tetos do ADR-0014 (T02)
+│   └── OpenApiDocument.php    Versão, info e operações projetadas
 ├── DTOs/                      Dados validados HTTP → Action
 │   ├── AssignProfilesToUserDto.php
 │   ├── CreateUserDto.php, UpdateUserDto.php              (Fase 4.2)
@@ -69,6 +73,7 @@ app/
 │   ├── Organization{Created,Updated}, OrganizationMembership{Created,Updated,Removed}   (P1)
 │   ├── {Project,Application,Environment}{Created,Updated,Archived,Restored}            (P2)
 │   ├── ApiSpecification{Created,Updated,Archived,Restored}                              (P3)
+│   ├── ApiSpecificationVersionImported, ApiSpecificationImportRejected                  (P3-T04)
 │   └── TokenCreated.php, TokenRevoked.php
 ├── Listeners/                 Reações; hoje, apenas auditoria
 │   └── RecordAuditLog.php     Uma linha por evento Auditable
@@ -81,6 +86,7 @@ app/
 │   │   ├── {Project,Application,Environment}Controller.php        (P2)
 │   │   ├── {Project,Application,Environment}StatusController.php  archive/restore (P2)
 │   │   ├── ApiSpecification{,Status}Controller.php                rotas rasas (P3)
+│   │   ├── ApiSpecificationVersionController.php                  versões e import (P3-T04)
 │   │   ├── ProfileController.php
 │   │   ├── UserController.php
 │   │   ├── UserProfileController.php
@@ -103,7 +109,8 @@ app/
 │   │   └── Web/Admin/         Login web e requests de usuários, perfis e menus, que estendem os da API;
 │   │                          Concerns/ com mensagens em português e SendsEveryField
 │   └── Resources/             User, Profile, Menu, Organization, OrganizationMembership,
-│                              Project, Application, Environment, ApiSpecificationResource
+│                              Project, Application, Environment, ApiSpecification,
+│                              ApiSpecificationVersionResource
 ├── Exceptions/                LastActiveOrganizationOwnerException (409, P1)
 ├── Models/                    User, UserDetails, Profile, Menu, AuditLog,
 │                              SecurityLabResource, SecurityTestRun,

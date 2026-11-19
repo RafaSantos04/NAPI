@@ -16,6 +16,14 @@ Desde o P2.5-T03 e o T04, os grupos `api` e `web` começam por
 autenticação e do binding (ADR-0013). O path já passa antes pelo
 `ValidatePathEncoding` global do Laravel.
 
+A exceção é o import OpenAPI (P3-T04, ADR-0014): a rota retira o
+`LimitRequestBodySize:65536` e o `RejectInvalidUtf8` do grupo e aplica
+`LimitRequestBodySize:2097152` por último, depois de `auth:sanctum`, das
+cotas `throttle:api-imports` e da permissão. O UTF-8 do documento é
+conferido pelo parser (422 auditado). Os grupos declaram o limite padrão com
+o parâmetro porque o Laravel exclui um nome de classe sem parâmetro junto
+com todas as variantes dele.
+
 O grupo `api` do Laravel 13 contém apenas `SubstituteBindings`. Não há
 `EnsureFrontendRequestsAreStateful` (o `bootstrap/app.php` não chama
 `statefulApi()`). As rotas autenticadas acrescentam
